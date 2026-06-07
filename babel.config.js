@@ -14,6 +14,8 @@ module.exports = (api) => {
         },
       ],
       require.resolve('expo-router/babel'),
+      // react-native-reanimated/plugin MUST be listed last.
+      'react-native-reanimated/plugin',
     ],
   };
 };
