@@ -6,9 +6,8 @@ import Tasks from '@/screens/Tasks';
 import { TodayFocusScreen } from '@/screens/TodayFocusScreen';
 
 const items: ReactElement[] = [
-  <NewTask key="new-task-1" />,
-  <NewTask key="new-task-2" />,
   <Tasks key="tasks" />,
+  <NewTask key="new-task" />,
 ];
 
 const Home = () => {
