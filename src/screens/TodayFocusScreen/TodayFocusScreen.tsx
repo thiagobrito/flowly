@@ -1,5 +1,5 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { SlidersHorizontal } from 'lucide-react-native';
+import { BatteryFull, SlidersHorizontal } from 'lucide-react-native';
 import { useCallback, useState } from 'react';
 import { Pressable, Text, useColorScheme, View } from 'react-native';
 import { GestureDetector } from 'react-native-gesture-handler';
@@ -21,8 +21,6 @@ export const TodayFocusScreen = <T,>({
   keyExtractor,
   renderItem,
   onIndexChange,
-  title = 'Today',
-  subtitle,
   onSettingsPress,
 }: TodayFocusScreenProps<T>) => {
   const colorScheme = useColorScheme();
@@ -61,18 +59,23 @@ export const TodayFocusScreen = <T,>({
       />
 
       <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
-        <View className="flex-1 px-5">
+        <View className="flex-1 px-3">
           {/* Header fixo */}
           <View className="flex-row items-start justify-between pt-2">
-            <View>
+            <View className="flex-col">
               <Text className="text-3xl font-bold text-zinc-900 dark:text-zinc-50">
-                {title}
+                Bom dia, Thiago
               </Text>
-              {subtitle ? (
-                <Text className="mt-0.5 text-lg text-zinc-500 dark:text-zinc-400">
-                  {subtitle}
+              <View className="mt-1 flex-row rounded-xl bg-green-500/0">
+                <BatteryFull
+                  className="my-auto flex"
+                  size={24}
+                  color={isDark ? '#e4e4e7' : 'green'}
+                />
+                <Text className="my-auto ml-2 flex rounded-xl text-lg text-green-700">
+                  Energia corporal de 90%
                 </Text>
-              ) : null}
+              </View>
             </View>
 
             <Pressable
