@@ -54,7 +54,12 @@ export default function NewTask({ onCreate }: NewTaskProps) {
         Defina o essencial para começar com clareza.
       </Text>
 
-      <ScrollView className="mt-5 flex-1" showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        className="mt-5 flex-1"
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={{ paddingBottom: 60 }}
+      >
         <Text className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
           Nome
         </Text>
@@ -67,12 +72,12 @@ export default function NewTask({ onCreate }: NewTaskProps) {
         />
 
         <View className="mt-6">
-          <SectionHeader label="Energia" Icon={Zap} accent="#22c55e" />
+          <SectionHeader label="Gasto de Energia" Icon={Zap} accent="#22c55e" />
           <LevelScale value={energy} onChange={setEnergy} Icon={Zap} accent="#22c55e" isDark={isDark} />
         </View>
 
         <View className="mt-6">
-          <SectionHeader label="Impacto" Icon={TrendingUp} accent="#3b82f6" />
+          <SectionHeader label="Impacto esperado" Icon={TrendingUp} accent="#3b82f6" />
           <LevelScale value={impact} onChange={setImpact} Icon={TrendingUp} accent="#3b82f6" isDark={isDark} />
         </View>
 
