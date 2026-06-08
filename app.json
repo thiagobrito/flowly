@@ -22,12 +22,41 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.anonymous.reactnativeboilerplate"
+      "package": "com.anonymous.reactnativeboilerplate",
+      "permissions": [
+        "android.permission.health.READ_SLEEP",
+        "android.permission.health.READ_HEART_RATE",
+        "android.permission.health.READ_HEART_RATE_VARIABILITY",
+        "android.permission.health.READ_RESTING_HEART_RATE",
+        "android.permission.health.READ_EXERCISE",
+        "android.permission.health.READ_ACTIVE_CALORIES_BURNED"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png",
       "bundler": "metro"
     },
-    "plugins": ["@config-plugins/detox", "expo-router"]
+    "plugins": [
+      "@config-plugins/detox",
+      "expo-router",
+      [
+        "react-native-health",
+        {
+          "healthSharePermission": "Permitir que o Flowly leia seus dados de saúde para calcular seu Energy Score.",
+          "healthUpdatePermission": "Permitir que o Flowly atualize seus dados de saúde."
+        }
+      ],
+      "react-native-health-connect",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "compileSdkVersion": 35,
+            "targetSdkVersion": 35,
+            "minSdkVersion": 26
+          }
+        }
+      ]
+    ]
   }
 }

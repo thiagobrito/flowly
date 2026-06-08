@@ -123,31 +123,6 @@ export function TaskCardContent({
           {item.description}
         </Text>
       </View>
-
-      {/*
-      <View className="mt-auto flex-row items-center justify-between">
-        <Pressable
-          onPress={item.onStart}
-          accessibilityRole="button"
-          accessibilityLabel={item.buttonLabel}
-          className="flex-row items-center rounded-full bg-black px-3 py-2 active:opacity-80"
-        >
-          <View className="mr-2 h-7 w-7 items-center justify-center rounded-full bg-red-500">
-            <Play size={14} color="#ffffff" fill="#ffffff" />
-          </View>
-          <Text className="pr-3 text-base font-semibold text-white">
-            {item.buttonLabel}
-          </Text>
-        </Pressable>
-
-        <View className="flex-row items-center">
-          <Clock size={16} color={isDark ? '#a1a1aa' : '#71717a'} />
-          <Text className="ml-1.5 text-sm text-zinc-500 dark:text-zinc-400">
-            {item.durationLabel}
-          </Text>
-        </View>
-      </View>
-      */}
     </View>
   );
 }

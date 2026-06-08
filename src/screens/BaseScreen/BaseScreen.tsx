@@ -15,14 +15,15 @@ import { useDeckGesture } from './useDeckGesture';
 const clamp = (value: number, min: number, max: number) =>
   Math.max(min, Math.min(max, value));
 
-export const TodayFocusScreen = <T,>({
+export default function TodayFocusScreen<T>({
   items,
   initialIndex = 0,
   keyExtractor,
   renderItem,
   onIndexChange,
   onSettingsPress,
-}: TodayFocusScreenProps<T>) => {
+  energyInfo,
+}: TodayFocusScreenProps<T>) {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
 
@@ -73,7 +74,7 @@ export const TodayFocusScreen = <T,>({
                   color={isDark ? '#e4e4e7' : 'green'}
                 />
                 <Text className="my-auto ml-2 flex rounded-xl text-lg text-green-700">
-                  Energia corporal de 90%
+                  Energia corporal de {energyInfo.score}%
                 </Text>
               </View>
             </View>
@@ -117,6 +118,4 @@ export const TodayFocusScreen = <T,>({
       </SafeAreaView>
     </View>
   );
-};
-
-export default TodayFocusScreen;
+}

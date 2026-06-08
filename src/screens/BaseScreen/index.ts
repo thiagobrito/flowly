@@ -1,3 +1,4 @@
+export { default as TodayFocusScreen } from './BaseScreen';
 export type {
   DeckItem,
   ProgressItem,
@@ -5,5 +6,4 @@ export type {
   WeekDay,
 } from './exampleContent';
 export { ProgressRing, TaskCardContent } from './exampleContent';
-export { TodayFocusScreen } from './TodayFocusScreen';
 export type { TodayFocusScreenProps } from './types';

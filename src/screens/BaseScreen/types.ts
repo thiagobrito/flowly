@@ -19,4 +19,6 @@ export type TodayFocusScreenProps<T> = {
   subtitle?: string;
   /** Toque no botão de ajustes do header. */
   onSettingsPress?: () => void;
+  /** Energia corporal. */
+  energyInfo: any;
 };
