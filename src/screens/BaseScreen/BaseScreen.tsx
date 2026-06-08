@@ -1,7 +1,6 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { BatteryFull, SlidersHorizontal } from 'lucide-react-native';
 import { useCallback, useState } from 'react';
-import { Pressable, Text, useColorScheme, View } from 'react-native';
+import { useColorScheme, View } from 'react-native';
 import { GestureDetector } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -21,8 +20,6 @@ export default function TodayFocusScreen<T>({
   keyExtractor,
   renderItem,
   onIndexChange,
-  onSettingsPress,
-  energyInfo,
 }: TodayFocusScreenProps<T>) {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
@@ -61,37 +58,6 @@ export default function TodayFocusScreen<T>({
 
       <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
         <View className="flex-1 px-3">
-          {/* Header fixo */}
-          <View className="flex-row items-start justify-between pt-2">
-            <View className="flex-col">
-              <Text className="text-3xl font-bold text-zinc-900 dark:text-zinc-50">
-                Bom dia, Thiago
-              </Text>
-              <View className="mt-1 flex-row rounded-xl bg-green-500/0">
-                <BatteryFull
-                  className="my-auto flex"
-                  size={24}
-                  color={isDark ? '#e4e4e7' : 'green'}
-                />
-                <Text className="my-auto ml-2 flex rounded-xl text-lg text-green-700">
-                  Energia corporal de {energyInfo.score}%
-                </Text>
-              </View>
-            </View>
-
-            <Pressable
-              onPress={onSettingsPress}
-              accessibilityRole="button"
-              accessibilityLabel="Settings"
-              className="h-10 w-10 items-center justify-center rounded-full bg-white/40 dark:bg-white/10"
-            >
-              <SlidersHorizontal
-                size={18}
-                color={isDark ? '#e4e4e7' : '#27272a'}
-              />
-            </Pressable>
-          </View>
-
           {/* Deck vertical de N cards */}
           <View
             className="relative mt-4 flex-1"
