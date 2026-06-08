@@ -23,14 +23,11 @@ type TriggerConfig = Extract<FrequencyConfig, { kind: 'trigger' }>;
 
 type PickerMode = 'date' | 'time' | null;
 
+const MONTHS_SHORT = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'] as const;
+
 const formatDate = (isoDate: string) => {
   const [year = 0, month = 1, day = 1] = isoDate.split('-').map(Number);
-  const date = new Date(year, month - 1, day);
-  return date.toLocaleDateString('pt-BR', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  });
+  return `${String(day).padStart(2, '0')} ${MONTHS_SHORT[month - 1] ?? ''} ${year}`;
 };
 
 const toIsoDate = (date: Date) => {
@@ -60,23 +57,7 @@ const parseTime = (time: string | null, baseDate: Date) => {
   return date;
 };
 
-function DateTimeField({
-  label,
-  value,
-  placeholder,
-  Icon,
-  onPress,
-  isDark,
-  accent,
-}: {
-  label: string;
-  value: string | null;
-  placeholder: string;
-  Icon: LucideIcon;
-  onPress: () => void;
-  isDark: boolean;
-  accent: string;
-}) {
+function DateTimeField({ label, value, placeholder, Icon, onPress, isDark, accent }: { label: string; value: string | null; placeholder: string; Icon: LucideIcon; onPress: () => void; isDark: boolean; accent: string }) {
   let borderColor = 'rgba(0,0,0,0.08)';
   let iconColor = '#71717a';
   let valueColor = '#a1a1aa';
@@ -91,7 +72,7 @@ function DateTimeField({
   }
 
   return (
-    <Pressable onPress={onPress} accessibilityRole="button" className="flex-1 active:opacity-80">
+    <Pressable onPress={onPress} accessibilityRole="button" className="flex-1 active:opacity-80" style={{ minWidth: 0 }}>
       <View
         className="rounded-2xl border p-3"
         style={{
@@ -101,9 +82,9 @@ function DateTimeField({
       >
         <View className="flex-row items-center gap-2">
           <Icon size={16} color={iconColor} />
-          <View>
+          <View className="min-w-0 flex-1">
             <Text className="text-xs text-zinc-500 dark:text-zinc-400">{label}</Text>
-            <Text className="text-sm font-medium" style={{ color: valueColor }}>
+            <Text className="text-sm font-medium" style={{ color: valueColor }} numberOfLines={1} ellipsizeMode="tail">
               {value ?? placeholder}
             </Text>
           </View>
@@ -113,17 +94,7 @@ function DateTimeField({
   );
 }
 
-function OnceConfigPanel({
-  config,
-  onChange,
-  isDark,
-  accent,
-}: {
-  config: OnceConfig;
-  onChange: (config: OnceConfig) => void;
-  isDark: boolean;
-  accent: string;
-}) {
+function OnceConfigPanel({ config, onChange, isDark, accent }: { config: OnceConfig; onChange: (config: OnceConfig) => void; isDark: boolean; accent: string }) {
   const [pickerMode, setPickerMode] = useState<PickerMode>(null);
 
   const pickerValue = useMemo(() => {
@@ -155,27 +126,11 @@ function OnceConfigPanel({
   return (
     <View>
       <View className="flex-row">
-        <View className="flex-1" style={{ marginRight: 6 }}>
-          <DateTimeField
-            label="Data"
-            value={config.date ? formatDate(config.date) : null}
-            placeholder="Selecionar"
-            Icon={Calendar}
-            onPress={() => setPickerMode('date')}
-            isDark={isDark}
-            accent={accent}
-          />
+        <View className="min-w-0 flex-[3]" style={{ marginRight: 6 }}>
+          <DateTimeField label="Data" value={config.date ? formatDate(config.date) : null} placeholder="Selecionar" Icon={Calendar} onPress={() => setPickerMode('date')} isDark={isDark} accent={accent} />
         </View>
-        <View className="flex-1" style={{ marginLeft: 6 }}>
-          <DateTimeField
-            label="Hora"
-            value={config.time}
-            placeholder="Opcional"
-            Icon={Clock}
-            onPress={() => setPickerMode('time')}
-            isDark={isDark}
-            accent={accent}
-          />
+        <View className="min-w-0 flex-[2]" style={{ marginLeft: 6 }}>
+          <DateTimeField label="Hora" value={config.time} placeholder="Opcional" Icon={Clock} onPress={() => setPickerMode('time')} isDark={isDark} accent={accent} />
         </View>
       </View>
 
@@ -187,29 +142,12 @@ function OnceConfigPanel({
         </Pressable>
       ) : null}
 
-      {pickerMode ? (
-        <DateTimePicker
-          value={pickerValue}
-          mode={pickerMode}
-          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-          onChange={handlePickerChange}
-        />
-      ) : null}
+      {pickerMode ? <DateTimePicker value={pickerValue} mode={pickerMode} display={Platform.OS === 'ios' ? 'spinner' : 'default'} onChange={handlePickerChange} /> : null}
     </View>
   );
 }
 
-function DailyConfigPanel({
-  config,
-  onChange,
-  isDark,
-  accent,
-}: {
-  config: DailyConfig;
-  onChange: (config: DailyConfig) => void;
-  isDark: boolean;
-  accent: string;
-}) {
+function DailyConfigPanel({ config, onChange, isDark, accent }: { config: DailyConfig; onChange: (config: DailyConfig) => void; isDark: boolean; accent: string }) {
   const mode = config.everyDay ? 'everyday' : 'specific';
 
   return (
@@ -233,29 +171,14 @@ function DailyConfigPanel({
 
       {!config.everyDay ? (
         <View className="mt-4">
-          <WeekdayToggles
-            value={config.days}
-            onChange={(days) => onChange({ ...config, days })}
-            accent={accent}
-            isDark={isDark}
-          />
+          <WeekdayToggles value={config.days} onChange={(days) => onChange({ ...config, days })} accent={accent} isDark={isDark} />
         </View>
       ) : null}
     </View>
   );
 }
 
-function WeeklyConfigPanel({
-  config,
-  onChange,
-  isDark,
-  accent,
-}: {
-  config: WeeklyConfig;
-  onChange: (config: WeeklyConfig) => void;
-  isDark: boolean;
-  accent: string;
-}) {
+function WeeklyConfigPanel({ config, onChange, isDark, accent }: { config: WeeklyConfig; onChange: (config: WeeklyConfig) => void; isDark: boolean; accent: string }) {
   return (
     <View>
       <SegmentedToggle
@@ -277,96 +200,37 @@ function WeeklyConfigPanel({
 
       <View className="mt-4">
         {config.mode === 'count' ? (
-          <Stepper
-            value={config.count}
-            onChange={(count) => onChange({ ...config, count })}
-            min={1}
-            max={7}
-            suffix="vezes por semana"
-            accent={accent}
-            isDark={isDark}
-          />
+          <Stepper value={config.count} onChange={(count) => onChange({ ...config, count })} min={1} max={7} suffix="vezes por semana" accent={accent} isDark={isDark} />
         ) : (
-          <WeekdayToggles
-            value={config.days}
-            onChange={(days) => onChange({ ...config, days })}
-            accent={accent}
-            isDark={isDark}
-          />
+          <WeekdayToggles value={config.days} onChange={(days) => onChange({ ...config, days })} accent={accent} isDark={isDark} />
         )}
       </View>
     </View>
   );
 }
 
-function IntervalConfigPanel({
-  config,
-  onChange,
-  isDark,
-  accent,
-}: {
-  config: IntervalConfig;
-  onChange: (config: IntervalConfig) => void;
-  isDark: boolean;
-  accent: string;
-}) {
+function IntervalConfigPanel({ config, onChange, isDark, accent }: { config: IntervalConfig; onChange: (config: IntervalConfig) => void; isDark: boolean; accent: string }) {
   return (
     <View>
       <Text className="mb-2 text-sm text-zinc-500 dark:text-zinc-400">A cada</Text>
-      <Stepper
-        value={config.everyNDays}
-        onChange={(everyNDays) => onChange({ ...config, everyNDays })}
-        min={1}
-        max={30}
-        suffix={config.everyNDays === 1 ? 'dia' : 'dias'}
-        accent={accent}
-        isDark={isDark}
-      />
+      <Stepper value={config.everyNDays} onChange={(everyNDays) => onChange({ ...config, everyNDays })} min={1} max={30} suffix={config.everyNDays === 1 ? 'dia' : 'dias'} accent={accent} isDark={isDark} />
     </View>
   );
 }
 
-function TriggerConfigPanel({
-  config,
-  onChange,
-  isDark,
-  accent,
-}: {
-  config: TriggerConfig;
-  onChange: (config: TriggerConfig) => void;
-  isDark: boolean;
-  accent: string;
-}) {
+function TriggerConfigPanel({ config, onChange, isDark, accent }: { config: TriggerConfig; onChange: (config: TriggerConfig) => void; isDark: boolean; accent: string }) {
   return (
     <View className="-mx-1 flex-row flex-wrap">
       {TRIGGER_EVENTS.map((event) => (
         <View key={event.id} className="w-1/2 p-1">
-          <OptionChip
-            label={event.label}
-            Icon={Link2}
-            selected={config.eventId === event.id}
-            accent={accent}
-            isDark={isDark}
-            onPress={() => onChange({ ...config, eventId: event.id })}
-            className="w-full"
-          />
+          <OptionChip label={event.label} Icon={Link2} selected={config.eventId === event.id} accent={accent} isDark={isDark} onPress={() => onChange({ ...config, eventId: event.id })} className="w-full" />
         </View>
       ))}
     </View>
   );
 }
 
-function ConfigPanel({
-  config,
-  onChange,
-  isDark,
-  accent,
-}: {
-  config: FrequencyConfig;
-  onChange: (config: FrequencyConfig) => void;
-  isDark: boolean;
-  accent: string;
-}) {
+function ConfigPanel({ config, onChange, isDark, accent }: { config: FrequencyConfig; onChange: (config: FrequencyConfig) => void; isDark: boolean; accent: string }) {
   switch (config.kind) {
     case 'once':
       return <OnceConfigPanel config={config} onChange={onChange} isDark={isDark} accent={accent} />;
@@ -396,15 +260,7 @@ export function FrequencyPicker({ value, onChange, isDark, accent }: FrequencyPi
       <View className="-mx-1 flex-row flex-wrap">
         {FREQUENCIES.map((item) => (
           <View key={item.id} className="w-1/2 p-1">
-            <OptionChip
-              label={item.label}
-              Icon={item.Icon}
-              selected={selectedKind === item.id}
-              accent={accent}
-              isDark={isDark}
-              onPress={() => handleSelectMode(item.id)}
-              className="w-full"
-            />
+            <OptionChip label={item.label} Icon={item.Icon} selected={selectedKind === item.id} accent={accent} isDark={isDark} onPress={() => handleSelectMode(item.id)} className="w-full" />
           </View>
         ))}
       </View>

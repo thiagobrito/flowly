@@ -60,16 +60,8 @@ export default function TaskCard({ task, selected, isDark, onPress }: TaskCardPr
   const mutedColor = isDark ? '#a1a1aa' : '#71717a';
 
   return (
-    <Pressable
-      onPress={handlePress}
-      accessibilityRole="button"
-      accessibilityState={{ selected: isSelected }}
-      className="mb-3 active:opacity-80"
-    >
-      <View
-        className="flex-row items-center overflow-hidden rounded-2xl p-3"
-        style={{ borderColor, backgroundColor, borderWidth: 1.5 }}
-      >
+    <Pressable onPress={handlePress} accessibilityRole="button" accessibilityState={{ selected: isSelected }} className="mb-3 active:opacity-80">
+      <View className="flex-row items-center overflow-hidden rounded-2xl p-3" style={{ borderColor, backgroundColor, borderWidth: 1.5 }}>
         <View className="h-11 w-11 items-center justify-center rounded-2xl" style={{ backgroundColor: `${accent}22` }}>
           {AreaIcon ? <AreaIcon size={20} color={accent} /> : null}
         </View>

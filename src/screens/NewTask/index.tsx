@@ -20,12 +20,8 @@ export default function NewTask({ onCreate }: NewTaskProps) {
   const [frequency, setFrequency] = useState<FrequencyConfig | null>(null);
   const [area, setArea] = useState<string | null>(null);
 
-  const canSubmit = useMemo(
-    () => name.trim().length > 0 && isFrequencyConfigValid(frequency) && area !== null,
-    [name, frequency, area],
-  );
-
-  let buttonBackground = isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)';
+  const canSubmit = useMemo(() => name.trim().length > 0 && isFrequencyConfigValid(frequency) && area !== null, [name, frequency, area]);
+  let buttonBackground = isDark ? 'rgba(255,255,255,0.12)' : 'rgba(10, 21, 241, 0.08)';
   let buttonTextColor = isDark ? '#71717a' : '#a1a1aa';
 
   if (canSubmit) {
@@ -45,24 +41,21 @@ export default function NewTask({ onCreate }: NewTaskProps) {
       frequency,
       area,
     });
+
+    setName('');
+    setEnergy(3);
+    setImpact(3);
+    setFrequency(null);
+    setArea(null);
   };
 
   return (
     <View className="flex-1">
       <Text className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">Nova atividade</Text>
-      <Text className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-        Defina o essencial para começar com clareza.
-      </Text>
+      <Text className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">Defina o essencial para começar com clareza.</Text>
 
-      <ScrollView
-        className="mt-5 flex-1"
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        contentContainerStyle={{ paddingBottom: 60 }}
-      >
-        <Text className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-          Nome
-        </Text>
+      <ScrollView className="mt-5 flex-1" showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 60 }}>
+        <Text className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Nome</Text>
         <TextInput
           value={name}
           onChangeText={setName}
@@ -91,27 +84,13 @@ export default function NewTask({ onCreate }: NewTaskProps) {
           <View className="-mx-1 flex-row flex-wrap">
             {LIFE_AREAS.map((item) => (
               <View key={item.id} className="w-1/2 p-1">
-                <OptionChip
-                  label={item.label}
-                  Icon={item.Icon}
-                  selected={area === item.id}
-                  accent={item.accent}
-                  isDark={isDark}
-                  onPress={() => setArea(item.id)}
-                  className="w-full"
-                />
+                <OptionChip label={item.label} Icon={item.Icon} selected={area === item.id} accent={item.accent} isDark={isDark} onPress={() => setArea(item.id)} className="w-full" />
               </View>
             ))}
           </View>
         </View>
 
-        <Pressable
-          onPress={handleCreate}
-          disabled={!canSubmit}
-          accessibilityRole="button"
-          accessibilityState={{ disabled: !canSubmit }}
-          className="mb-2 mt-8 active:opacity-80"
-        >
+        <Pressable onPress={handleCreate} disabled={!canSubmit} accessibilityRole="button" accessibilityState={{ disabled: !canSubmit }} className="mb-2 mt-8 active:opacity-80">
           <View className="items-center rounded-2xl py-3.5" style={{ backgroundColor: buttonBackground }}>
             <Text className="text-base font-semibold" style={{ color: buttonTextColor }}>
               Criar atividade
