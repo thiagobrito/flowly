@@ -14,13 +14,11 @@ module.exports = {
       type: 'ios.app',
       build:
         'xcodebuild -workspace ios/reactnativeboilerplate.xcworkspace -scheme reactnativeboilerplate -configuration Release -sdk iphonesimulator -arch x86_64 -derivedDataPath ios/build',
-      binaryPath:
-        'ios/build/Build/Products/Release-iphonesimulator/reactnativeboilerplate.app',
+      binaryPath: 'ios/build/Build/Products/Release-iphonesimulator/reactnativeboilerplate.app',
     },
     'android.release': {
       type: 'android.apk',
-      build:
-        'cd android && ./gradlew :app:assembleRelease :app:assembleAndroidTest -DtestBuildType=release && cd ..',
+      build: 'cd android && ./gradlew :app:assembleRelease :app:assembleAndroidTest -DtestBuildType=release && cd ..',
       binaryPath: 'android/app/build/outputs/apk/release/app-release.apk',
     },
   },

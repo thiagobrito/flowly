@@ -7,16 +7,7 @@ import type {
 } from 'react-native-health';
 
 import type { DateRange, HealthMetrics } from '../types';
-import {
-  average,
-  dayKey,
-  emptyMetrics,
-  isSameDay,
-  lastDaysRange,
-  minutesBetween,
-  stdDev,
-  sum,
-} from './shared';
+import { average, dayKey, emptyMetrics, isSameDay, lastDaysRange, minutesBetween, stdDev, sum } from './shared';
 import type { HealthDataProvider } from './types';
 
 /** Sleep sample as returned at runtime by `getSleepSamples`. */
@@ -42,10 +33,7 @@ const loadHealthKit = (): AppleHealthKitType | null => {
 };
 
 const promisify = <T>(
-  fn: (
-    options: HealthInputOptions,
-    cb: (err: string | null, res: T) => void,
-  ) => void,
+  fn: (options: HealthInputOptions, cb: (err: string | null, res: T) => void) => void,
   options: HealthInputOptions,
 ): Promise<T | null> =>
   new Promise((resolve) => {
@@ -58,14 +46,7 @@ const promisify = <T>(
 
 const sleepFromSamples = (
   samples: AppleSleepSample[],
-): Pick<
-  HealthMetrics,
-  | 'sleepHours'
-  | 'wakeTime'
-  | 'deepSleepMin'
-  | 'remSleepMin'
-  | 'sleepVariability'
-> => {
+): Pick<HealthMetrics, 'sleepHours' | 'wakeTime' | 'deepSleepMin' | 'remSleepMin' | 'sleepVariability'> => {
   const asleep = samples.filter((s) => ASLEEP_VALUES.has(s.value));
   if (!asleep.length) {
     return {
@@ -78,36 +59,20 @@ const sleepFromSamples = (
   }
 
   // Latest awakening across the asleep samples.
-  const wakeTime = asleep.reduce(
-    (latest, s) => (s.endDate > latest ? s.endDate : latest),
-    asleep[0]!.endDate,
-  );
+  const wakeTime = asleep.reduce((latest, s) => (s.endDate > latest ? s.endDate : latest), asleep[0]!.endDate);
   const wakeKey = dayKey(wakeTime);
 
   // Samples belonging to the most recent night (bucketed by wake day).
   const lastNight = asleep.filter((s) => dayKey(s.endDate) === wakeKey);
-  const lastNightMinutes = sum(
-    lastNight.map((s) => minutesBetween(s.startDate, s.endDate)),
-  );
-  const deepMin = sum(
-    lastNight
-      .filter((s) => s.value === 'DEEP')
-      .map((s) => minutesBetween(s.startDate, s.endDate)),
-  );
-  const remMin = sum(
-    lastNight
-      .filter((s) => s.value === 'REM')
-      .map((s) => minutesBetween(s.startDate, s.endDate)),
-  );
+  const lastNightMinutes = sum(lastNight.map((s) => minutesBetween(s.startDate, s.endDate)));
+  const deepMin = sum(lastNight.filter((s) => s.value === 'DEEP').map((s) => minutesBetween(s.startDate, s.endDate)));
+  const remMin = sum(lastNight.filter((s) => s.value === 'REM').map((s) => minutesBetween(s.startDate, s.endDate)));
 
   // Nightly totals across the range to estimate sleep variability (hours).
   const perNight = new Map<string, number>();
   asleep.forEach((s) => {
     const key = dayKey(s.endDate);
-    perNight.set(
-      key,
-      (perNight.get(key) ?? 0) + minutesBetween(s.startDate, s.endDate),
-    );
+    perNight.set(key, (perNight.get(key) ?? 0) + minutesBetween(s.startDate, s.endDate));
   });
   const nightlyHours = [...perNight.values()].map((m) => m / 60);
   const variability = stdDev(nightlyHours);
@@ -171,46 +136,30 @@ export class AppleHealthProvider implements HealthDataProvider {
     const { hk } = this;
     const [sleepRes, hrvRes, rhrRes, workoutRes] = await Promise.all([
       promisify<HealthValue[]>((o, cb) => hk.getSleepSamples(o, cb), options),
-      promisify<HealthValue[]>(
-        (o, cb) => hk.getHeartRateVariabilitySamples(o, cb),
-        options,
-      ),
-      promisify<HealthValue[]>(
-        (o, cb) => hk.getRestingHeartRateSamples(o, cb),
-        options,
-      ),
+      promisify<HealthValue[]>((o, cb) => hk.getHeartRateVariabilitySamples(o, cb), options),
+      promisify<HealthValue[]>((o, cb) => hk.getRestingHeartRateSamples(o, cb), options),
       new Promise<HKWorkoutQueriedSampleType[] | null>((resolve) => {
         try {
-          hk.getAnchoredWorkouts(options, (err, res) =>
-            resolve(err ? null : res?.data ?? null),
-          );
+          hk.getAnchoredWorkouts(options, (err, res) => resolve(err ? null : res?.data ?? null));
         } catch {
           resolve(null);
         }
       }),
     ]);
 
-    const sleep = sleepFromSamples(
-      (sleepRes ?? []) as unknown as AppleSleepSample[],
-    );
+    const sleep = sleepFromSamples((sleepRes ?? []) as unknown as AppleSleepSample[]);
 
     // Apple HRV (SDNN) is reported in milliseconds by react-native-health.
     const hrvMs = average((hrvRes ?? []).map((s) => s.value));
 
     // Most recent resting heart rate sample.
-    const rhrSorted = (rhrRes ?? [])
-      .slice()
-      .sort((a, b) => b.endDate.localeCompare(a.endDate));
+    const rhrSorted = (rhrRes ?? []).slice().sort((a, b) => b.endDate.localeCompare(a.endDate));
     const restingHeartRate = rhrSorted.length ? rhrSorted[0]!.value : null;
 
     const workouts = workoutRes ?? [];
     const todays = workouts.filter((w) => w.start && isSameDay(w.start, now));
-    const workoutMinutesToday = todays.length
-      ? sum(todays.map(workoutMinutes))
-      : null;
-    const trainingLoad7d = workouts.length
-      ? sum(workouts.map(workoutMinutes))
-      : null;
+    const workoutMinutesToday = todays.length ? sum(todays.map(workoutMinutes)) : null;
+    const trainingLoad7d = workouts.length ? sum(workouts.map(workoutMinutes)) : null;
 
     return {
       ...sleep,

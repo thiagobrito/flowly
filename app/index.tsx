@@ -21,11 +21,7 @@ function Home() {
   return (
     <View className="flex-1 bg-white dark:bg-black">
       <LinearGradient
-        colors={
-          isDark
-            ? ['#0b1220', '#070b14', '#000000']
-            : ['#cfe3f5', '#eaf1f8', '#f7f8fa']
-        }
+        colors={isDark ? ['#0b1220', '#070b14', '#000000'] : ['#cfe3f5', '#eaf1f8', '#f7f8fa']}
         locations={[0, 0.45, 1]}
         style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 }}
       />

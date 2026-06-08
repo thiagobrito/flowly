@@ -11,12 +11,7 @@ type DeckSlotProps = {
   children: ReactNode;
 };
 
-export const DeckSlot = ({
-  slotIndex,
-  index,
-  drag,
-  children,
-}: DeckSlotProps) => {
+export const DeckSlot = ({ slotIndex, index, drag, children }: DeckSlotProps) => {
   const animatedStyle = useAnimatedStyle(() => {
     const virtualIndex = index.value - drag.value / STEP;
     const d = slotIndex - virtualIndex;

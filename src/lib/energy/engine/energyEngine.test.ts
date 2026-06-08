@@ -5,9 +5,7 @@ import { computeEnergyScore } from './energyEngine';
 // Fixed reference time: 14:00, near the circadian peak.
 const NOW = '2026-06-08T14:00:00.000Z';
 
-const baseMetrics = (
-  overrides: Partial<HealthMetrics> = {},
-): HealthMetrics => ({
+const baseMetrics = (overrides: Partial<HealthMetrics> = {}): HealthMetrics => ({
   sleepHours: 8,
   // Woke at ~06:30 (ideal), 7.5h before NOW.
   wakeTime: '2026-06-08T06:30:00.000Z',
@@ -57,9 +55,7 @@ describe('computeEnergyScore', () => {
   });
 
   it('weights sleep hours as the strongest single signal', () => {
-    const sub = computeEnergyScore(baseMetrics()).breakdown.find(
-      (s) => s.key === 'sleepHours',
-    );
+    const sub = computeEnergyScore(baseMetrics()).breakdown.find((s) => s.key === 'sleepHours');
     expect(sub?.tier).toBe('MUITO_ALTO');
     expect(sub?.weight).toBe(WEIGHT_TIERS.MUITO_ALTO);
   });
@@ -79,14 +75,7 @@ describe('computeEnergyScore', () => {
     const missing = result.breakdown.filter((s) => !s.available);
 
     expect(missing.map((s) => s.key).sort()).toEqual(
-      [
-        'deepSleep',
-        'hrv',
-        'remSleep',
-        'restingHeartRate',
-        'sleepVariability',
-        'trainingLoad7d',
-      ].sort(),
+      ['deepSleep', 'hrv', 'remSleep', 'restingHeartRate', 'sleepVariability', 'trainingLoad7d'].sort(),
     );
     // timeAwake and workoutToday are always available; plus sleepHours, wakeTime.
     expect(available.length).toBe(4);
@@ -110,9 +99,7 @@ describe('computeEnergyScore', () => {
 
     // Only timeAwake (circadian) and workoutToday remain available.
     const available = result.breakdown.filter((s) => s.available);
-    expect(available.map((s) => s.key).sort()).toEqual(
-      ['timeAwake', 'workoutToday'].sort(),
-    );
+    expect(available.map((s) => s.key).sort()).toEqual(['timeAwake', 'workoutToday'].sort());
   });
 
   it('respects a custom configuration override', () => {

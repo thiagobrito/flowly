@@ -2,13 +2,7 @@
   // Configuration for JavaScript files
   "extends": ["airbnb-base", "plugin:prettier/recommended"],
   "rules": {
-    "prettier/prettier": [
-      "error",
-      {
-        "singleQuote": true,
-        "endOfLine": "auto"
-      }
-    ]
+    "prettier/prettier": "error"
   },
   "overrides": [
     // Configuration for TypeScript files
@@ -32,13 +26,7 @@
         "project": "./tsconfig.json"
       },
       "rules": {
-        "prettier/prettier": [
-          "error",
-          {
-            "singleQuote": true,
-            "endOfLine": "auto"
-          }
-        ],
+        "prettier/prettier": "error",
         "import/extensions": [
           "error",
           "ignorePackages",

@@ -16,10 +16,7 @@ import { clamp, hourOfDay, hoursBetween, triangular } from './normalize';
  * Reservoir replenishment from the last sleep session.
  * Full reservoir at `idealSleepHours`; mild penalty for large oversleep.
  */
-export const sleepReservoirScore = (
-  sleepHours: number,
-  ranges: NormalizationRanges,
-): number => {
+export const sleepReservoirScore = (sleepHours: number, ranges: NormalizationRanges): number => {
   const { idealSleepHours } = ranges;
   if (sleepHours <= idealSleepHours) {
     return clamp((sleepHours / idealSleepHours) * 100);
@@ -48,11 +45,7 @@ export const circadianAlertness = (nowIso: string): number => {
  * Reservoir depletion driven by continuous time awake.
  * Full energy right after waking, decaying to ~0 by `maxAwakeHours`.
  */
-export const timeAwakeScore = (
-  wakeTimeIso: string,
-  nowIso: string,
-  ranges: NormalizationRanges,
-): number => {
+export const timeAwakeScore = (wakeTimeIso: string, nowIso: string, ranges: NormalizationRanges): number => {
   const awake = Math.max(0, hoursBetween(wakeTimeIso, nowIso));
   return clamp(100 - (awake / ranges.maxAwakeHours) * 100);
 };
@@ -61,10 +54,7 @@ export const timeAwakeScore = (
  * How well the wake-up time aligns with the user's ideal circadian wake hour.
  * Rewards consistent, well-timed awakenings.
  */
-export const wakeAlignmentScore = (
-  wakeTimeIso: string,
-  ranges: NormalizationRanges,
-): number => {
+export const wakeAlignmentScore = (wakeTimeIso: string, ranges: NormalizationRanges): number => {
   const wakeHour = hourOfDay(wakeTimeIso);
   return triangular(wakeHour, ranges.idealWakeHour, ranges.wakeToleranceHours);
 };

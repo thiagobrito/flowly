@@ -1,17 +1,10 @@
-import DateTimePicker, {
-  type DateTimePickerEvent,
-} from '@react-native-community/datetimepicker';
+import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import type { LucideIcon } from 'lucide-react-native';
 import { Calendar, Clock, Link2 } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { Platform, Pressable, Text, View } from 'react-native';
 
-import {
-  OptionChip,
-  SegmentedToggle,
-  Stepper,
-  WeekdayToggles,
-} from './components';
+import { OptionChip, SegmentedToggle, Stepper, WeekdayToggles } from './components';
 import type { FrequencyConfig, FrequencyId } from './data';
 import { DEFAULT_FREQUENCY_CONFIG, FREQUENCIES, TRIGGER_EVENTS } from './data';
 
@@ -98,26 +91,18 @@ function DateTimeField({
   }
 
   return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      className="flex-1 active:opacity-80"
-    >
+    <Pressable onPress={onPress} accessibilityRole="button" className="flex-1 active:opacity-80">
       <View
         className="rounded-2xl border p-3"
         style={{
           borderColor,
-          backgroundColor: isDark
-            ? 'rgba(255,255,255,0.06)'
-            : 'rgba(255,255,255,0.7)',
+          backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.7)',
         }}
       >
         <View className="flex-row items-center gap-2">
           <Icon size={16} color={iconColor} />
           <View>
-            <Text className="text-xs text-zinc-500 dark:text-zinc-400">
-              {label}
-            </Text>
+            <Text className="text-xs text-zinc-500 dark:text-zinc-400">{label}</Text>
             <Text className="text-sm font-medium" style={{ color: valueColor }}>
               {value ?? placeholder}
             </Text>
@@ -146,10 +131,7 @@ function OnceConfigPanel({
     return pickerMode === 'time' ? parseTime(config.time, baseDate) : baseDate;
   }, [config.date, config.time, pickerMode]);
 
-  const handlePickerChange = (
-    event: DateTimePickerEvent,
-    selectedDate?: Date,
-  ) => {
+  const handlePickerChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
     if (Platform.OS === 'android') setPickerMode(null);
     if (event.type === 'dismissed' || !selectedDate) {
       setPickerMode(null);
@@ -198,10 +180,7 @@ function OnceConfigPanel({
       </View>
 
       {config.time ? (
-        <Pressable
-          onPress={clearTime}
-          className="mt-2 self-start active:opacity-70"
-        >
+        <Pressable onPress={clearTime} className="mt-2 self-start active:opacity-70">
           <Text className="text-xs font-medium" style={{ color: accent }}>
             Remover hora
           </Text>
@@ -333,9 +312,7 @@ function IntervalConfigPanel({
 }) {
   return (
     <View>
-      <Text className="mb-2 text-sm text-zinc-500 dark:text-zinc-400">
-        A cada
-      </Text>
+      <Text className="mb-2 text-sm text-zinc-500 dark:text-zinc-400">A cada</Text>
       <Stepper
         value={config.everyNDays}
         onChange={(everyNDays) => onChange({ ...config, everyNDays })}
@@ -392,61 +369,21 @@ function ConfigPanel({
 }) {
   switch (config.kind) {
     case 'once':
-      return (
-        <OnceConfigPanel
-          config={config}
-          onChange={onChange}
-          isDark={isDark}
-          accent={accent}
-        />
-      );
+      return <OnceConfigPanel config={config} onChange={onChange} isDark={isDark} accent={accent} />;
     case 'daily':
-      return (
-        <DailyConfigPanel
-          config={config}
-          onChange={onChange}
-          isDark={isDark}
-          accent={accent}
-        />
-      );
+      return <DailyConfigPanel config={config} onChange={onChange} isDark={isDark} accent={accent} />;
     case 'weekly':
-      return (
-        <WeeklyConfigPanel
-          config={config}
-          onChange={onChange}
-          isDark={isDark}
-          accent={accent}
-        />
-      );
+      return <WeeklyConfigPanel config={config} onChange={onChange} isDark={isDark} accent={accent} />;
     case 'interval':
-      return (
-        <IntervalConfigPanel
-          config={config}
-          onChange={onChange}
-          isDark={isDark}
-          accent={accent}
-        />
-      );
+      return <IntervalConfigPanel config={config} onChange={onChange} isDark={isDark} accent={accent} />;
     case 'trigger':
-      return (
-        <TriggerConfigPanel
-          config={config}
-          onChange={onChange}
-          isDark={isDark}
-          accent={accent}
-        />
-      );
+      return <TriggerConfigPanel config={config} onChange={onChange} isDark={isDark} accent={accent} />;
     default:
       return null;
   }
 }
 
-export function FrequencyPicker({
-  value,
-  onChange,
-  isDark,
-  accent,
-}: FrequencyPickerProps) {
+export function FrequencyPicker({ value, onChange, isDark, accent }: FrequencyPickerProps) {
   const selectedKind = value?.kind ?? null;
 
   const handleSelectMode = (kind: FrequencyId) => {
@@ -477,17 +414,10 @@ export function FrequencyPicker({
           className="mt-4 rounded-2xl border p-4"
           style={{
             borderColor: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)',
-            backgroundColor: isDark
-              ? 'rgba(255,255,255,0.04)'
-              : 'rgba(255,255,255,0.5)',
+            backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.5)',
           }}
         >
-          <ConfigPanel
-            config={value}
-            onChange={onChange}
-            isDark={isDark}
-            accent={accent}
-          />
+          <ConfigPanel config={value} onChange={onChange} isDark={isDark} accent={accent} />
         </View>
       ) : null}
     </View>

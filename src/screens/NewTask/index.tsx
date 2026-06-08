@@ -1,13 +1,6 @@
 import { HeartPulse, Timer, TrendingUp, Zap } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
-import {
-  Pressable,
-  ScrollView,
-  Text,
-  TextInput,
-  useColorScheme,
-  View,
-} from 'react-native';
+import { Pressable, ScrollView, Text, TextInput, useColorScheme, View } from 'react-native';
 
 import { LevelScale, OptionChip, SectionHeader } from './components';
 import type { FrequencyConfig, NewTaskPayload } from './data';
@@ -28,10 +21,7 @@ export default function NewTask({ onCreate }: NewTaskProps) {
   const [area, setArea] = useState<string | null>(null);
 
   const canSubmit = useMemo(
-    () =>
-      name.trim().length > 0 &&
-      isFrequencyConfigValid(frequency) &&
-      area !== null,
+    () => name.trim().length > 0 && isFrequencyConfigValid(frequency) && area !== null,
     [name, frequency, area],
   );
 
@@ -44,11 +34,7 @@ export default function NewTask({ onCreate }: NewTaskProps) {
   }
 
   const handleCreate = () => {
-    if (
-      !isFrequencyConfigValid(frequency) ||
-      area === null ||
-      name.trim().length === 0
-    ) {
+    if (!isFrequencyConfigValid(frequency) || area === null || name.trim().length === 0) {
       return;
     }
 
@@ -63,18 +49,12 @@ export default function NewTask({ onCreate }: NewTaskProps) {
 
   return (
     <View className="flex-1">
-      <Text className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
-        Nova atividade
-      </Text>
+      <Text className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">Nova atividade</Text>
       <Text className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
         Defina o essencial para começar com clareza.
       </Text>
 
-      <ScrollView
-        className="mt-5 flex-1"
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
+      <ScrollView className="mt-5 flex-1" showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         <Text className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
           Nome
         </Text>
@@ -88,42 +68,21 @@ export default function NewTask({ onCreate }: NewTaskProps) {
 
         <View className="mt-6">
           <SectionHeader label="Energia" Icon={Zap} accent="#22c55e" />
-          <LevelScale
-            value={energy}
-            onChange={setEnergy}
-            Icon={Zap}
-            accent="#22c55e"
-            isDark={isDark}
-          />
+          <LevelScale value={energy} onChange={setEnergy} Icon={Zap} accent="#22c55e" isDark={isDark} />
         </View>
 
         <View className="mt-6">
           <SectionHeader label="Impacto" Icon={TrendingUp} accent="#3b82f6" />
-          <LevelScale
-            value={impact}
-            onChange={setImpact}
-            Icon={TrendingUp}
-            accent="#3b82f6"
-            isDark={isDark}
-          />
+          <LevelScale value={impact} onChange={setImpact} Icon={TrendingUp} accent="#3b82f6" isDark={isDark} />
         </View>
 
         <View className="mt-6">
           <SectionHeader label="Frequência" Icon={Timer} accent="#f97316" />
-          <FrequencyPicker
-            value={frequency}
-            onChange={setFrequency}
-            isDark={isDark}
-            accent="#f97316"
-          />
+          <FrequencyPicker value={frequency} onChange={setFrequency} isDark={isDark} accent="#f97316" />
         </View>
 
         <View className="mt-6">
-          <SectionHeader
-            label="Área da vida"
-            Icon={HeartPulse}
-            accent="#8b5cf6"
-          />
+          <SectionHeader label="Área da vida" Icon={HeartPulse} accent="#8b5cf6" />
           <View className="-mx-1 flex-row flex-wrap">
             {LIFE_AREAS.map((item) => (
               <View key={item.id} className="w-1/2 p-1">
@@ -148,14 +107,8 @@ export default function NewTask({ onCreate }: NewTaskProps) {
           accessibilityState={{ disabled: !canSubmit }}
           className="mb-2 mt-8 active:opacity-80"
         >
-          <View
-            className="items-center rounded-2xl py-3.5"
-            style={{ backgroundColor: buttonBackground }}
-          >
-            <Text
-              className="text-base font-semibold"
-              style={{ color: buttonTextColor }}
-            >
+          <View className="items-center rounded-2xl py-3.5" style={{ backgroundColor: buttonBackground }}>
+            <Text className="text-base font-semibold" style={{ color: buttonTextColor }}>
               Criar atividade
             </Text>
           </View>

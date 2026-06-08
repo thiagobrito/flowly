@@ -35,9 +35,7 @@ export interface UseEnergyScoreResult {
  * React hook that wires the full pipeline:
  * permissions -> Coletor de Dados -> Energy Engine -> Energy Score.
  */
-export const useEnergyScore = (
-  options: UseEnergyScoreOptions = {},
-): UseEnergyScoreResult => {
+export const useEnergyScore = (options: UseEnergyScoreOptions = {}): UseEnergyScoreResult => {
   const { config = defaultConfig, range, autoFetch = true } = options;
 
   const provider = useMemo(() => getHealthProvider(), []);

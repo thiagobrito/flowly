@@ -30,11 +30,7 @@ export const minutesBetween = (startIso: string, endIso: string): number =>
 /** Whether `iso` falls on the same calendar day as `now`. */
 export const isSameDay = (iso: string, now = new Date()): boolean => {
   const d = new Date(iso);
-  return (
-    d.getFullYear() === now.getFullYear() &&
-    d.getMonth() === now.getMonth() &&
-    d.getDate() === now.getDate()
-  );
+  return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
 };
 
 /** `YYYY-MM-DD` key in local time, used to bucket data per day. */
@@ -46,14 +42,12 @@ export const dayKey = (iso: string): string => {
 export const average = (values: number[]): number | null =>
   values.length ? values.reduce((a, b) => a + b, 0) / values.length : null;
 
-export const sum = (values: number[]): number =>
-  values.reduce((a, b) => a + b, 0);
+export const sum = (values: number[]): number => values.reduce((a, b) => a + b, 0);
 
 /** Population standard deviation, or `null` for fewer than 2 samples. */
 export const stdDev = (values: number[]): number | null => {
   if (values.length < 2) return null;
   const mean = sum(values) / values.length;
-  const variance =
-    values.reduce((acc, v) => acc + (v - mean) ** 2, 0) / values.length;
+  const variance = values.reduce((acc, v) => acc + (v - mean) ** 2, 0) / values.length;
   return Math.sqrt(variance);
 };

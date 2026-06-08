@@ -1,6 +1,5 @@
 /** Clamp a value to the [min, max] range (defaults to 0-100). */
-export const clamp = (value: number, min = 0, max = 100): number =>
-  Math.max(min, Math.min(max, value));
+export const clamp = (value: number, min = 0, max = 100): number => Math.max(min, Math.min(max, value));
 
 /**
  * Linearly map `value` from the `worst`..`best` interval onto 0..100, clamped.
@@ -15,11 +14,7 @@ export const linear = (value: number, worst: number, best: number): number => {
  * Triangular response peaking at `ideal` and decaying to 0 once the value is
  * `tolerance` units away on either side.
  */
-export const triangular = (
-  value: number,
-  ideal: number,
-  tolerance: number,
-): number => {
+export const triangular = (value: number, ideal: number, tolerance: number): number => {
   if (tolerance <= 0) return value === ideal ? 100 : 0;
   const diff = Math.abs(value - ideal);
   return clamp(100 - (diff / tolerance) * 100);

@@ -73,12 +73,7 @@ export default function BottomTabBar({ active, onChange }: BottomTabBarProps) {
           elevation: 12,
         }}
       >
-        <SideTabButton
-          tab={NEW_TAB}
-          active={active === NEW_TAB.key}
-          isDark={isDark}
-          onPress={() => onChange('new')}
-        />
+        <SideTabButton tab={NEW_TAB} active={active === NEW_TAB.key} isDark={isDark} onPress={() => onChange('new')} />
 
         <Pressable
           onPress={() => onChange('home')}
@@ -105,11 +100,7 @@ export default function BottomTabBar({ active, onChange }: BottomTabBarProps) {
               elevation: 10,
             }}
           >
-            <Home
-              size={30}
-              color="#ffffff"
-              strokeWidth={active === 'home' ? 2.6 : 2}
-            />
+            <Home size={30} color="#ffffff" strokeWidth={active === 'home' ? 2.6 : 2} />
           </LinearGradient>
         </Pressable>
 

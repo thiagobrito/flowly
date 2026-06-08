@@ -1,21 +1,9 @@
 import type * as HealthConnectModule from 'react-native-health-connect';
-import type {
-  Permission,
-  RecordResult,
-} from 'react-native-health-connect/lib/typescript/types';
+import type { Permission, RecordResult } from 'react-native-health-connect/lib/typescript/types';
 import type { SleepStage } from 'react-native-health-connect/lib/typescript/types/base.types';
 
 import type { DateRange, HealthMetrics } from '../types';
-import {
-  average,
-  dayKey,
-  emptyMetrics,
-  isSameDay,
-  lastDaysRange,
-  minutesBetween,
-  stdDev,
-  sum,
-} from './shared';
+import { average, dayKey, emptyMetrics, isSameDay, lastDaysRange, minutesBetween, stdDev, sum } from './shared';
 import type { HealthDataProvider } from './types';
 
 /** Health Connect `SleepSessionRecord.StageType` codes. */
@@ -25,12 +13,7 @@ const STAGE = {
   DEEP: 5,
   REM: 6,
 } as const;
-const ASLEEP_STAGES = new Set<number>([
-  STAGE.SLEEPING,
-  STAGE.LIGHT,
-  STAGE.DEEP,
-  STAGE.REM,
-]);
+const ASLEEP_STAGES = new Set<number>([STAGE.SLEEPING, STAGE.LIGHT, STAGE.DEEP, STAGE.REM]);
 
 type HealthConnect = typeof HealthConnectModule;
 
@@ -53,29 +36,14 @@ const READ_PERMISSIONS: Permission[] = [
 ];
 
 const stageMinutes = (stages: SleepStage[], stage: number): number =>
-  sum(
-    stages
-      .filter((s) => s.stage === stage)
-      .map((s) => minutesBetween(s.startTime, s.endTime)),
-  );
+  sum(stages.filter((s) => s.stage === stage).map((s) => minutesBetween(s.startTime, s.endTime)));
 
 const asleepMinutes = (stages: SleepStage[]): number =>
-  sum(
-    stages
-      .filter((s) => ASLEEP_STAGES.has(s.stage))
-      .map((s) => minutesBetween(s.startTime, s.endTime)),
-  );
+  sum(stages.filter((s) => ASLEEP_STAGES.has(s.stage)).map((s) => minutesBetween(s.startTime, s.endTime)));
 
 const sleepFromSessions = (
   sessions: RecordResult<'SleepSession'>[],
-): Pick<
-  HealthMetrics,
-  | 'sleepHours'
-  | 'wakeTime'
-  | 'deepSleepMin'
-  | 'remSleepMin'
-  | 'sleepVariability'
-> => {
+): Pick<HealthMetrics, 'sleepHours' | 'wakeTime' | 'deepSleepMin' | 'remSleepMin' | 'sleepVariability'> => {
   if (!sessions.length) {
     return {
       sleepHours: null,
@@ -86,24 +54,18 @@ const sleepFromSessions = (
     };
   }
 
-  const sorted = sessions
-    .slice()
-    .sort((a, b) => a.endTime.localeCompare(b.endTime));
+  const sorted = sessions.slice().sort((a, b) => a.endTime.localeCompare(b.endTime));
   const last = sorted[sorted.length - 1]!;
   const lastStages = last.stages ?? [];
 
   // Duration falls back to the session span when no stages are present.
-  const lastMinutes = lastStages.length
-    ? asleepMinutes(lastStages)
-    : minutesBetween(last.startTime, last.endTime);
+  const lastMinutes = lastStages.length ? asleepMinutes(lastStages) : minutesBetween(last.startTime, last.endTime);
 
   // Per-night totals to estimate variability (hours).
   const perNight = new Map<string, number>();
   sorted.forEach((session) => {
     const stages = session.stages ?? [];
-    const minutes = stages.length
-      ? asleepMinutes(stages)
-      : minutesBetween(session.startTime, session.endTime);
+    const minutes = stages.length ? asleepMinutes(stages) : minutesBetween(session.startTime, session.endTime);
     const key = dayKey(session.endTime);
     perNight.set(key, (perNight.get(key) ?? 0) + minutes);
   });
@@ -112,9 +74,7 @@ const sleepFromSessions = (
   return {
     sleepHours: lastMinutes / 60,
     wakeTime: last.endTime,
-    deepSleepMin: lastStages.length
-      ? stageMinutes(lastStages, STAGE.DEEP)
-      : null,
+    deepSleepMin: lastStages.length ? stageMinutes(lastStages, STAGE.DEEP) : null,
     remSleepMin: lastStages.length ? stageMinutes(lastStages, STAGE.REM) : null,
     sleepVariability: variability,
   };
@@ -170,9 +130,7 @@ export class HealthConnectProvider implements HealthDataProvider {
       startTime: range.startDate,
       endTime: range.endDate,
     };
-    const read = async <T extends Parameters<HealthConnect['readRecords']>[0]>(
-      recordType: T,
-    ) => {
+    const read = async <T extends Parameters<HealthConnect['readRecords']>[0]>(recordType: T) => {
       try {
         const { records } = await this.hc!.readRecords(recordType, {
           timeRangeFilter,
@@ -183,39 +141,28 @@ export class HealthConnectProvider implements HealthDataProvider {
       }
     };
 
-    const [sleepRecords, hrvRecords, rhrRecords, exerciseRecords] =
-      await Promise.all([
-        read('SleepSession'),
-        read('HeartRateVariabilityRmssd'),
-        read('RestingHeartRate'),
-        read('ExerciseSession'),
-      ]);
+    const [sleepRecords, hrvRecords, rhrRecords, exerciseRecords] = await Promise.all([
+      read('SleepSession'),
+      read('HeartRateVariabilityRmssd'),
+      read('RestingHeartRate'),
+      read('ExerciseSession'),
+    ]);
 
-    const sleep = sleepFromSessions(
-      sleepRecords as RecordResult<'SleepSession'>[],
-    );
+    const sleep = sleepFromSessions(sleepRecords as RecordResult<'SleepSession'>[]);
 
     const hrvMs = average(
-      (hrvRecords as RecordResult<'HeartRateVariabilityRmssd'>[]).map(
-        (r) => r.heartRateVariabilityMillis,
-      ),
+      (hrvRecords as RecordResult<'HeartRateVariabilityRmssd'>[]).map((r) => r.heartRateVariabilityMillis),
     );
 
     const rhrSorted = (rhrRecords as RecordResult<'RestingHeartRate'>[])
       .slice()
       .sort((a, b) => b.time.localeCompare(a.time));
-    const restingHeartRate = rhrSorted.length
-      ? rhrSorted[0]!.beatsPerMinute
-      : null;
+    const restingHeartRate = rhrSorted.length ? rhrSorted[0]!.beatsPerMinute : null;
 
     const sessions = exerciseRecords as RecordResult<'ExerciseSession'>[];
     const todays = sessions.filter((s) => isSameDay(s.startTime, now));
-    const workoutMinutesToday = todays.length
-      ? sum(todays.map((s) => minutesBetween(s.startTime, s.endTime)))
-      : null;
-    const trainingLoad7d = sessions.length
-      ? sum(sessions.map((s) => minutesBetween(s.startTime, s.endTime)))
-      : null;
+    const workoutMinutesToday = todays.length ? sum(todays.map((s) => minutesBetween(s.startTime, s.endTime))) : null;
+    const trainingLoad7d = sessions.length ? sum(sessions.map((s) => minutesBetween(s.startTime, s.endTime))) : null;
 
     return {
       ...sleep,

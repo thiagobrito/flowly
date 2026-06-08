@@ -11,8 +11,7 @@ import { DotsIndicator } from './DotsIndicator';
 import type { TodayFocusScreenProps } from './types';
 import { useDeckGesture } from './useDeckGesture';
 
-const clamp = (value: number, min: number, max: number) =>
-  Math.max(min, Math.min(max, value));
+const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
 
 export default function TodayFocusScreen<T>({
   items,
@@ -47,11 +46,7 @@ export default function TodayFocusScreen<T>({
   return (
     <View className="flex-1 bg-white dark:bg-black">
       <LinearGradient
-        colors={
-          isDark
-            ? ['#0b1220', '#070b14', '#000000']
-            : ['#cfe3f5', '#eaf1f8', '#f7f8fa']
-        }
+        colors={isDark ? ['#0b1220', '#070b14', '#000000'] : ['#cfe3f5', '#eaf1f8', '#f7f8fa']}
         locations={[0, 0.45, 1]}
         style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 }}
       />
@@ -59,19 +54,11 @@ export default function TodayFocusScreen<T>({
       <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
         <View className="flex-1 px-3">
           {/* Deck vertical de N cards */}
-          <View
-            className="relative mt-4 flex-1"
-            style={{ minHeight: CARD_HEIGHT + PEEK * 2 }}
-          >
+          <View className="relative mt-4 flex-1" style={{ minHeight: CARD_HEIGHT + PEEK * 2 }}>
             <GestureDetector gesture={panGesture}>
               <View className="flex-1">
                 {items.map((item, i) => (
-                  <DeckSlot
-                    key={keyExtractor?.(item, i) ?? String(i)}
-                    slotIndex={i}
-                    index={index}
-                    drag={drag}
-                  >
+                  <DeckSlot key={keyExtractor?.(item, i) ?? String(i)} slotIndex={i} index={index} drag={drag}>
                     <DeckCard isDark={isDark}>{renderItem(item, i)}</DeckCard>
                   </DeckSlot>
                 ))}

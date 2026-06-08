@@ -2,12 +2,7 @@ import type { EnergyConfig } from '../config';
 import { WEIGHT_TIERS } from '../config';
 import type { HealthMetrics, MetricKey, SubScore } from '../types';
 import { clamp, linear } from './normalize';
-import {
-  circadianAlertness,
-  sleepReservoirScore,
-  timeAwakeScore,
-  wakeAlignmentScore,
-} from './safte';
+import { circadianAlertness, sleepReservoirScore, timeAwakeScore, wakeAlignmentScore } from './safte';
 
 interface RawSub {
   key: MetricKey;
@@ -16,10 +11,7 @@ interface RawSub {
 }
 
 /** Workout-today contribution: a moderate session helps, an excessive one tires. */
-const workoutScore = (
-  metrics: HealthMetrics,
-  fatigueThreshold: number,
-): number => {
+const workoutScore = (metrics: HealthMetrics, fatigueThreshold: number): number => {
   if (!metrics.workoutToday) return 55;
   const minutes = metrics.workoutMinutesToday;
   if (minutes == null) return 70;
@@ -29,11 +21,7 @@ const workoutScore = (
 };
 
 /** 7-day training load: rewards an optimal band, penalizes overtraining. */
-const trainingLoadScore = (
-  load: number,
-  optimal: number,
-  max: number,
-): number => {
+const trainingLoadScore = (load: number, optimal: number, max: number): number => {
   if (load <= optimal) {
     // Ramp from a baseline up to the optimal peak.
     return clamp(60 + (load / optimal) * 40);
@@ -44,26 +32,17 @@ const trainingLoadScore = (
 };
 
 /** Compute the raw (pre-weight) normalized values for every metric. */
-const rawSubScores = (
-  metrics: HealthMetrics,
-  config: EnergyConfig,
-): RawSub[] => {
+const rawSubScores = (metrics: HealthMetrics, config: EnergyConfig): RawSub[] => {
   const { ranges } = config;
 
   return [
     {
       key: 'sleepHours',
-      value:
-        metrics.sleepHours == null
-          ? null
-          : sleepReservoirScore(metrics.sleepHours, ranges),
+      value: metrics.sleepHours == null ? null : sleepReservoirScore(metrics.sleepHours, ranges),
     },
     {
       key: 'wakeTime',
-      value:
-        metrics.wakeTime == null
-          ? null
-          : wakeAlignmentScore(metrics.wakeTime, ranges),
+      value: metrics.wakeTime == null ? null : wakeAlignmentScore(metrics.wakeTime, ranges),
     },
     {
       key: 'timeAwake',
@@ -72,8 +51,7 @@ const rawSubScores = (
       value:
         metrics.wakeTime == null
           ? circadianAlertness(metrics.now)
-          : 0.6 * timeAwakeScore(metrics.wakeTime, metrics.now, ranges) +
-            0.4 * circadianAlertness(metrics.now),
+          : 0.6 * timeAwakeScore(metrics.wakeTime, metrics.now, ranges) + 0.4 * circadianAlertness(metrics.now),
     },
     {
       key: 'workoutToday',
@@ -81,58 +59,37 @@ const rawSubScores = (
     },
     {
       key: 'hrv',
-      value:
-        metrics.hrvMs == null
-          ? null
-          : linear(metrics.hrvMs, ranges.hrvFloor, ranges.hrvCeil),
+      value: metrics.hrvMs == null ? null : linear(metrics.hrvMs, ranges.hrvFloor, ranges.hrvCeil),
     },
     {
       key: 'restingHeartRate',
       value:
-        metrics.restingHeartRate == null
-          ? null
-          : linear(metrics.restingHeartRate, ranges.rhrWorst, ranges.rhrBest),
+        metrics.restingHeartRate == null ? null : linear(metrics.restingHeartRate, ranges.rhrWorst, ranges.rhrBest),
     },
     {
       key: 'deepSleep',
-      value:
-        metrics.deepSleepMin == null
-          ? null
-          : linear(metrics.deepSleepMin, 0, ranges.deepIdealMin),
+      value: metrics.deepSleepMin == null ? null : linear(metrics.deepSleepMin, 0, ranges.deepIdealMin),
     },
     {
       key: 'remSleep',
-      value:
-        metrics.remSleepMin == null
-          ? null
-          : linear(metrics.remSleepMin, 0, ranges.remIdealMin),
+      value: metrics.remSleepMin == null ? null : linear(metrics.remSleepMin, 0, ranges.remIdealMin),
     },
     {
       key: 'sleepVariability',
-      value:
-        metrics.sleepVariability == null
-          ? null
-          : linear(metrics.sleepVariability, ranges.variabilityWorst, 0),
+      value: metrics.sleepVariability == null ? null : linear(metrics.sleepVariability, ranges.variabilityWorst, 0),
     },
     {
       key: 'trainingLoad7d',
       value:
         metrics.trainingLoad7d == null
           ? null
-          : trainingLoadScore(
-              metrics.trainingLoad7d,
-              ranges.trainingLoadOptimal,
-              ranges.trainingLoadMax,
-            ),
+          : trainingLoadScore(metrics.trainingLoad7d, ranges.trainingLoadOptimal, ranges.trainingLoadMax),
     },
   ];
 };
 
 /** Build the fully-described, weighted sub-scores for the breakdown. */
-export const buildSubScores = (
-  metrics: HealthMetrics,
-  config: EnergyConfig,
-): SubScore[] =>
+export const buildSubScores = (metrics: HealthMetrics, config: EnergyConfig): SubScore[] =>
   rawSubScores(metrics, config).map(({ key, value }) => {
     const meta = config.metrics[key];
     return {

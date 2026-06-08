@@ -14,13 +14,7 @@ type LevelScaleProps = {
   isDark: boolean;
 };
 
-export function LevelScale({
-  value,
-  onChange,
-  Icon,
-  accent,
-  isDark,
-}: LevelScaleProps) {
+export function LevelScale({ value, onChange, Icon, accent, isDark }: LevelScaleProps) {
   const label = LEVEL_LABELS[Math.max(0, Math.min(4, value - 1))];
   const emptyBarColor = isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)';
 
@@ -60,9 +54,7 @@ export function LevelScale({
           {value}
         </Text>
       </View>
-      <Text className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
-        {label}
-      </Text>
+      <Text className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">{label}</Text>
     </View>
   );
 }
@@ -88,9 +80,7 @@ export function OptionChip({
 }: OptionChipProps) {
   let iconColor = isDark ? '#a1a1aa' : '#71717a';
   let borderColor = isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)';
-  let backgroundColor = isDark
-    ? 'rgba(255,255,255,0.06)'
-    : 'rgba(255,255,255,0.7)';
+  let backgroundColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.7)';
   let textColor = isDark ? '#e4e4e7' : '#3f3f46';
 
   if (selected) {
@@ -140,9 +130,7 @@ export function SectionHeader({ label, Icon, accent }: SectionHeaderProps) {
   return (
     <View className="mb-3 flex-row items-center">
       <Icon size={16} color={accent} style={{ marginRight: 8 }} />
-      <Text className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-        {label}
-      </Text>
+      <Text className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{label}</Text>
     </View>
   );
 }
@@ -155,21 +143,13 @@ type SegmentedToggleProps = {
   isDark: boolean;
 };
 
-export function SegmentedToggle({
-  options,
-  value,
-  onChange,
-  accent,
-  isDark,
-}: SegmentedToggleProps) {
+export function SegmentedToggle({ options, value, onChange, accent, isDark }: SegmentedToggleProps) {
   return (
     <View
       className="flex-row rounded-2xl border p-1"
       style={{
         borderColor: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)',
-        backgroundColor: isDark
-          ? 'rgba(255,255,255,0.04)'
-          : 'rgba(255,255,255,0.5)',
+        backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.5)',
       }}
     >
       {options.map((option) => {
@@ -195,10 +175,7 @@ export function SegmentedToggle({
                 backgroundColor: selected ? `${accent}22` : 'transparent',
               }}
             >
-              <Text
-                className="text-sm font-medium"
-                style={{ color: optionColor }}
-              >
+              <Text className="text-sm font-medium" style={{ color: optionColor }}>
                 {option.label}
               </Text>
             </View>
@@ -219,15 +196,7 @@ type StepperProps = {
   isDark: boolean;
 };
 
-export function Stepper({
-  value,
-  onChange,
-  min = 1,
-  max = 99,
-  suffix,
-  accent,
-  isDark,
-}: StepperProps) {
+export function Stepper({ value, onChange, min = 1, max = 99, suffix, accent, isDark }: StepperProps) {
   const decrement = () => onChange(Math.max(min, value - 1));
   const increment = () => onChange(Math.min(max, value + 1));
 
@@ -254,11 +223,7 @@ export function Stepper({
         <Text className="text-2xl font-bold" style={{ color: accent }}>
           {value}
         </Text>
-        {suffix ? (
-          <Text className="text-sm text-zinc-500 dark:text-zinc-400">
-            {suffix}
-          </Text>
-        ) : null}
+        {suffix ? <Text className="text-sm text-zinc-500 dark:text-zinc-400">{suffix}</Text> : null}
       </View>
 
       <Pressable
@@ -286,12 +251,7 @@ type WeekdayTogglesProps = {
   isDark: boolean;
 };
 
-export function WeekdayToggles({
-  value,
-  onChange,
-  accent,
-  isDark,
-}: WeekdayTogglesProps) {
+export function WeekdayToggles({ value, onChange, accent, isDark }: WeekdayTogglesProps) {
   const toggleDay = (dayIndex: number) => {
     if (value.includes(dayIndex)) {
       onChange(value.filter((d) => d !== dayIndex));
@@ -329,10 +289,7 @@ export function WeekdayToggles({
                 backgroundColor: selected ? `${accent}22` : 'transparent',
               }}
             >
-              <Text
-                className="text-xs font-semibold"
-                style={{ color: dayTextColor }}
-              >
+              <Text className="text-xs font-semibold" style={{ color: dayTextColor }}>
                 {day.label}
               </Text>
             </View>

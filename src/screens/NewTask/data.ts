@@ -105,9 +105,7 @@ export const DEFAULT_FREQUENCY_CONFIG: Record<FrequencyId, FrequencyConfig> = {
   trigger: { kind: 'trigger', eventId: null },
 };
 
-export function isFrequencyConfigValid(
-  config: FrequencyConfig | null,
-): config is FrequencyConfig {
+export function isFrequencyConfigValid(config: FrequencyConfig | null): config is FrequencyConfig {
   if (!config) return false;
 
   switch (config.kind) {
@@ -116,9 +114,7 @@ export function isFrequencyConfigValid(
     case 'daily':
       return config.everyDay || config.days.length > 0;
     case 'weekly':
-      return config.mode === 'count'
-        ? config.count >= 1
-        : config.days.length > 0;
+      return config.mode === 'count' ? config.count >= 1 : config.days.length > 0;
     case 'interval':
       return config.everyNDays >= 1;
     case 'trigger':
@@ -128,13 +124,7 @@ export function isFrequencyConfigValid(
   }
 }
 
-export const LEVEL_LABELS = [
-  'Muito baixo',
-  'Baixo',
-  'Médio',
-  'Alto',
-  'Muito alto',
-] as const;
+export const LEVEL_LABELS = ['Muito baixo', 'Baixo', 'Médio', 'Alto', 'Muito alto'] as const;
 
 export type Task = {
   id: string;
@@ -208,20 +198,7 @@ export const SAMPLE_TASKS: Task[] = [
   },
 ];
 
-const MONTHS_SHORT = [
-  'jan',
-  'fev',
-  'mar',
-  'abr',
-  'mai',
-  'jun',
-  'jul',
-  'ago',
-  'set',
-  'out',
-  'nov',
-  'dez',
-] as const;
+const MONTHS_SHORT = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'] as const;
 
 export function getLifeArea(id: string): LifeArea | undefined {
   return LIFE_AREAS.find((area) => area.id === id);
@@ -257,9 +234,7 @@ export function describeFrequency(config: FrequencyConfig): string {
       }
       return config.days.length > 0 ? formatDayList(config.days) : 'Semanal';
     case 'interval':
-      return config.everyNDays === 1
-        ? 'A cada dia'
-        : `A cada ${config.everyNDays} dias`;
+      return config.everyNDays === 1 ? 'A cada dia' : `A cada ${config.everyNDays} dias`;
     case 'trigger': {
       const event = TRIGGER_EVENTS.find((item) => item.id === config.eventId);
       return event?.label ?? 'Gatilho';

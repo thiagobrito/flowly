@@ -151,25 +151,7 @@ export {
   lastDaysRange,
   type ProviderPlatform,
 } from './collectors';
-export {
-  defaultConfig,
-  type EnergyConfig,
-  type MetricConfig,
-  type NormalizationRanges,
-  WEIGHT_TIERS,
-} from './config';
+export { defaultConfig, type EnergyConfig, type MetricConfig, type NormalizationRanges, WEIGHT_TIERS } from './config';
 export { computeEnergyScore } from './engine';
-export {
-  useEnergyScore,
-  type UseEnergyScoreOptions,
-  type UseEnergyScoreResult,
-} from './hooks/useEnergyScore';
-export type {
-  DateRange,
-  EnergyBand,
-  EnergyScore,
-  HealthMetrics,
-  MetricKey,
-  SubScore,
-  WeightTier,
-} from './types';
+export { useEnergyScore, type UseEnergyScoreOptions, type UseEnergyScoreResult } from './hooks/useEnergyScore';
+export type { DateRange, EnergyBand, EnergyScore, HealthMetrics, MetricKey, SubScore, WeightTier } from './types';

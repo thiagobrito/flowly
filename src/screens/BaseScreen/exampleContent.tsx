@@ -46,12 +46,7 @@ type ProgressRingProps = {
   isDark: boolean;
 };
 
-export function ProgressRing({
-  progress,
-  size = 80,
-  strokeWidth = 7,
-  isDark,
-}: ProgressRingProps) {
+export function ProgressRing({ progress, size = 80, strokeWidth = 7, isDark }: ProgressRingProps) {
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const clamped = Math.max(0, Math.min(100, progress));
@@ -62,14 +57,7 @@ export function ProgressRing({
 
   return (
     <Svg width={size} height={size}>
-      <Circle
-        cx={size / 2}
-        cy={size / 2}
-        r={radius}
-        stroke={trackColor}
-        strokeWidth={strokeWidth}
-        fill="none"
-      />
+      <Circle cx={size / 2} cy={size / 2} r={radius} stroke={trackColor} strokeWidth={strokeWidth} fill="none" />
       <Circle
         cx={size / 2}
         cy={size / 2}
@@ -90,13 +78,7 @@ export function ProgressRing({
 /* Card de tarefa                                                              */
 /* -------------------------------------------------------------------------- */
 
-export function TaskCardContent({
-  item,
-  isDark: _isDark,
-}: {
-  item: TaskItem;
-  isDark: boolean;
-}) {
+export function TaskCardContent({ item, isDark: _isDark }: { item: TaskItem; isDark: boolean }) {
   return (
     <View className="flex-1">
       <View className="flex-row items-center justify-between">
@@ -113,13 +95,8 @@ export function TaskCardContent({
       </View>
 
       <View className="mt-4 flex-1">
-        <Text className="text-3xl font-bold leading-tight text-zinc-900 dark:text-zinc-50">
-          {item.title}
-        </Text>
-        <Text
-          className="mt-3 text-base leading-relaxed text-zinc-500 dark:text-zinc-400"
-          numberOfLines={3}
-        >
+        <Text className="text-3xl font-bold leading-tight text-zinc-900 dark:text-zinc-50">{item.title}</Text>
+        <Text className="mt-3 text-base leading-relaxed text-zinc-500 dark:text-zinc-400" numberOfLines={3}>
           {item.description}
         </Text>
       </View>
