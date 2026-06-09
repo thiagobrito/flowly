@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ScrollView, useColorScheme, View } from 'react-native';
 
 import { useEnergyScore } from '@/lib/energy';
@@ -7,6 +7,7 @@ import { api } from '@/lib/network';
 import type { Task } from '../NewTask/data';
 import Header from './components/Header';
 import TaskCard from './components/TaskCard';
+import { prioritizeTasks } from './priorization';
 
 type TasksProps = {
   onSelect?: (task: Task) => void;
@@ -38,12 +39,16 @@ export default function Tasks({ onSelect, onLogout }: TasksProps) {
     fetchTasks();
   }, []);
 
+  // `useEnergyScore` retorna 0-100; o FlowScore espera energia atual em 0-5.
+  const currentEnergy = (energyInfo.score ?? 0) / 20;
+  const prioritizedTasks = useMemo(() => prioritizeTasks(tasks, currentEnergy), [tasks, currentEnergy]);
+
   return (
     <View className="flex-1">
       <Header isDark={isDark} energyInfo={energyInfo} onLogout={onLogout} />
 
       <ScrollView className="mt-2 flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 50 }}>
-        {tasks.map((task) => (
+        {prioritizedTasks.map((task) => (
           <TaskCard key={task.id} task={task} selected={selectedId === task.id} isDark={isDark} onPress={() => handleSelect(task)} />
         ))}
       </ScrollView>
