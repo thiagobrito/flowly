@@ -5,7 +5,6 @@ import { useEnergyScore } from '@/lib/energy';
 import { api } from '@/lib/network';
 
 import type { Task } from '../NewTask/data';
-import { SAMPLE_TASKS } from '../NewTask/data';
 import Header from './components/Header';
 import TaskCard from './components/TaskCard';
 
@@ -18,7 +17,7 @@ export default function Tasks({ onSelect, onLogout }: TasksProps) {
   const isDark = useColorScheme() === 'dark';
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const energyInfo = useEnergyScore();
-  const [tasks, setTasks] = useState<Task[]>(SAMPLE_TASKS);
+  const [tasks, setTasks] = useState<Task[]>([]);
 
   const handleSelect = (task: Task) => {
     setSelectedId(task.id);

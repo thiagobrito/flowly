@@ -111,69 +111,6 @@ export type Task = {
   frequency: FrequencyConfig;
 };
 
-export const SAMPLE_TASKS: Task[] = [
-  {
-    id: 't1',
-    name: 'Consulta médica',
-    area: 'health',
-    energy: 2,
-    impact: 5,
-    frequency: { kind: 'once', date: '2026-06-12', time: '14:00' },
-  },
-  {
-    id: 't2',
-    name: 'Beber 2L de água',
-    area: 'health',
-    energy: 1,
-    impact: 3,
-    frequency: { kind: 'daily', everyDay: true, days: [] },
-  },
-  {
-    id: 't3',
-    name: 'Treino na academia',
-    area: 'leisure',
-    energy: 4,
-    impact: 4,
-    frequency: { kind: 'daily', everyDay: false, days: [1, 3, 5] },
-  },
-  {
-    id: 't4',
-    name: 'Ligar para a família',
-    area: 'relationships',
-    energy: 2,
-    impact: 5,
-    frequency: { kind: 'weekly', mode: 'count', count: 2, days: [] },
-  },
-  {
-    id: 't5',
-    name: 'Revisão financeira',
-    area: 'finance',
-    impact: 4,
-    frequency: { kind: 'weekly', mode: 'days', count: 1, days: [1, 4] },
-  },
-  {
-    id: 't6',
-    name: 'Estudar inglês',
-    area: 'studies',
-    energy: 3,
-    impact: 4,
-    frequency: { kind: 'interval', everyNDays: 3 },
-  },
-  {
-    id: 't7',
-    name: 'Meditar',
-    area: 'spirituality',
-    energy: 1,
-    frequency: { kind: 'trigger', eventId: 'wakeup' },
-  },
-  {
-    id: 't8',
-    name: 'Organizar a mesa',
-    area: 'home',
-    frequency: { kind: 'interval', everyNDays: 7 },
-  },
-];
-
 const MONTHS_SHORT = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'] as const;
 
 export function getLifeArea(id: string): LifeArea | undefined {
