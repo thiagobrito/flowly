@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, ScrollView, useColorScheme, View } from 'react-native';
+import { Alert, Platform, ScrollView, Text, useColorScheme, View } from 'react-native';
 
 import { useEnergyScore } from '@/lib/energy';
 import { api } from '@/lib/network';
@@ -56,17 +56,32 @@ export default function Tasks({ onEdit, onLogout }: TasksProps) {
 
   // `useEnergyScore` retorna 0-100; o FlowScore espera energia atual em 0-5.
   const currentEnergy = (energyInfo.score ?? 0) / 20;
-  const visibleTasks = useMemo(() => FilterTasksToShow(tasks), [tasks]);
+
+  const { concludedTasks, visibleTasks } = useMemo(() => FilterTasksToShow(tasks), [tasks]);
   const prioritizedTasks = useMemo(() => prioritizeTasks(visibleTasks, currentEnergy), [visibleTasks, currentEnergy]);
 
   return (
     <View className="flex-1">
       <Header isDark={isDark} energyInfo={energyInfo} onLogout={onLogout} />
 
-      <ScrollView className="mt-2 flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 50 }}>
+      <ScrollView className="mt-2 flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 70 }}>
         {prioritizedTasks.map((task) => (
           <TaskCard key={task.randomId} task={task} selected={false} isDark={isDark} onComplete={() => setUpdateId(updateId + 1)} onEdit={() => onEdit?.(task)} onDelete={() => handleDelete(task)} />
         ))}
+
+        <View
+          className="w-full border-t border-zinc-200 dark:border-zinc-800"
+          style={Platform.select({
+            web: { filter: 'grayscale(100%)' },
+            default: { opacity: 0.55 },
+          })}
+        >
+          <Text className="my-2 text-center text-sm text-zinc-400 dark:text-zinc-400">{concludedTasks.length} atividades já concluídas</Text>
+
+          {concludedTasks.map((task: Task) => (
+            <TaskCard key={task.randomId} task={task} selected isDark={isDark} onComplete={() => setUpdateId(updateId + 1)} onEdit={() => onEdit?.(task)} onDelete={() => handleDelete(task)} />
+          ))}
+        </View>
       </ScrollView>
     </View>
   );

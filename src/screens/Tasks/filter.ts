@@ -56,15 +56,19 @@ function isDueToday(task: Task, now: Date, todayKey: string): boolean {
   }
 }
 
-export default function FilterTasksToShow(tasks: Task[]): Task[] {
+export default function FilterTasksToShow(tasks: Task[]): any {
   const now = new Date();
   const todayKey = localDateKey(now);
 
-  return tasks.filter((task) => {
-    // remove tasks that are already completed today
-    if (isCompletedToday(task, todayKey)) return false;
-    // remove tasks that the frequency is not met for today
-    if (!isDueToday(task, now, todayKey)) return false;
-    return true;
-  });
+  return {
+    concludedTasks: tasks.filter((task) => {
+      return isCompletedToday(task, todayKey) && isDueToday(task, now, todayKey);
+    }),
+
+    visibleTasks: tasks.filter((task) => {
+      if (isCompletedToday(task, todayKey)) return false;
+      if (!isDueToday(task, now, todayKey)) return false;
+      return true;
+    }),
+  };
 }
