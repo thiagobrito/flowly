@@ -1,0 +1,7 @@
+{
+  "mcpServers": {
+    "mongodb": {
+      "command": "/Users/thiagobrito/dev/flowly/.cursor/run-mongodb-mcp.sh"
+    }
+  }
+}
