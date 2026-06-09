@@ -45,7 +45,6 @@ type ProgressRingProps = {
   strokeWidth?: number;
   isDark: boolean;
 };
-
 export function ProgressRing({ progress, size = 80, strokeWidth = 7, isDark }: ProgressRingProps) {
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
@@ -58,18 +57,7 @@ export function ProgressRing({ progress, size = 80, strokeWidth = 7, isDark }: P
   return (
     <Svg width={size} height={size}>
       <Circle cx={size / 2} cy={size / 2} r={radius} stroke={trackColor} strokeWidth={strokeWidth} fill="none" />
-      <Circle
-        cx={size / 2}
-        cy={size / 2}
-        r={radius}
-        stroke={progressColor}
-        strokeWidth={strokeWidth}
-        strokeLinecap="round"
-        fill="none"
-        strokeDasharray={circumference}
-        strokeDashoffset={dashOffset}
-        transform={`rotate(-90 ${size / 2} ${size / 2})`}
-      />
+      <Circle cx={size / 2} cy={size / 2} r={radius} stroke={progressColor} strokeWidth={strokeWidth} strokeLinecap="round" fill="none" strokeDasharray={circumference} strokeDashoffset={dashOffset} transform={`rotate(-90 ${size / 2} ${size / 2})`} />
     </Svg>
   );
 }
@@ -82,9 +70,7 @@ export function TaskCardContent({ item, isDark: _isDark }: { item: TaskItem; isD
   return (
     <View className="flex-1">
       <View className="flex-row items-center justify-between">
-        <Text className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-          {item.label}
-        </Text>
+        <Text className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{item.label}</Text>
         {item.avatarUrl ? (
           <View className="h-9 w-9 overflow-hidden rounded-full border border-white/60">
             <Image source={{ uri: item.avatarUrl }} className="h-9 w-9" />

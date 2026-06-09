@@ -2,6 +2,8 @@ import { HeartPulse, Timer, TrendingUp, Zap } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, useColorScheme, View } from 'react-native';
 
+import { api } from '@/lib/network';
+
 import { LevelScale, OptionChip, SectionHeader } from './components';
 import type { FrequencyConfig, NewTaskPayload } from './data';
 import { isFrequencyConfigValid, LIFE_AREAS } from './data';
@@ -9,9 +11,10 @@ import { FrequencyPicker } from './FrequencyPicker';
 
 type NewTaskProps = {
   onCreate?: (payload: NewTaskPayload) => void;
+  onSuccess?: () => void;
 };
 
-export default function NewTask({ onCreate }: NewTaskProps) {
+export default function NewTask({ onCreate, onSuccess }: NewTaskProps) {
   const isDark = useColorScheme() === 'dark';
 
   const [name, setName] = useState('');
@@ -25,11 +28,11 @@ export default function NewTask({ onCreate }: NewTaskProps) {
   let buttonTextColor = isDark ? '#71717a' : '#a1a1aa';
 
   if (canSubmit) {
-    buttonBackground = isDark ? '#fafafa' : '#18181b';
+    buttonBackground = isDark ? '#fafafa' : '#6366f1';
     buttonTextColor = isDark ? '#18181b' : '#ffffff';
   }
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!isFrequencyConfigValid(frequency) || area === null || name.trim().length === 0) {
       return;
     }
@@ -42,11 +45,15 @@ export default function NewTask({ onCreate }: NewTaskProps) {
       area,
     });
 
-    setName('');
-    setEnergy(3);
-    setImpact(3);
-    setFrequency(null);
-    setArea(null);
+    await api.put('/tasks', {
+      name: name.trim(),
+      energy,
+      impact,
+      frequency,
+      area,
+    });
+
+    onSuccess?.();
   };
 
   return (
