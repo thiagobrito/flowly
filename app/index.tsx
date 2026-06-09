@@ -8,12 +8,32 @@ import type { TabKey } from '@/components/BottomTabBar';
 import BottomTabBar from '@/components/BottomTabBar';
 import { useSession } from '@/lib/auth';
 import NewTask from '@/screens/NewTask';
+import type { Task } from '@/screens/NewTask/data';
 import Tasks from '@/screens/Tasks/index';
 
-function ActiveScreen({ tab, onLogout, onTabChange }: { tab: TabKey; onLogout: () => void; onTabChange: (tab: TabKey) => void }) {
-  if (tab === 'new') return <NewTask onSuccess={() => onTabChange('home')} />;
-  if (tab === 'progress') return <Tasks onLogout={onLogout} />;
-  return <Tasks onLogout={onLogout} />;
+type ActiveScreenProps = {
+  tab: TabKey;
+  onLogout: () => void;
+  onTabChange: (tab: TabKey) => void;
+  editingTask: Task | null;
+  onEdit: (task: Task) => void;
+  onEditDone: () => void;
+};
+
+function ActiveScreen({ tab, onLogout, onTabChange, editingTask, onEdit, onEditDone }: ActiveScreenProps) {
+  if (tab === 'new') {
+    return (
+      <NewTask
+        task={editingTask}
+        onSuccess={() => {
+          onEditDone();
+          onTabChange('home');
+        }}
+      />
+    );
+  }
+  if (tab === 'progress') return <Tasks onLogout={onLogout} onEdit={onEdit} />;
+  return <Tasks onLogout={onLogout} onEdit={onEdit} />;
 }
 
 function Background({ isDark }: { isDark: boolean }) {
@@ -23,7 +43,18 @@ function Background({ isDark }: { isDark: boolean }) {
 function Home() {
   const isDark = useColorScheme() === 'dark';
   const [tab, setTab] = useState<TabKey>('home');
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
   const { isHydrated, isAuthenticated, signOut } = useSession();
+
+  const handleTabChange = (next: TabKey) => {
+    if (next === 'new') setEditingTask(null);
+    setTab(next);
+  };
+
+  const handleEdit = (task: Task) => {
+    setEditingTask(task);
+    setTab('new');
+  };
 
   if (!isHydrated) {
     return (
@@ -51,9 +82,9 @@ function Home() {
 
       <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
         <View className="flex-1 px-3 pt-2">
-          <ActiveScreen tab={tab} onLogout={handleLogout} onTabChange={setTab} />
+          <ActiveScreen tab={tab} onLogout={handleLogout} onTabChange={setTab} editingTask={editingTask} onEdit={handleEdit} onEditDone={() => setEditingTask(null)} />
 
-          <BottomTabBar active={tab} onChange={setTab} />
+          <BottomTabBar active={tab} onChange={handleTabChange} />
         </View>
       </SafeAreaView>
     </View>

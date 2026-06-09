@@ -104,11 +104,13 @@ export const LEVEL_LABELS = ['Muito baixo', 'Baixo', 'Médio', 'Alto', 'Muito al
 
 export type Task = {
   id: string;
+  randomId: string;
   name: string;
   area: string;
   energy?: number;
   impact?: number;
   frequency: FrequencyConfig;
+  completed?: string[];
 };
 
 const MONTHS_SHORT = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'] as const;

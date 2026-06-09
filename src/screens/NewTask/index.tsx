@@ -5,23 +5,25 @@ import { Pressable, ScrollView, Text, TextInput, useColorScheme, View } from 're
 import { api } from '@/lib/network';
 
 import { LevelScale, OptionChip, SectionHeader } from './components';
-import type { FrequencyConfig, NewTaskPayload } from './data';
+import type { FrequencyConfig, NewTaskPayload, Task } from './data';
 import { isFrequencyConfigValid, LIFE_AREAS } from './data';
 import { FrequencyPicker } from './FrequencyPicker';
 
 type NewTaskProps = {
+  task?: Task | null;
   onCreate?: (payload: NewTaskPayload) => void;
   onSuccess?: () => void;
 };
 
-export default function NewTask({ onCreate, onSuccess }: NewTaskProps) {
+export default function NewTask({ task, onCreate, onSuccess }: NewTaskProps) {
   const isDark = useColorScheme() === 'dark';
+  const isEditing = !!task;
 
-  const [name, setName] = useState('');
-  const [energy, setEnergy] = useState(3);
-  const [impact, setImpact] = useState(3);
-  const [frequency, setFrequency] = useState<FrequencyConfig | null>(null);
-  const [area, setArea] = useState<string | null>(null);
+  const [name, setName] = useState(task?.name ?? '');
+  const [energy, setEnergy] = useState(task?.energy ?? 3);
+  const [impact, setImpact] = useState(task?.impact ?? 3);
+  const [frequency, setFrequency] = useState<FrequencyConfig | null>(task?.frequency ?? null);
+  const [area, setArea] = useState<string | null>(task?.area ?? null);
 
   const canSubmit = useMemo(() => name.trim().length > 0 && isFrequencyConfigValid(frequency) && area !== null, [name, frequency, area]);
   let buttonBackground = isDark ? 'rgba(255,255,255,0.12)' : 'rgba(10, 21, 241, 0.08)';
@@ -37,28 +39,30 @@ export default function NewTask({ onCreate, onSuccess }: NewTaskProps) {
       return;
     }
 
-    onCreate?.({
+    const payload = {
       name: name.trim(),
       energy,
       impact,
       frequency,
       area,
-    });
+    } as any;
 
-    await api.put('/tasks', {
-      name: name.trim(),
-      energy,
-      impact,
-      frequency,
-      area,
-    });
+    if (isEditing) {
+      payload.id = task?.id;
+      payload.isEditing = true;
+    }
 
+    if (task) {
+      await api.put(`/tasks`, payload);
+    }
+
+    onCreate?.(payload);
     onSuccess?.();
   };
 
   return (
     <View className="flex-1">
-      <Text className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">Nova atividade</Text>
+      <Text className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">{isEditing ? 'Editar atividade' : 'Nova atividade'}</Text>
       <Text className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">Defina o essencial para começar com clareza.</Text>
 
       <ScrollView className="mt-5 flex-1" showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 60 }}>
@@ -100,7 +104,7 @@ export default function NewTask({ onCreate, onSuccess }: NewTaskProps) {
         <Pressable onPress={handleCreate} disabled={!canSubmit} accessibilityRole="button" accessibilityState={{ disabled: !canSubmit }} className="mb-2 mt-8 active:opacity-80">
           <View className="items-center rounded-2xl py-3.5" style={{ backgroundColor: buttonBackground }}>
             <Text className="text-base font-semibold" style={{ color: buttonTextColor }}>
-              Criar atividade
+              {isEditing ? 'Salvar alterações' : 'Criar atividade'}
             </Text>
           </View>
         </Pressable>

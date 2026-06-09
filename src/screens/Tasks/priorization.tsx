@@ -6,6 +6,7 @@ import type { FrequencyConfig, Task } from '../NewTask/data';
  * FlowScore passa a conceder o bônus de 50% automaticamente.
  */
 export type PrioritizableTask = Task & {
+  randomId: string;
   goalAligned?: boolean;
   goalId?: string | null;
 };

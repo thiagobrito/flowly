@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { ScrollView, useColorScheme, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Alert, ScrollView, useColorScheme, View } from 'react-native';
 
 import { useEnergyScore } from '@/lib/energy';
 import { api } from '@/lib/network';
@@ -7,41 +7,57 @@ import { api } from '@/lib/network';
 import type { Task } from '../NewTask/data';
 import Header from './components/Header';
 import TaskCard from './components/TaskCard';
+import FilterTasksToShow from './filter';
 import { prioritizeTasks } from './priorization';
 
 type TasksProps = {
-  onSelect?: (task: Task) => void;
+  onEdit?: (task: Task) => void;
   onLogout?: () => void;
 };
 
-export default function Tasks({ onSelect, onLogout }: TasksProps) {
+export default function Tasks({ onEdit, onLogout }: TasksProps) {
   const isDark = useColorScheme() === 'dark';
-  const [selectedId, setSelectedId] = useState<string | null>(null);
   const energyInfo = useEnergyScore();
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [updateId, setUpdateId] = useState<any>(0);
 
-  const handleSelect = (task: Task) => {
-    setSelectedId(task.id);
-    onSelect?.(task);
+  const handleDelete = (task: Task) => {
+    Alert.alert('Deletar atividade', `Deseja remover "${task.name}"?`, [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Deletar',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await api.delete(`/tasks/${task.id}`);
+            setUpdateId((prev: number) => prev + 1);
+          } catch {
+            Alert.alert('Erro', 'Não foi possível deletar a atividade.');
+          }
+        },
+      },
+    ]);
   };
 
-  useEffect(() => {
-    const fetchTasks = async () => {
-      const response = await api.get<{ result: Task[] }>('/tasks');
-      setTasks(
-        response.result.map((task) => ({
-          ...task,
-          // eslint-disable-next-line no-underscore-dangle -- campo `_id` retornado pela API MongoDB
-          id: task.id ?? (task as Task & { _id?: string })._id ?? '',
-        })),
-      );
-    };
-    fetchTasks();
+  const fetchTasks = useCallback(async () => {
+    const response = await api.get<{ result: Task[] }>('/tasks');
+    const taskList = response.result.map((task) => ({
+      ...task,
+      // eslint-disable-next-line no-underscore-dangle -- campo `_id` retornado pela API MongoDB
+      id: task.id ?? (task as Task & { _id?: string })._id ?? '',
+      randomId: Math.random().toString(36).substring(2, 15),
+    }));
+    setTasks(taskList);
   }, []);
+
+  useEffect(() => {
+    fetchTasks();
+  }, [fetchTasks, updateId]);
 
   // `useEnergyScore` retorna 0-100; o FlowScore espera energia atual em 0-5.
   const currentEnergy = (energyInfo.score ?? 0) / 20;
-  const prioritizedTasks = useMemo(() => prioritizeTasks(tasks, currentEnergy), [tasks, currentEnergy]);
+  const visibleTasks = useMemo(() => FilterTasksToShow(tasks), [tasks]);
+  const prioritizedTasks = useMemo(() => prioritizeTasks(visibleTasks, currentEnergy), [visibleTasks, currentEnergy]);
 
   return (
     <View className="flex-1">
@@ -49,7 +65,7 @@ export default function Tasks({ onSelect, onLogout }: TasksProps) {
 
       <ScrollView className="mt-2 flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 50 }}>
         {prioritizedTasks.map((task) => (
-          <TaskCard key={task.id} task={task} selected={selectedId === task.id} isDark={isDark} onPress={() => handleSelect(task)} />
+          <TaskCard key={task.randomId} task={task} selected={false} isDark={isDark} onComplete={() => setUpdateId(updateId + 1)} onEdit={() => onEdit?.(task)} onDelete={() => handleDelete(task)} />
         ))}
       </ScrollView>
     </View>
