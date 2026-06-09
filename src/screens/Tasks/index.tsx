@@ -65,8 +65,8 @@ export default function Tasks({ onEdit, onLogout }: TasksProps) {
       <Header isDark={isDark} energyInfo={energyInfo} onLogout={onLogout} />
 
       <ScrollView className="mt-2 flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 70 }}>
-        {prioritizedTasks.map((task) => (
-          <TaskCard key={task.randomId} task={task} selected={false} isDark={isDark} onComplete={() => setUpdateId(updateId + 1)} onEdit={() => onEdit?.(task)} onDelete={() => handleDelete(task)} />
+        {prioritizedTasks.map((task, index) => (
+          <TaskCard key={task.randomId} highlight={index === 0} task={task} selected={false} isDark={isDark} onComplete={() => setUpdateId(updateId + 1)} onEdit={() => onEdit?.(task)} onDelete={() => handleDelete(task)} />
         ))}
 
         <View
@@ -79,7 +79,7 @@ export default function Tasks({ onEdit, onLogout }: TasksProps) {
           <Text className="my-2 text-center text-sm text-zinc-400 dark:text-zinc-400">{concludedTasks.length} atividades já concluídas</Text>
 
           {concludedTasks.map((task: Task) => (
-            <TaskCard key={task.randomId} task={task} selected isDark={isDark} onComplete={() => setUpdateId(updateId + 1)} onEdit={() => onEdit?.(task)} onDelete={() => handleDelete(task)} />
+            <TaskCard key={task.randomId} highlight={false} task={task} selected isDark={isDark} onComplete={() => setUpdateId(updateId + 1)} onEdit={() => onEdit?.(task)} onDelete={() => handleDelete(task)} />
           ))}
         </View>
       </ScrollView>

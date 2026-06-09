@@ -40,6 +40,7 @@ function CheckIcon({ isSelected, isDark, accent }: CheckIconProps) {
 }
 
 type TaskCardProps = {
+  highlight: boolean;
   task: Task;
   selected: boolean;
   isDark: boolean;
@@ -48,7 +49,7 @@ type TaskCardProps = {
   onDelete: () => void;
 };
 
-export default function TaskCard({ task, selected, isDark, onComplete, onEdit, onDelete }: TaskCardProps) {
+export default function TaskCard({ highlight, task, selected, isDark, onComplete, onEdit, onDelete }: TaskCardProps) {
   const [isSelected, setIsSelected] = useState(selected);
   const opacity = useSharedValue(1);
   const scale = useSharedValue(1);
@@ -129,12 +130,15 @@ export default function TaskCard({ task, selected, isDark, onComplete, onEdit, o
   let borderColor = isDark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.07)';
   let backgroundColor = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.85)';
 
+  if (highlight) {
+    borderColor = '#3b82f6';
+  }
+
   if (isSelected) {
     borderColor = accent;
     backgroundColor = `${accent}14`;
   }
   const mutedColor = isDark ? '#a1a1aa' : '#71717a';
-
   return (
     <Animated.View className="mb-3" style={animatedStyle}>
       <View className="overflow-hidden rounded-2xl">

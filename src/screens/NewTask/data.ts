@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react-native';
-import { BookOpen, Briefcase, CalendarRange, HeartPulse, Home, Link2, Repeat, Smile, Sparkles, Sun, Target, Users, Wallet } from 'lucide-react-native';
+import { Bird, BookOpen, Briefcase, CalendarClock, CalendarRange, CircleCheckBig, HeartPulse, Home, Repeat, Smile, Sparkles, Sun, Users, Wallet } from 'lucide-react-native';
 
 export type LifeArea = {
   id: string;
@@ -8,7 +8,7 @@ export type LifeArea = {
   accent: string;
 };
 
-export type FrequencyId = 'once' | 'daily' | 'weekly' | 'interval' | 'trigger';
+export type FrequencyId = 'once' | 'daily' | 'weekly' | 'interval' | 'trigger' | 'notime';
 
 export type Frequency = {
   id: FrequencyId;
@@ -17,6 +17,7 @@ export type Frequency = {
 };
 
 export type FrequencyConfig =
+  | { kind: 'notime' }
   | { kind: 'once'; date: string | null; time: string | null }
   | { kind: 'daily'; everyDay: boolean; days: number[] }
   | { kind: 'weekly'; mode: 'count' | 'days'; count: number; days: number[] }
@@ -45,14 +46,16 @@ export const LIFE_AREAS: LifeArea[] = [
   { id: 'leisure', label: 'Lazer', Icon: Smile, accent: '#f97316' },
   { id: 'home', label: 'Casa', Icon: Home, accent: '#14b8a6' },
   { id: 'spirituality', label: 'Espiritualidade', Icon: Sparkles, accent: '#a855f7' },
+  { id: 'other', label: 'Outros', Icon: Bird, accent: '#a855f7' },
 ];
 
 export const FREQUENCIES: Frequency[] = [
-  { id: 'once', label: 'Pontual', Icon: Target },
+  { id: 'notime', label: 'Qualquer hora', Icon: CircleCheckBig },
+  { id: 'once', label: 'Data Específica', Icon: CalendarClock },
   { id: 'daily', label: 'Diária', Icon: Sun },
   { id: 'weekly', label: 'Semanal', Icon: CalendarRange },
   { id: 'interval', label: 'Intervalo', Icon: Repeat },
-  { id: 'trigger', label: 'Gatilho', Icon: Link2 },
+  // { id: 'trigger', label: 'Gatilho', Icon: Link2 },
 ];
 
 export const WEEKDAYS = [
@@ -74,6 +77,7 @@ export const TRIGGER_EVENTS: TriggerEvent[] = [
 ];
 
 export const DEFAULT_FREQUENCY_CONFIG: Record<FrequencyId, FrequencyConfig> = {
+  notime: { kind: 'notime' },
   once: { kind: 'once', date: null, time: null },
   daily: { kind: 'daily', everyDay: true, days: [] },
   weekly: { kind: 'weekly', mode: 'count', count: 1, days: [] },
@@ -95,6 +99,8 @@ export function isFrequencyConfigValid(config: FrequencyConfig | null): config i
       return config.everyNDays >= 1;
     case 'trigger':
       return config.eventId !== null;
+    case 'notime':
+      return true;
     default:
       return false;
   }

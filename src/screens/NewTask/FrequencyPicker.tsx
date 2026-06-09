@@ -126,10 +126,10 @@ function OnceConfigPanel({ config, onChange, isDark, accent }: { config: OnceCon
   return (
     <View>
       <View className="flex-row">
-        <View className="min-w-0 flex-[3]" style={{ marginRight: 6 }}>
+        <View className="mt-2 min-w-0 flex-[3]" style={{ marginRight: 6 }}>
           <DateTimeField label="Data" value={config.date ? formatDate(config.date) : null} placeholder="Selecionar" Icon={Calendar} onPress={() => setPickerMode('date')} isDark={isDark} accent={accent} />
         </View>
-        <View className="min-w-0 flex-[2]" style={{ marginLeft: 6 }}>
+        <View className="mt-2 min-w-0 flex-[2]" style={{ marginLeft: 6 }}>
           <DateTimeField label="Hora" value={config.time} placeholder="Opcional" Icon={Clock} onPress={() => setPickerMode('time')} isDark={isDark} accent={accent} />
         </View>
       </View>
@@ -232,6 +232,8 @@ function TriggerConfigPanel({ config, onChange, isDark, accent }: { config: Trig
 
 function ConfigPanel({ config, onChange, isDark, accent }: { config: FrequencyConfig; onChange: (config: FrequencyConfig) => void; isDark: boolean; accent: string }) {
   switch (config.kind) {
+    case 'notime':
+      return null;
     case 'once':
       return <OnceConfigPanel config={config} onChange={onChange} isDark={isDark} accent={accent} />;
     case 'daily':
@@ -265,7 +267,7 @@ export function FrequencyPicker({ value, onChange, isDark, accent }: FrequencyPi
         ))}
       </View>
 
-      {value ? (
+      {value && value.kind !== 'notime' ? (
         <View
           className="mt-4 rounded-2xl border p-4"
           style={{
