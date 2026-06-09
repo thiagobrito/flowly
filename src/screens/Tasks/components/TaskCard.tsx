@@ -67,9 +67,7 @@ export default function TaskCard({ task, selected, isDark, onPress }: TaskCardPr
         </View>
 
         <View className="ml-3 flex-1">
-          <Text className="text-base font-semibold text-zinc-900 dark:text-zinc-50" numberOfLines={1}>
-            {task.name}
-          </Text>
+          <Text className="text-base font-semibold text-zinc-900 dark:text-zinc-50">{task.name}</Text>
 
           <View className="mt-1.5 flex-row items-center">
             <View className="rounded-full px-2 py-0.5" style={{ backgroundColor: `${accent}22`, marginRight: 8 }}>
