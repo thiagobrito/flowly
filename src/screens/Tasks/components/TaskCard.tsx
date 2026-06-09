@@ -86,7 +86,11 @@ export default function TaskCard({ highlight, task, selected, isDark, onComplete
     setIsSelected(!isSelected);
 
     try {
-      await api.post('/tasks/complete', { taskId: task.id });
+      if (isSelected) {
+        await api.post('/tasks/undo', { taskId: task.id });
+      } else {
+        await api.post('/tasks/complete', { taskId: task.id });
+      }
     } catch {
       setIsSelected((prev) => !prev);
       return;

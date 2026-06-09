@@ -9,6 +9,7 @@ import BottomTabBar from '@/components/BottomTabBar';
 import { useSession } from '@/lib/auth';
 import NewTask from '@/screens/NewTask';
 import type { Task } from '@/screens/NewTask/data';
+import Statistics from '@/screens/Statistics';
 import Tasks from '@/screens/Tasks/index';
 
 type ActiveScreenProps = {
@@ -32,7 +33,7 @@ function ActiveScreen({ tab, onLogout, onTabChange, editingTask, onEdit, onEditD
       />
     );
   }
-  if (tab === 'progress') return <Tasks onLogout={onLogout} onEdit={onEdit} />;
+  if (tab === 'progress') return <Statistics />;
   return <Tasks onLogout={onLogout} onEdit={onEdit} />;
 }
 

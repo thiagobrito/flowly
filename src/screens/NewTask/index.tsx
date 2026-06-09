@@ -4,9 +4,10 @@ import { Pressable, ScrollView, Text, TextInput, useColorScheme, View } from 're
 
 import { api } from '@/lib/network';
 
+import { LIFE_AREAS } from '../common';
 import { LevelScale, OptionChip, SectionHeader } from './components';
 import type { FrequencyConfig, NewTaskPayload, Task } from './data';
-import { isFrequencyConfigValid, LIFE_AREAS } from './data';
+import { isFrequencyConfigValid } from './data';
 import { FrequencyPicker } from './FrequencyPicker';
 
 type NewTaskProps = {

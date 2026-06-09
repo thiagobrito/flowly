@@ -1,0 +1,52 @@
+import type { LucideIcon } from 'lucide-react-native';
+
+export type ProgressDay = {
+  /** ISO date (`YYYY-MM-DD`), usado como chave e para o request. */
+  date: string;
+  /** Dia do mês exibido no chip. */
+  day: number;
+  /** Quando preenchido, o chip mostra esse texto (ex.: "Hoje, 22 abr"). */
+  label?: string;
+  isToday?: boolean;
+};
+
+export type ProgressGear = {
+  shoe: string;
+  watch: string;
+};
+
+export type ProgressDaily = {
+  title: string;
+  concludedTasks: number;
+  /** 0–100. */
+  percent: number;
+  areas: string[];
+};
+
+export type ProgressStat = {
+  id: string;
+  value: string;
+  label: string;
+  /** Destaca o card central (com ícone). */
+  highlighted?: boolean;
+  area: string;
+};
+
+export type ProgressMetric = {
+  id: string;
+  label: string;
+  value: string;
+  unit?: string;
+  Icon: LucideIcon;
+  accent: string;
+};
+
+export type ProgressData = {
+  title: string;
+  impactScore: number;
+  selectedDay: string;
+  days: ProgressDay[];
+  daily: ProgressDaily;
+  stats: ProgressStat[];
+  metrics: ProgressMetric[];
+};
