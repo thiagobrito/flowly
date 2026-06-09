@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "react-native-boilerplate",
-    "slug": "react-native-boilerplate",
+    "name": "Flowly",
+    "slug": "flowly-m-gvdcsjo9xgnlwu4indg",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -15,14 +15,17 @@
     "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.reactnativeboilerplate"
+      "bundleIdentifier": "com.flowly-v2.app",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.anonymous.reactnativeboilerplate",
+      "package": "com.flowly-v2.app",
       "permissions": [
         "android.permission.health.READ_SLEEP",
         "android.permission.health.READ_HEART_RATE",
@@ -37,7 +40,6 @@
       "bundler": "metro"
     },
     "plugins": [
-      "@config-plugins/detox",
       "expo-router",
       [
         "react-native-health",
@@ -57,6 +59,15 @@
           }
         }
       ]
-    ]
+    ],
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "d8da7bca-73de-4836-b764-ec591717899f"
+      }
+    },
+    "owner": "thiagogbrito"
   }
 }

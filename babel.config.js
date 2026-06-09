@@ -3,18 +3,14 @@ module.exports = (api) => {
   return {
     presets: ['babel-preset-expo'],
     plugins: [
-      'nativewind/babel',
       [
         'module-resolver',
         {
           alias: {
-            // This needs to be mirrored in tsconfig.json
             '@': './src',
           },
         },
       ],
-      require.resolve('expo-router/babel'),
-      // react-native-reanimated/plugin MUST be listed last.
       'react-native-reanimated/plugin',
     ],
   };
