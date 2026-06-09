@@ -73,7 +73,7 @@ export default function Tasks({ onEdit, onLogout }: TasksProps) {
           className="w-full border-t border-zinc-200 dark:border-zinc-800"
           style={Platform.select({
             web: { filter: 'grayscale(100%)' },
-            default: { opacity: 0.55 },
+            default: { opacity: 0.5 },
           })}
         >
           <Text className="my-2 text-center text-sm text-zinc-400 dark:text-zinc-400">{concludedTasks.length} atividades já concluídas</Text>
