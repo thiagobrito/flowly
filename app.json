@@ -19,7 +19,7 @@
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       },
-      "buildNumber": "5",
+      "buildNumber": "6",
       "appleTeamId": "WCZL6FK4U7"
     },
     "android": {
@@ -36,7 +36,7 @@
         "android.permission.health.READ_EXERCISE",
         "android.permission.health.READ_ACTIVE_CALORIES_BURNED"
       ],
-      "versionCode": 2026061005
+      "versionCode": 2026061006
     },
     "web": {
       "favicon": "./assets/favicon.png",
