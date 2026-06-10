@@ -53,9 +53,7 @@ export default function NewTask({ task, onCreate, onSuccess }: NewTaskProps) {
       payload.isEditing = true;
     }
 
-    if (task) {
-      await api.put(`/tasks`, payload);
-    }
+    await api.put(`/tasks`, payload);
 
     onCreate?.(payload);
     onSuccess?.();
