@@ -41,7 +41,7 @@ export default function Tasks({ onEdit, onLogout }: TasksProps) {
         style: 'destructive',
         onPress: async () => {
           try {
-            await api.delete(`/tasks/${task.id}`);
+            await api.delete(`/tasks`, { params: { id: task.id } });
             setUpdateId((prev: number) => prev + 1);
           } catch {
             Alert.alert('Erro', 'Não foi possível deletar a atividade.');
