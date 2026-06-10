@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, Platform, ScrollView, Text, useColorScheme, View } from 'react-native';
+import { ActivityIndicator, Alert, Platform, ScrollView, Text, useColorScheme, View } from 'react-native';
 
 import { useEnergyScore } from '@/lib/energy';
 import { api } from '@/lib/network';
@@ -20,6 +20,7 @@ export default function Tasks({ onEdit, onLogout }: TasksProps) {
   const energyInfo = useEnergyScore();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [updateId, setUpdateId] = useState<any>(0);
+  const [loading, setLoading] = useState(true);
 
   const handleDelete = (task: Task) => {
     Alert.alert('Deletar atividade', `Deseja remover "${task.name}"?`, [
@@ -48,6 +49,7 @@ export default function Tasks({ onEdit, onLogout }: TasksProps) {
       randomId: Math.random().toString(36).substring(2, 15),
     }));
     setTasks(taskList);
+    setLoading(false);
   }, []);
 
   useEffect(() => {
@@ -58,6 +60,14 @@ export default function Tasks({ onEdit, onLogout }: TasksProps) {
 
   const { concludedTasks, visibleTasks } = useMemo(() => FilterTasksToShow(tasks), [tasks]);
   const prioritizedTasks = useMemo(() => prioritizeTasks(visibleTasks, currentEnergy), [visibleTasks, currentEnergy]);
+
+  if (loading) {
+    return (
+      <View className="flex-1 items-center justify-center">
+        <ActivityIndicator color={isDark ? '#e4e4e7' : '#3b82f6'} />
+      </View>
+    );
+  }
 
   return (
     <View className="flex-1">
