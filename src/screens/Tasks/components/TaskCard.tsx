@@ -87,9 +87,9 @@ export default function TaskCard({ highlight, task, selected, isDark, onComplete
 
     try {
       if (isSelected) {
-        await api.post('/tasks/undo', { taskId: task.id });
+        await api.post('/tasks/undo', { taskId: task.id, date: new Date().toISOString().split('T')[0] });
       } else {
-        await api.post('/tasks/complete', { taskId: task.id });
+        await api.post('/tasks/complete', { taskId: task.id, date: new Date().toISOString().split('T')[0] });
       }
     } catch {
       setIsSelected((prev) => !prev);
