@@ -51,9 +51,9 @@
  *
  * ```tsx
  * useEnergyScore({
- *   autoFetch: true,          // pede permissão e coleta no mount (padrão)
- *   range: lastDaysRange(7),  // janela de coleta (padrão: 7 dias)
- *   config: defaultConfig,    // pesos e faixas de normalização
+ *   autoFetch: true,           // pede permissão e coleta no mount (padrão)
+ *   range: lastDaysRange(14),  // janela de coleta (padrão: 14 dias)
+ *   config: defaultConfig,     // pesos e faixas de normalização
  * });
  * ```
  *
@@ -74,12 +74,31 @@
  * const granted = await provider.requestPermissions();
  * if (!granted) return;
  *
- * const metrics = await provider.collect(lastDaysRange(7));
+ * const metrics = await provider.collect(lastDaysRange(14));
  * const result = computeEnergyScore(metrics);
  *
  * console.log(result.score);      // 0-100
  * console.log(result.band);       // 'low' | 'moderate' | 'high'
  * console.log(result.breakdown);  // SubScore[] com valor, peso e tier
+ * ```
+ *
+ * ## Flowly Energy Engine (RISE / SAFTE-inspired)
+ *
+ * Motor de previsão biológica com dívida de sono (14 dias), ritmo circadiano,
+ * inércia do sono e recovery score. Veja `README.md` para a matemática.
+ *
+ * ```ts
+ * import {
+ *   computeEnergyAtMoment,
+ *   computeFlowlyEnergy,
+ *   flowlyInputFromMetrics,
+ *   generateEnergyCurve,
+ * } from '@/lib/energy';
+ *
+ * const input = flowlyInputFromMetrics(metrics);
+ * const now = computeFlowlyEnergy(input);                              // agora
+ * const at15 = computeEnergyAtMoment(input, '2026-06-08T15:00:00Z');   // momento arbitrário
+ * const curve = generateEnergyCurve(input);                            // curva do dia
  * ```
  *
  * ## Métricas coletadas
@@ -119,6 +138,8 @@
  * const metrics = {
  *   sleepHours: 8,
  *   wakeTime: '2026-06-08T06:30:00.000Z',
+ *   bedTime: '2026-06-07T22:30:00.000Z',
+ *   sleepHistory: [{ date: '2026-06-08', sleepHours: 8 }],
  *   now: new Date().toISOString(),
  *   workoutToday: true,
  *   workoutMinutesToday: 45,
@@ -144,6 +165,26 @@
 
 export { AppleHealthProvider, emptyMetrics, getHealthProvider, HealthConnectProvider, type HealthDataProvider, lastDaysRange, type ProviderPlatform } from './collectors';
 export { defaultConfig, type EnergyConfig, type MetricConfig, type NormalizationRanges, WEIGHT_TIERS } from './config';
-export { computeEnergyScore } from './engine';
+export {
+  type CircadianWave,
+  computeCircadianEnergy,
+  computeEnergyAtMoment,
+  computeEnergyScore,
+  computeFlowlyEnergy,
+  computeRecoveryScore,
+  computeSleepDebtHours,
+  computeSleepDebtScore,
+  computeSleepInertiaPenalty,
+  computeTaskCompatibility,
+  defaultFlowlyConfig,
+  type EnergyCurveOptions,
+  energyScoreToLevel,
+  type FlowlyEngineConfig,
+  flowlyInputFromMetrics,
+  generateEnergyCurve,
+  normalizeHrv,
+  normalizeRestingHeartRate,
+  normalizeSleepQuality,
+} from './engine';
 export { useEnergyScore, type UseEnergyScoreOptions, type UseEnergyScoreResult } from './hooks/useEnergyScore';
-export type { DateRange, EnergyBand, EnergyScore, HealthMetrics, MetricKey, SubScore, WeightTier } from './types';
+export type { DateRange, EnergyBand, EnergyCurvePoint, EnergyScore, FlowlyEnergyComponents, FlowlyEnergyResult, FlowlyEngineInput, HealthMetrics, MetricKey, SleepNight, SubScore, WeightTier } from './types';

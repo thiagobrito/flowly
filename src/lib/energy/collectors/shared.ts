@@ -1,9 +1,12 @@
 import type { DateRange, HealthMetrics } from '../types';
 
-const DAY_MS = 24 * 60 * 60 * 1000;
+export const DAY_MS = 24 * 60 * 60 * 1000;
 
-/** Range covering the last `days` (default 7) ending at `now`. */
-export const lastDaysRange = (days = 7, now = new Date()): DateRange => ({
+/**
+ * Range covering the last `days` (default 14, the sleep-debt rolling window)
+ * ending at `now`.
+ */
+export const lastDaysRange = (days = 14, now = new Date()): DateRange => ({
   startDate: new Date(now.getTime() - days * DAY_MS).toISOString(),
   endDate: now.toISOString(),
 });
@@ -12,6 +15,8 @@ export const lastDaysRange = (days = 7, now = new Date()): DateRange => ({
 export const emptyMetrics = (now = new Date()): HealthMetrics => ({
   sleepHours: null,
   wakeTime: null,
+  bedTime: null,
+  sleepHistory: null,
   now: now.toISOString(),
   workoutToday: false,
   workoutMinutesToday: null,
@@ -36,6 +41,13 @@ export const isSameDay = (iso: string, now = new Date()): boolean => {
 export const dayKey = (iso: string): string => {
   const d = new Date(iso);
   return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+};
+
+/** Zero-padded `YYYY-MM-DD` key in local time (sortable, used for history). */
+export const isoDayKey = (iso: string): string => {
+  const d = new Date(iso);
+  const pad = (n: number): string => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 };
 
 export const average = (values: number[]): number | null => (values.length ? values.reduce((a, b) => a + b, 0) / values.length : null);

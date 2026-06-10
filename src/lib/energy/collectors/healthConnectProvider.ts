@@ -2,8 +2,8 @@ import type * as HealthConnectModule from 'react-native-health-connect';
 import type { Permission, RecordResult } from 'react-native-health-connect/lib/typescript/types';
 import type { SleepStage } from 'react-native-health-connect/lib/typescript/types/base.types';
 
-import type { DateRange, HealthMetrics } from '../types';
-import { average, dayKey, emptyMetrics, isSameDay, lastDaysRange, minutesBetween, stdDev, sum } from './shared';
+import type { DateRange, HealthMetrics, SleepNight } from '../types';
+import { average, DAY_MS, emptyMetrics, isoDayKey, isSameDay, lastDaysRange, minutesBetween, stdDev, sum } from './shared';
 import type { HealthDataProvider } from './types';
 
 /** Health Connect `SleepSessionRecord.StageType` codes. */
@@ -39,11 +39,13 @@ const stageMinutes = (stages: SleepStage[], stage: number): number => sum(stages
 
 const asleepMinutes = (stages: SleepStage[]): number => sum(stages.filter((s) => ASLEEP_STAGES.has(s.stage)).map((s) => minutesBetween(s.startTime, s.endTime)));
 
-const sleepFromSessions = (sessions: RecordResult<'SleepSession'>[]): Pick<HealthMetrics, 'sleepHours' | 'wakeTime' | 'deepSleepMin' | 'remSleepMin' | 'sleepVariability'> => {
+const sleepFromSessions = (sessions: RecordResult<'SleepSession'>[]): Pick<HealthMetrics, 'sleepHours' | 'wakeTime' | 'bedTime' | 'sleepHistory' | 'deepSleepMin' | 'remSleepMin' | 'sleepVariability'> => {
   if (!sessions.length) {
     return {
       sleepHours: null,
       wakeTime: null,
+      bedTime: null,
+      sleepHistory: null,
       deepSleepMin: null,
       remSleepMin: null,
       sleepVariability: null,
@@ -57,19 +59,22 @@ const sleepFromSessions = (sessions: RecordResult<'SleepSession'>[]): Pick<Healt
   // Duration falls back to the session span when no stages are present.
   const lastMinutes = lastStages.length ? asleepMinutes(lastStages) : minutesBetween(last.startTime, last.endTime);
 
-  // Per-night totals to estimate variability (hours).
+  // Per-night totals (sleep history + variability).
   const perNight = new Map<string, number>();
   sorted.forEach((session) => {
     const stages = session.stages ?? [];
     const minutes = stages.length ? asleepMinutes(stages) : minutesBetween(session.startTime, session.endTime);
-    const key = dayKey(session.endTime);
+    const key = isoDayKey(session.endTime);
     perNight.set(key, (perNight.get(key) ?? 0) + minutes);
   });
-  const variability = stdDev([...perNight.values()].map((m) => m / 60));
+  const sleepHistory: SleepNight[] = [...perNight.entries()].map(([date, minutes]) => ({ date, sleepHours: minutes / 60 })).sort((a, b) => a.date.localeCompare(b.date));
+  const variability = stdDev(sleepHistory.map((n) => n.sleepHours));
 
   return {
     sleepHours: lastMinutes / 60,
     wakeTime: last.endTime,
+    bedTime: last.startTime,
+    sleepHistory,
     deepSleepMin: lastStages.length ? stageMinutes(lastStages, STAGE.DEEP) : null,
     remSleepMin: lastStages.length ? stageMinutes(lastStages, STAGE.REM) : null,
     sleepVariability: variability,
@@ -149,7 +154,10 @@ export class HealthConnectProvider implements HealthDataProvider {
     const sessions = exerciseRecords as RecordResult<'ExerciseSession'>[];
     const todays = sessions.filter((s) => isSameDay(s.startTime, now));
     const workoutMinutesToday = todays.length ? sum(todays.map((s) => minutesBetween(s.startTime, s.endTime))) : null;
-    const trainingLoad7d = sessions.length ? sum(sessions.map((s) => minutesBetween(s.startTime, s.endTime))) : null;
+    // Keep the 7-day semantics even when the collection range is wider (14d).
+    const sevenDaysAgo = now.getTime() - 7 * DAY_MS;
+    const lastWeek = sessions.filter((s) => new Date(s.startTime).getTime() >= sevenDaysAgo);
+    const trainingLoad7d = sessions.length ? sum(lastWeek.map((s) => minutesBetween(s.startTime, s.endTime))) : null;
 
     return {
       ...sleep,

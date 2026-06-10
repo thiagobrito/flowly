@@ -9,6 +9,8 @@ const baseMetrics = (overrides: Partial<HealthMetrics> = {}): HealthMetrics => (
   sleepHours: 8,
   // Woke at ~06:30 (ideal), 7.5h before NOW.
   wakeTime: '2026-06-08T06:30:00.000Z',
+  bedTime: '2026-06-07T22:30:00.000Z',
+  sleepHistory: [],
   now: NOW,
   workoutToday: true,
   workoutMinutesToday: 45,
@@ -84,6 +86,8 @@ describe('computeEnergyScore', () => {
     const result = computeEnergyScore({
       sleepHours: null,
       wakeTime: null,
+      bedTime: null,
+      sleepHistory: null,
       now: NOW,
       workoutToday: false,
       workoutMinutesToday: null,

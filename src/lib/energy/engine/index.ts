@@ -1,4 +1,10 @@
+export { computeCircadianEnergy, computeSleepInertiaPenalty } from './circadian';
+export { computeTaskCompatibility, energyScoreToLevel } from './compatibility';
 export { buildSubScores } from './components';
 export { computeEnergyScore } from './energyEngine';
+export { type CircadianWave, defaultFlowlyConfig, type FlowlyEngineConfig } from './flowlyConfig';
+export { computeEnergyAtMoment, computeFlowlyEnergy, type EnergyCurveOptions, flowlyInputFromMetrics, generateEnergyCurve } from './flowlyEngine';
 export { clamp, hourOfDay, hoursBetween, linear, triangular } from './normalize';
+export { computeRecoveryScore, normalizeHrv, normalizeRestingHeartRate, normalizeSleepQuality, type RecoveryInput } from './recovery';
 export { circadianAlertness, sleepReservoirScore, timeAwakeScore, wakeAlignmentScore } from './safte';
+export { computeSleepDebtHours, computeSleepDebtScore } from './sleepDebt';

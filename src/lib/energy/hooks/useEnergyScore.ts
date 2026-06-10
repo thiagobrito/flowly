@@ -9,7 +9,7 @@ import type { DateRange, EnergyScore, HealthMetrics } from '../types';
 export interface UseEnergyScoreOptions {
   /** Engine configuration (weights / ranges). Defaults to {@link defaultConfig}. */
   config?: EnergyConfig;
-  /** Collection window. Defaults to the last 7 days. */
+  /** Collection window. Defaults to the last 14 days (sleep-debt window). */
   range?: DateRange;
   /** Request permissions and fetch automatically on mount. Defaults to true. */
   autoFetch?: boolean;

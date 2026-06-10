@@ -6,6 +6,7 @@ import { useEnergyScore } from '@/lib/energy';
 
 import DayChip from './components/DayChip';
 import ProgressRing from './components/ProgressRing';
+import SleepCard from './components/SleepCard';
 import StatCard from './components/StatsCard';
 import { fetchProgress } from './data';
 import type { ProgressData } from './types';
@@ -89,6 +90,10 @@ export default function Statistics() {
           {data.stats.map((stat) => (
             <StatCard key={stat.id} stat={stat} isDark={isDark} />
           ))}
+        </View>
+
+        <View className="mt-7">
+          <SleepCard energyInfo={energyInfo} isDark={isDark} />
         </View>
 
         {/* }
