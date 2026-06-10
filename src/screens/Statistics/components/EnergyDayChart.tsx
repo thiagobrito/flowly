@@ -117,7 +117,7 @@ export default function EnergyDayChart({ input, tasks, selectedDay, isDark }: En
 
     const energyAt = (hourFraction: number): number => {
       const moment = new Date(day.getTime() + hourFraction * 3600_000);
-      return computeEnergyAtMoment(dayInput, moment.toISOString()).energyScore;
+      return computeEnergyAtMoment(dayInput, moment.toISOString()).doubleEnergyScore;
     };
 
     const hourly = Array.from({ length: HOURS_IN_DAY + 1 }, (_, hour) => energyAt(hour));

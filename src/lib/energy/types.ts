@@ -133,6 +133,8 @@ export interface FlowlyEnergyComponents {
 export interface FlowlyEnergyResult {
   /** Final energy score, integer in the 0-100 range (0 = exhausted, 100 = peak). */
   energyScore: number;
+  /** Final energy score, integer in the 0-100 range (0 = exhausted, 100 = peak). */
+  doubleEnergyScore: number;
   /** Same energy expressed on the 0-5 scale used by the task engine. */
   energyLevel: number;
   band: EnergyBand;

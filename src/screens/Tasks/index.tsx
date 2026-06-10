@@ -64,7 +64,7 @@ export default function Tasks({ onEdit, onLogout }: TasksProps) {
     const metrics = getHealthProvider().collect() as any;
     const input = flowlyInputFromMetrics(metrics, 8);
     const result = computeEnergyAtMoment(input, new Date().toISOString());
-    setEnergyScore(result.energyScore);
+    setEnergyScore(result.doubleEnergyScore);
     setEnergyLevel(result.energyLevel);
   }, []);
 

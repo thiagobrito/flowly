@@ -7,16 +7,17 @@ type HeaderProps = {
   onLogout?: () => void;
 };
 
-function EnergyColor(energyScore: number) {
-  if (energyScore >= 80) return 'text-green-600';
-  if (energyScore >= 40) return 'text-yellow-600';
-  return 'text-red-600';
-}
+function BatteryData({ energyScore }: { energyScore: number }) {
+  let color = 'bg-red-800/80';
+  if (energyScore >= 80) color = 'bg-green-800/80';
+  if (energyScore >= 40) color = 'bg-yellow-600/70';
 
-function IconColor(energyScore: number) {
-  if (energyScore >= 80) return 'green';
-  if (energyScore >= 40) return 'yellow';
-  return 'red';
+  return (
+    <View className={`flex flex-row ${color} rounded-xl px-2`}>
+      <BatteryFull className="my-auto flex" size={28} color="white" />
+      <Text className="ml-2 flex rounded-xl text-lg text-white">Energia corporal de {energyScore}%</Text>
+    </View>
+  );
 }
 
 export default function Header({ isDark, energyScore, onLogout }: HeaderProps) {
@@ -24,10 +25,7 @@ export default function Header({ isDark, energyScore, onLogout }: HeaderProps) {
     <View className="flex-row items-start justify-between pt-2">
       <View className="flex-col">
         <Text className="text-xl font-bold text-zinc-900 dark:text-zinc-50">Suas atividades,</Text>
-        <View className="flex flex-row">
-          <BatteryFull className={`my-auto flex ${EnergyColor(energyScore)}`} size={28} color={IconColor(energyScore)} />
-          <Text className={`ml-2 flex rounded-xl text-lg ${EnergyColor(energyScore)}`}>Energia corporal de {energyScore}%</Text>
-        </View>
+        <BatteryData energyScore={energyScore} />
       </View>
 
       <View className="flex-row items-center" style={{ gap: 8 }}>

@@ -85,10 +85,11 @@ const buildDayContext = (input: FlowlyEngineInput, config: FlowlyEngineConfig): 
 const energyFromContext = (context: DayContext, hoursAwake: number, momentIso: string, config: FlowlyEngineConfig): FlowlyEnergyResult => {
   const circadianEnergy = computeCircadianEnergy(hoursAwake, context.dayLengthHours, config);
   const sleepInertiaPenalty = computeSleepInertiaPenalty(hoursAwake, config);
-  const energyScore = Math.min(Math.round(clamp(circadianEnergy * (context.recoveryScore / 100) - sleepInertiaPenalty)) * 2, 100);
+  const energyScore = Math.round(clamp(circadianEnergy * (context.recoveryScore / 100) - sleepInertiaPenalty));
 
   return {
     energyScore,
+    doubleEnergyScore: Math.min(energyScore * 2, 100),
     energyLevel: energyScoreToLevel(energyScore),
     band: resolveBand(energyScore, config.bands),
     components: {
@@ -146,7 +147,7 @@ export const generateEnergyCurve = (input: FlowlyEngineInput, config: FlowlyEngi
     points.push({
       time,
       hoursAwake,
-      energyScore: energyFromContext(context, hoursAwake, time, config).energyScore,
+      energyScore: energyFromContext(context, hoursAwake, time, config).doubleEnergyScore,
     });
   }
   return points;
