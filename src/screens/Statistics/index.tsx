@@ -2,7 +2,7 @@ import { BatteryFull, CheckCircle, HandFist } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, Text, useColorScheme, View } from 'react-native';
 
-import { useEnergyScore } from '@/lib/energy';
+import { computeFlowlyEnergy, flowlyInputFromMetrics, getHealthProvider, useEnergyScore } from '@/lib/energy';
 
 import DayChip from './components/DayChip';
 import ProgressRing from './components/ProgressRing';
@@ -17,6 +17,14 @@ export default function Statistics() {
   const [loading, setLoading] = useState(true);
   const energyInfo = useEnergyScore();
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  const [energyScore, setEnergyScore] = useState<number | null>(null);
+
+  useEffect(() => {
+    const metrics = getHealthProvider().collect() as any;
+    const input = flowlyInputFromMetrics(metrics, 8);
+    const now = computeFlowlyEnergy(input);
+    setEnergyScore(now.energyScore);
+  }, [energyInfo]);
 
   useEffect(() => {
     let active = true;
@@ -67,10 +75,10 @@ export default function Statistics() {
             </View>
 
             <View className="min-w-full flex-1 rounded-2xl bg-white/40 px-4 py-2 pr-3">
-              <Text className="text-lg font-semibold text-zinc-700 dark:text-zinc-200">Energia Restante</Text>
+              <Text className="text-lg font-semibold text-zinc-700 dark:text-zinc-200">Pontos de Energia</Text>
               <View className="flex-row items-center gap-2">
                 <BatteryFull size={24} color={isDark ? '#e4e4e7' : '#3b82f6'} />
-                <Text className="ml-2 text-xl font-extrabold text-zinc-900 dark:text-zinc-50">{energyInfo.score ?? 0}%</Text>
+                <Text className="ml-2 text-xl font-extrabold text-zinc-900 dark:text-zinc-50">{energyScore ?? 0}</Text>
               </View>
             </View>
 

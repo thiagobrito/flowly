@@ -6,7 +6,7 @@ Importável via `@/lib/energy`.
 
 O módulo expõe dois motores complementares:
 
-- **`computeEnergyScore`** — modelo legado de média ponderada por sinal (retorno preservado: `{ score, band, breakdown, computedAt }`).
+- `**computeEnergyScore**` — modelo legado de média ponderada por sinal (retorno preservado: `{ score, band, breakdown, computedAt }`).
 - **Flowly Energy Engine** (`computeFlowlyEnergy` / `computeEnergyAtMoment`) — modelo biológico inspirado em RISE Sleep, pesquisa de ritmo circadiano, dívida de sono e modelagem de fadiga estilo SAFTE. Veja a seção [Flowly Energy Engine](#flowly-energy-engine) abaixo.
 
 ## Arquitetura
@@ -73,13 +73,15 @@ useEnergyScore({
 
 **Retorno:** `{ score, energy, metrics, loading, error, hasPermissions, requestPermissions, refresh }`
 
-| Campo | Descrição |
-| --- | --- |
-| `score` | Score final 0–100, ou `null` antes da primeira coleta |
-| `energy` | Resultado completo (`band`, `breakdown`, `computedAt`) |
-| `metrics` | Métricas normalizadas coletadas do Health |
-| `requestPermissions` | Solicita permissões de leitura |
-| `refresh` | Re-coleta dados e recalcula o score |
+
+| Campo                | Descrição                                              |
+| -------------------- | ------------------------------------------------------ |
+| `score`              | Score final 0–100, ou `null` antes da primeira coleta  |
+| `energy`             | Resultado completo (`band`, `breakdown`, `computedAt`) |
+| `metrics`            | Métricas normalizadas coletadas do Health              |
+| `requestPermissions` | Solicita permissões de leitura                         |
+| `refresh`            | Re-coleta dados e recalcula o score                    |
+
 
 ## Uso manual (sem hook)
 
@@ -105,18 +107,20 @@ console.log(result.breakdown);  // SubScore[] com valor, peso e tier
 
 ## Métricas coletadas
 
-| Sinal | Peso padrão |
-| --- | --- |
-| Horas de sono | Muito alto |
-| Horário que acordou | Alto |
-| Horário atual | Alto |
-| Treino realizado hoje | Médio |
-| HRV | Alto |
-| FC em repouso | Médio |
-| Sono profundo | Médio |
-| Sono REM | Médio |
-| Variabilidade do sono | Médio |
-| Carga de treino (7 dias) | Médio |
+
+| Sinal                    | Peso padrão |
+| ------------------------ | ----------- |
+| Horas de sono            | Muito alto  |
+| Horário que acordou      | Alto        |
+| Horário atual            | Alto        |
+| Treino realizado hoje    | Médio       |
+| HRV                      | Alto        |
+| FC em repouso            | Médio       |
+| Sono profundo            | Médio       |
+| Sono REM                 | Médio       |
+| Variabilidade do sono    | Médio       |
+| Carga de treino (7 dias) | Médio       |
+
 
 Sinais ausentes são ignorados; os pesos restantes são re-normalizados automaticamente.
 
@@ -184,14 +188,16 @@ FlowlyEngineInput ──┬─> Sleep Debt   (janela móvel de 14 dias)
 
 Cada componente é um módulo puro e testado isoladamente:
 
-| Módulo | Responsabilidade |
-| --- | --- |
-| `engine/sleepDebt.ts` | Dívida de sono + score normalizado |
-| `engine/circadian.ts` | Curva circadiana + inércia do sono |
-| `engine/recovery.ts` | Recovery score + normalizações de HRV/FC |
-| `engine/compatibility.ts` | Compatibilidade tarefa × energia |
-| `engine/flowlyEngine.ts` | Orquestração, score por momento e curva do dia |
-| `engine/flowlyConfig.ts` | Todos os parâmetros do modelo (tuning sem tocar no código) |
+
+| Módulo                    | Responsabilidade                                           |
+| ------------------------- | ---------------------------------------------------------- |
+| `engine/sleepDebt.ts`     | Dívida de sono + score normalizado                         |
+| `engine/circadian.ts`     | Curva circadiana + inércia do sono                         |
+| `engine/recovery.ts`      | Recovery score + normalizações de HRV/FC                   |
+| `engine/compatibility.ts` | Compatibilidade tarefa × energia                           |
+| `engine/flowlyEngine.ts`  | Orquestração, score por momento e curva do dia             |
+| `engine/flowlyConfig.ts`  | Todos os parâmetros do modelo (tuning sem tocar no código) |
+
 
 ### Matemática do modelo
 
@@ -356,13 +362,15 @@ src/lib/energy/
 
 ## Exports principais
 
-| Export | Descrição |
-| --- | --- |
-| `useEnergyScore` | Hook React (pipeline completo) |
-| `computeEnergyScore` | Engine puro (sem side effects) |
-| `getHealthProvider` | Provider da plataforma (iOS/Android) |
-| `lastDaysRange` | Helper de intervalo de datas |
-| `defaultConfig` | Configuração padrão de pesos e faixas |
-| `WEIGHT_TIERS` | Mapa numérico dos tiers de peso |
+
+| Export               | Descrição                             |
+| -------------------- | ------------------------------------- |
+| `useEnergyScore`     | Hook React (pipeline completo)        |
+| `computeEnergyScore` | Engine puro (sem side effects)        |
+| `getHealthProvider`  | Provider da plataforma (iOS/Android)  |
+| `lastDaysRange`      | Helper de intervalo de datas          |
+| `defaultConfig`      | Configuração padrão de pesos e faixas |
+| `WEIGHT_TIERS`       | Mapa numérico dos tiers de peso       |
+
 
 Tipos: `HealthMetrics`, `EnergyScore`, `SubScore`, `EnergyBand`, `DateRange`, `EnergyConfig`.

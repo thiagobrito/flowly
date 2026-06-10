@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Platform, ScrollView, Text, useColorScheme, View } from 'react-native';
 
-import { useEnergyScore } from '@/lib/energy';
+import { computeFlowlyEnergy, flowlyInputFromMetrics, getHealthProvider } from '@/lib/energy';
 import { api } from '@/lib/network';
 
 import type { Task } from '../NewTask/data';
@@ -17,10 +17,10 @@ type TasksProps = {
 
 export default function Tasks({ onEdit, onLogout }: TasksProps) {
   const isDark = useColorScheme() === 'dark';
-  const energyInfo = useEnergyScore();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [updateId, setUpdateId] = useState<any>(0);
   const [loading, setLoading] = useState(true);
+  const [energyScore, setEnergyScore] = useState<number>(0);
 
   const handleDelete = (task: Task) => {
     Alert.alert('Deletar atividade', `Deseja remover "${task.name}"?`, [
@@ -53,13 +53,18 @@ export default function Tasks({ onEdit, onLogout }: TasksProps) {
   }, []);
 
   useEffect(() => {
+    const metrics = getHealthProvider().collect() as any;
+    const input = flowlyInputFromMetrics(metrics, 8);
+    const now = computeFlowlyEnergy(input);
+    setEnergyScore(now.energyScore);
+  }, []);
+
+  useEffect(() => {
     fetchTasks();
   }, [fetchTasks, updateId]);
 
-  const currentEnergy = (energyInfo.score ?? 0) / 20;
-
   const { concludedTasks, visibleTasks } = useMemo(() => FilterTasksToShow(tasks), [tasks]);
-  const prioritizedTasks = useMemo(() => prioritizeTasks(visibleTasks, currentEnergy), [visibleTasks, currentEnergy]);
+  const prioritizedTasks = useMemo(() => prioritizeTasks(visibleTasks, energyScore), [visibleTasks, energyScore]);
 
   if (loading) {
     return (
@@ -71,7 +76,7 @@ export default function Tasks({ onEdit, onLogout }: TasksProps) {
 
   return (
     <View className="flex-1">
-      <Header isDark={isDark} energyInfo={energyInfo} onLogout={onLogout} />
+      <Header isDark={isDark} energyScore={energyScore} onLogout={onLogout} />
 
       <ScrollView className="mt-2 flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 70 }}>
         {prioritizedTasks.map((task, index) => (

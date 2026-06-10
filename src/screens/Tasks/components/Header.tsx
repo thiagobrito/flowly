@@ -3,18 +3,30 @@ import { Pressable, Text, View } from 'react-native';
 
 type HeaderProps = {
   isDark: boolean;
-  energyInfo: { score?: number | null };
+  energyScore: number;
   onLogout?: () => void;
 };
 
-export default function Header({ isDark, energyInfo, onLogout }: HeaderProps) {
+function EnergyColor(energyScore: number) {
+  if (energyScore >= 80) return 'text-green-600';
+  if (energyScore >= 40) return 'text-yellow-600';
+  return 'text-red-600';
+}
+
+function IconColor(energyScore: number) {
+  if (energyScore >= 80) return 'green';
+  if (energyScore >= 40) return 'yellow';
+  return 'red';
+}
+
+export default function Header({ isDark, energyScore, onLogout }: HeaderProps) {
   return (
     <View className="flex-row items-start justify-between pt-2">
       <View className="flex-col">
         <Text className="text-xl font-bold text-zinc-900 dark:text-zinc-50">Suas atividades,</Text>
         <View className="flex flex-row">
-          <BatteryFull className="my-auto flex" size={24} color={isDark ? '#e4e4e7' : 'green'} />
-          <Text className="my-auto ml-2 flex rounded-xl text-lg text-green-700">Energia corporal de {energyInfo.score}%</Text>
+          <BatteryFull className={`my-auto flex ${EnergyColor(energyScore)}`} size={28} color={IconColor(energyScore)} />
+          <Text className={`ml-2 flex rounded-xl text-lg ${EnergyColor(energyScore)}`}>Energia corporal de {energyScore}%</Text>
         </View>
       </View>
 
