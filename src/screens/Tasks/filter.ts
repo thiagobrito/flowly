@@ -61,9 +61,7 @@ export default function FilterTasksToShow(tasks: Task[]): any {
   const todayKey = localDateKey(now);
 
   return {
-    concludedTasks: tasks.filter((task) => {
-      return isCompletedToday(task, todayKey) && isDueToday(task, now, todayKey);
-    }),
+    concludedTasks: tasks.filter((task) => isCompletedToday(task, todayKey) && isDueToday(task, now, todayKey)),
 
     visibleTasks: tasks.filter((task) => {
       if (isCompletedToday(task, todayKey)) return false;
