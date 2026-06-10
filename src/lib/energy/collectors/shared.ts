@@ -24,8 +24,7 @@ export const emptyMetrics = (now = new Date()): HealthMetrics => ({
 });
 
 /** Minutes elapsed between two ISO timestamps. */
-export const minutesBetween = (startIso: string, endIso: string): number =>
-  (new Date(endIso).getTime() - new Date(startIso).getTime()) / 60000;
+export const minutesBetween = (startIso: string, endIso: string): number => (new Date(endIso).getTime() - new Date(startIso).getTime()) / 60000;
 
 /** Whether `iso` falls on the same calendar day as `now`. */
 export const isSameDay = (iso: string, now = new Date()): boolean => {
@@ -39,8 +38,7 @@ export const dayKey = (iso: string): string => {
   return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 };
 
-export const average = (values: number[]): number | null =>
-  values.length ? values.reduce((a, b) => a + b, 0) / values.length : null;
+export const average = (values: number[]): number | null => (values.length ? values.reduce((a, b) => a + b, 0) / values.length : null);
 
 export const sum = (values: number[]): number => values.reduce((a, b) => a + b, 0);
 

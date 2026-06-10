@@ -11,10 +11,7 @@ type DeckCardProps = {
 
 export function DeckCard({ isDark, children }: DeckCardProps) {
   return (
-    <View
-      className="overflow-hidden rounded-3xl border border-white/50 bg-white/40 shadow-lg dark:bg-zinc-900"
-      style={{ height: CARD_HEIGHT }}
-    >
+    <View className="overflow-hidden rounded-3xl border border-white/50 bg-white/40 shadow-lg dark:bg-zinc-900" style={{ height: CARD_HEIGHT }}>
       <BlurView intensity={40} tint={isDark ? 'dark' : 'light'} className="flex-1 px-4 py-6">
         <View className="absolute inset-0 bg-white/40 dark:bg-white/10" />
         <View className="flex-1">{children}</View>

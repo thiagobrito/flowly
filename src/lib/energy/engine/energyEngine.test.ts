@@ -74,9 +74,7 @@ describe('computeEnergyScore', () => {
     const available = result.breakdown.filter((s) => s.available);
     const missing = result.breakdown.filter((s) => !s.available);
 
-    expect(missing.map((s) => s.key).sort()).toEqual(
-      ['deepSleep', 'hrv', 'remSleep', 'restingHeartRate', 'sleepVariability', 'trainingLoad7d'].sort(),
-    );
+    expect(missing.map((s) => s.key).sort()).toEqual(['deepSleep', 'hrv', 'remSleep', 'restingHeartRate', 'sleepVariability', 'trainingLoad7d'].sort());
     // timeAwake and workoutToday are always available; plus sleepHours, wakeTime.
     expect(available.length).toBe(4);
     expect(result.score).toBeGreaterThan(0);
@@ -109,5 +107,21 @@ describe('computeEnergyScore', () => {
     });
     // With stricter band thresholds a normally-high score is downgraded.
     expect(result.band).not.toBe('high');
+  });
+
+  it('penalizes long workouts and high weekly training load', () => {
+    const moderateWorkout = computeEnergyScore(baseMetrics({ workoutMinutesToday: 60 }));
+    const longWorkout = computeEnergyScore(baseMetrics({ workoutMinutesToday: 120 }));
+    const heavyLoad = computeEnergyScore(baseMetrics({ trainingLoad7d: 900 }));
+
+    expect(longWorkout.breakdown.find((item) => item.key === 'workoutToday')?.value).toBeLessThan(moderateWorkout.breakdown.find((item) => item.key === 'workoutToday')?.value ?? 100);
+    expect(heavyLoad.breakdown.find((item) => item.key === 'trainingLoad7d')?.value).toBeLessThan(100);
+  });
+
+  it('reduces the sleep score when the user oversleeps', () => {
+    const idealSleep = computeEnergyScore(baseMetrics({ sleepHours: 8 }));
+    const overslept = computeEnergyScore(baseMetrics({ sleepHours: 10 }));
+
+    expect(overslept.breakdown.find((item) => item.key === 'sleepHours')?.value).toBeLessThan(idealSleep.breakdown.find((item) => item.key === 'sleepHours')?.value ?? 100);
   });
 });

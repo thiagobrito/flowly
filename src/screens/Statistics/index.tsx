@@ -59,7 +59,7 @@ export default function Statistics() {
             <View className="min-w-full flex-1 rounded-2xl bg-white/40 px-4 py-2 pr-3">
               <Text className="text-lg font-semibold text-zinc-700 dark:text-zinc-200">Tarefas concluídas</Text>
 
-              <View className="gap-2] flex-row items-center">
+              <View className="flex-row items-center gap-2">
                 <CheckCircle size={24} color={isDark ? '#e4e4e7' : '#3b82f6'} />
                 <Text className="ml-2 text-xl font-extrabold text-zinc-900 dark:text-zinc-50">{data.daily.concludedTasks}</Text>
               </View>

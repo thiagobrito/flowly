@@ -72,11 +72,11 @@ export function TaskCardContent({ item, isDark: _isDark }: { item: TaskItem; isD
       <View className="flex-row items-center justify-between">
         <Text className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{item.label}</Text>
         {item.avatarUrl ? (
-          <View className="h-9 w-9 overflow-hidden rounded-full border border-white/60">
-            <Image source={{ uri: item.avatarUrl }} className="h-9 w-9" />
+          <View className="size-9 overflow-hidden rounded-full border border-white/60">
+            <Image source={{ uri: item.avatarUrl }} className="size-9" />
           </View>
         ) : (
-          <View className="h-9 w-9 rounded-full bg-zinc-300 dark:bg-zinc-700" />
+          <View className="size-9 rounded-full bg-zinc-300 dark:bg-zinc-700" />
         )}
       </View>
 

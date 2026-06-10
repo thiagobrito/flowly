@@ -47,10 +47,7 @@ export function LevelScale({ value, onChange, Icon, accent, isDark }: LevelScale
             );
           })}
         </View>
-        <Text
-          className="w-5 text-center text-sm font-semibold text-zinc-700 dark:text-zinc-200"
-          style={{ marginLeft: 10 }}
-        >
+        <Text className="w-5 text-center text-sm font-semibold text-zinc-700 dark:text-zinc-200" style={{ marginLeft: 10 }}>
           {value}
         </Text>
       </View>
@@ -69,15 +66,7 @@ type OptionChipProps = {
   className?: string;
 };
 
-export function OptionChip({
-  label,
-  Icon,
-  selected,
-  accent = '#3b82f6',
-  isDark,
-  onPress,
-  className = '',
-}: OptionChipProps) {
+export function OptionChip({ label, Icon, selected, accent = '#3b82f6', isDark, onPress, className = '' }: OptionChipProps) {
   let iconColor = isDark ? '#a1a1aa' : '#71717a';
   let borderColor = isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)';
   let backgroundColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.7)';
@@ -91,12 +80,7 @@ export function OptionChip({
   }
 
   return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityState={{ selected }}
-      className={`active:opacity-80 ${className}`}
-    >
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityState={{ selected }} className={`active:opacity-80 ${className}`}>
       <View
         className="w-full flex-row items-center justify-center rounded-2xl border p-3"
         style={{
@@ -162,13 +146,7 @@ export function SegmentedToggle({ options, value, onChange, accent, isDark }: Se
         }
 
         return (
-          <Pressable
-            key={option.value}
-            onPress={() => onChange(option.value)}
-            accessibilityRole="button"
-            accessibilityState={{ selected }}
-            className="flex-1 active:opacity-80"
-          >
+          <Pressable key={option.value} onPress={() => onChange(option.value)} accessibilityRole="button" accessibilityState={{ selected }} className="flex-1 active:opacity-80">
             <View
               className="items-center rounded-xl py-2"
               style={{
@@ -204,17 +182,8 @@ export function Stepper({ value, onChange, min = 1, max = 99, suffix, accent, is
 
   return (
     <View className="flex-row items-center justify-between">
-      <Pressable
-        onPress={decrement}
-        disabled={value <= min}
-        accessibilityRole="button"
-        accessibilityLabel="Diminuir"
-        className="active:opacity-70"
-      >
-        <View
-          className="h-10 w-10 items-center justify-center rounded-full"
-          style={{ backgroundColor: buttonBg, opacity: value <= min ? 0.4 : 1 }}
-        >
+      <Pressable onPress={decrement} disabled={value <= min} accessibilityRole="button" accessibilityLabel="Diminuir" className="active:opacity-70">
+        <View className="size-10 items-center justify-center rounded-full" style={{ backgroundColor: buttonBg, opacity: value <= min ? 0.4 : 1 }}>
           <Minus size={18} color={isDark ? '#e4e4e7' : '#3f3f46'} />
         </View>
       </Pressable>
@@ -226,17 +195,8 @@ export function Stepper({ value, onChange, min = 1, max = 99, suffix, accent, is
         {suffix ? <Text className="text-sm text-zinc-500 dark:text-zinc-400">{suffix}</Text> : null}
       </View>
 
-      <Pressable
-        onPress={increment}
-        disabled={value >= max}
-        accessibilityRole="button"
-        accessibilityLabel="Aumentar"
-        className="active:opacity-70"
-      >
-        <View
-          className="h-10 w-10 items-center justify-center rounded-full"
-          style={{ backgroundColor: buttonBg, opacity: value >= max ? 0.4 : 1 }}
-        >
+      <Pressable onPress={increment} disabled={value >= max} accessibilityRole="button" accessibilityLabel="Aumentar" className="active:opacity-70">
+        <View className="size-10 items-center justify-center rounded-full" style={{ backgroundColor: buttonBg, opacity: value >= max ? 0.4 : 1 }}>
           <Plus size={18} color={isDark ? '#e4e4e7' : '#3f3f46'} />
         </View>
       </Pressable>
@@ -275,15 +235,9 @@ export function WeekdayToggles({ value, onChange, accent, isDark }: WeekdayToggl
         }
 
         return (
-          <Pressable
-            key={day.index}
-            onPress={() => toggleDay(day.index)}
-            accessibilityRole="button"
-            accessibilityState={{ selected }}
-            className="active:opacity-80"
-          >
+          <Pressable key={day.index} onPress={() => toggleDay(day.index)} accessibilityRole="button" accessibilityState={{ selected }} className="active:opacity-80">
             <View
-              className="h-10 w-10 items-center justify-center rounded-full border"
+              className="size-10 items-center justify-center rounded-full border"
               style={{
                 borderColor: dayBorderColor,
                 backgroundColor: selected ? `${accent}22` : 'transparent',

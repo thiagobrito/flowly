@@ -2,7 +2,7 @@
   "expo": {
     "name": "Flowly",
     "slug": "flowly-m-gvdcsjo9xgnlwu4indg",
-    "version": "1.0.0",
+    "version": "2026.06.09",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -18,7 +18,9 @@
       "bundleIdentifier": "com.flowly-v2.app",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
-      }
+      },
+      "buildNumber": "1",
+      "appleTeamId": "WCZL6FK4U7"
     },
     "android": {
       "adaptiveIcon": {
@@ -33,7 +35,8 @@
         "android.permission.health.READ_RESTING_HEART_RATE",
         "android.permission.health.READ_EXERCISE",
         "android.permission.health.READ_ACTIVE_CALORIES_BURNED"
-      ]
+      ],
+      "versionCode": 2026060901
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -44,8 +47,8 @@
       [
         "react-native-health",
         {
-          "healthSharePermission": "Permitir que o Flowly leia seus dados de saúde para calcular seu Energy Score.",
-          "healthUpdatePermission": "Permitir que o Flowly atualize seus dados de saúde."
+          "healthSharePermission": "Permitir que o Flowly leia seus dados de sa\u00fade para calcular seu Energy Score.",
+          "healthUpdatePermission": "Permitir que o Flowly atualize seus dados de sa\u00fade."
         }
       ],
       "react-native-health-connect",

@@ -1,10 +1,4 @@
-import type {
-  AppleHealthKit as AppleHealthKitType,
-  HealthInputOptions,
-  HealthKitPermissions,
-  HealthValue,
-  HKWorkoutQueriedSampleType,
-} from 'react-native-health';
+import type { AppleHealthKit as AppleHealthKitType, HealthInputOptions, HealthKitPermissions, HealthValue, HKWorkoutQueriedSampleType } from 'react-native-health';
 
 import type { DateRange, HealthMetrics } from '../types';
 import { average, dayKey, emptyMetrics, isSameDay, lastDaysRange, minutesBetween, stdDev, sum } from './shared';
@@ -32,10 +26,7 @@ const loadHealthKit = (): AppleHealthKitType | null => {
   }
 };
 
-const promisify = <T>(
-  fn: (options: HealthInputOptions, cb: (err: string | null, res: T) => void) => void,
-  options: HealthInputOptions,
-): Promise<T | null> =>
+const promisify = <T>(fn: (options: HealthInputOptions, cb: (err: string | null, res: T) => void) => void, options: HealthInputOptions): Promise<T | null> =>
   new Promise((resolve) => {
     try {
       fn(options, (err, res) => resolve(err ? null : res));
@@ -44,9 +35,7 @@ const promisify = <T>(
     }
   });
 
-const sleepFromSamples = (
-  samples: AppleSleepSample[],
-): Pick<HealthMetrics, 'sleepHours' | 'wakeTime' | 'deepSleepMin' | 'remSleepMin' | 'sleepVariability'> => {
+const sleepFromSamples = (samples: AppleSleepSample[]): Pick<HealthMetrics, 'sleepHours' | 'wakeTime' | 'deepSleepMin' | 'remSleepMin' | 'sleepVariability'> => {
   const asleep = samples.filter((s) => ASLEEP_VALUES.has(s.value));
   if (!asleep.length) {
     return {
@@ -86,8 +75,7 @@ const sleepFromSamples = (
   };
 };
 
-const workoutMinutes = (w: HKWorkoutQueriedSampleType): number =>
-  w.start && w.end ? minutesBetween(w.start, w.end) : (w.duration ?? 0) / 60;
+const workoutMinutes = (w: HKWorkoutQueriedSampleType): number => (w.start && w.end ? minutesBetween(w.start, w.end) : (w.duration ?? 0) / 60);
 
 /** Apple Health (HealthKit) data provider for iOS. */
 export class AppleHealthProvider implements HealthDataProvider {
@@ -107,14 +95,7 @@ export class AppleHealthProvider implements HealthDataProvider {
     const { Permissions } = this.hk.Constants;
     const permissions: HealthKitPermissions = {
       permissions: {
-        read: [
-          Permissions.SleepAnalysis,
-          Permissions.HeartRateVariability,
-          Permissions.RestingHeartRate,
-          Permissions.HeartRate,
-          Permissions.Workout,
-          Permissions.ActiveEnergyBurned,
-        ],
+        read: [Permissions.SleepAnalysis, Permissions.HeartRateVariability, Permissions.RestingHeartRate, Permissions.HeartRate, Permissions.Workout, Permissions.ActiveEnergyBurned],
         write: [],
       },
     };
@@ -140,7 +121,7 @@ export class AppleHealthProvider implements HealthDataProvider {
       promisify<HealthValue[]>((o, cb) => hk.getRestingHeartRateSamples(o, cb), options),
       new Promise<HKWorkoutQueriedSampleType[] | null>((resolve) => {
         try {
-          hk.getAnchoredWorkouts(options, (err, res) => resolve(err ? null : res?.data ?? null));
+          hk.getAnchoredWorkouts(options, (err, res) => resolve(err ? null : (res?.data ?? null)));
         } catch {
           resolve(null);
         }

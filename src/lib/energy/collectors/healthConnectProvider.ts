@@ -35,15 +35,11 @@ const READ_PERMISSIONS: Permission[] = [
   { accessType: 'read', recordType: 'ActiveCaloriesBurned' },
 ];
 
-const stageMinutes = (stages: SleepStage[], stage: number): number =>
-  sum(stages.filter((s) => s.stage === stage).map((s) => minutesBetween(s.startTime, s.endTime)));
+const stageMinutes = (stages: SleepStage[], stage: number): number => sum(stages.filter((s) => s.stage === stage).map((s) => minutesBetween(s.startTime, s.endTime)));
 
-const asleepMinutes = (stages: SleepStage[]): number =>
-  sum(stages.filter((s) => ASLEEP_STAGES.has(s.stage)).map((s) => minutesBetween(s.startTime, s.endTime)));
+const asleepMinutes = (stages: SleepStage[]): number => sum(stages.filter((s) => ASLEEP_STAGES.has(s.stage)).map((s) => minutesBetween(s.startTime, s.endTime)));
 
-const sleepFromSessions = (
-  sessions: RecordResult<'SleepSession'>[],
-): Pick<HealthMetrics, 'sleepHours' | 'wakeTime' | 'deepSleepMin' | 'remSleepMin' | 'sleepVariability'> => {
+const sleepFromSessions = (sessions: RecordResult<'SleepSession'>[]): Pick<HealthMetrics, 'sleepHours' | 'wakeTime' | 'deepSleepMin' | 'remSleepMin' | 'sleepVariability'> => {
   if (!sessions.length) {
     return {
       sleepHours: null,
@@ -141,22 +137,13 @@ export class HealthConnectProvider implements HealthDataProvider {
       }
     };
 
-    const [sleepRecords, hrvRecords, rhrRecords, exerciseRecords] = await Promise.all([
-      read('SleepSession'),
-      read('HeartRateVariabilityRmssd'),
-      read('RestingHeartRate'),
-      read('ExerciseSession'),
-    ]);
+    const [sleepRecords, hrvRecords, rhrRecords, exerciseRecords] = await Promise.all([read('SleepSession'), read('HeartRateVariabilityRmssd'), read('RestingHeartRate'), read('ExerciseSession')]);
 
     const sleep = sleepFromSessions(sleepRecords as RecordResult<'SleepSession'>[]);
 
-    const hrvMs = average(
-      (hrvRecords as RecordResult<'HeartRateVariabilityRmssd'>[]).map((r) => r.heartRateVariabilityMillis),
-    );
+    const hrvMs = average((hrvRecords as RecordResult<'HeartRateVariabilityRmssd'>[]).map((r) => r.heartRateVariabilityMillis));
 
-    const rhrSorted = (rhrRecords as RecordResult<'RestingHeartRate'>[])
-      .slice()
-      .sort((a, b) => b.time.localeCompare(a.time));
+    const rhrSorted = (rhrRecords as RecordResult<'RestingHeartRate'>[]).slice().sort((a, b) => b.time.localeCompare(a.time));
     const restingHeartRate = rhrSorted.length ? rhrSorted[0]!.beatsPerMinute : null;
 
     const sessions = exerciseRecords as RecordResult<'ExerciseSession'>[];

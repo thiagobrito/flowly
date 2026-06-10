@@ -19,12 +19,12 @@ export default function Header({ isDark, energyInfo, onLogout }: HeaderProps) {
       </View>
 
       <View className="flex-row items-center" style={{ gap: 8 }}>
-        <Pressable onPress={() => {}} accessibilityRole="button" accessibilityLabel="Settings" className="h-10 w-10 items-center justify-center rounded-full bg-white/40 dark:bg-white/10">
+        <Pressable onPress={() => {}} accessibilityRole="button" accessibilityLabel="Settings" className="size-10 items-center justify-center rounded-full bg-white/40 dark:bg-white/10">
           <SlidersHorizontal size={18} color={isDark ? '#e4e4e7' : '#27272a'} />
         </Pressable>
 
         {onLogout ? (
-          <Pressable onPress={onLogout} accessibilityRole="button" accessibilityLabel="Sair" className="h-10 w-10 items-center justify-center rounded-full bg-white/40 dark:bg-white/10">
+          <Pressable onPress={onLogout} accessibilityRole="button" accessibilityLabel="Sair" className="size-10 items-center justify-center rounded-full bg-white/40 dark:bg-white/10">
             <LogOut size={18} color={isDark ? '#e4e4e7' : '#27272a'} />
           </Pressable>
         ) : null}

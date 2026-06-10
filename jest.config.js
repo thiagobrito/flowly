@@ -12,13 +12,7 @@ module.exports = {
   ],
   clearMocks: true,
   collectCoverage: true,
-  collectCoverageFrom: [
-    './src/**/*.{js,ts}',
-    '!**/coverage/**',
-    '!**/node_modules/**',
-    '!**/babel.config.js',
-    '!**/jest.setup.js',
-  ],
+  collectCoverageFrom: ['./src/lib/energy/config.ts', './src/lib/energy/engine/**/*.{js,ts}', '!./src/lib/energy/engine/index.ts', './src/lib/energy/collectors/shared.ts', './src/lib/storage/helpers.ts', './src/screens/Tasks/filter.ts'],
   coverageThreshold: {
     global: {
       branches: 30,

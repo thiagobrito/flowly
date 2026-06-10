@@ -16,7 +16,7 @@ export default function MetricCard({ metric, isDark }: { metric: ProgressMetric;
     >
       <View className="flex-row items-center justify-between">
         <Text className="text-sm font-medium text-zinc-500 dark:text-zinc-400">{metric.label}</Text>
-        <View className="h-7 w-7 items-center justify-center rounded-full" style={{ backgroundColor: `${metric.accent}22` }}>
+        <View className="size-7 items-center justify-center rounded-full" style={{ backgroundColor: `${metric.accent}22` }}>
           <metric.Icon size={15} color={metric.accent} />
         </View>
       </View>

@@ -54,8 +54,12 @@ export function usePersistedState<T extends PersistedValue>(initial: T, key: str
 
   const setPersisted = useCallback<SetPersisted<T>>(
     (value, _force = false, trace = null) => {
+      const telemetry = getTelemetry();
+
       if (value === null || value === undefined || typeof value !== 'object') {
-        console.log('setPersisted:error - value is null, undefined or not an object', value);
+        telemetry.reportMessage('usePersistedState_invalid_value', {
+          extra: { trace, valueType: typeof value },
+        });
         return;
       }
 
@@ -65,11 +69,15 @@ export function usePersistedState<T extends PersistedValue>(initial: T, key: str
       } catch (error) {
         if (error instanceof TypeError && error.message.includes('circular')) {
           InteractionManager.runAfterInteractions(() => {
-            console.error(`[${trace ?? ''}]: usePersistedState: erro ao serializar após interações`, error);
+            telemetry.reportMessage('usePersistedState_circular_reference', {
+              extra: { trace, message: error instanceof Error ? error.message : String(error) },
+            });
           });
           return;
         }
-        console.error(`[${trace ?? ''}]: usePersistedState: erro ao salvar storage`, error);
+        telemetry.reportMessage('usePersistedState_save_error', {
+          extra: { trace, message: error instanceof Error ? error.message : String(error) },
+        });
         return;
       }
 
@@ -86,7 +94,6 @@ export function usePersistedState<T extends PersistedValue>(initial: T, key: str
         entry.cachedRawValue = cloneRawValue(newValue);
         publishToListeners(entry, entry.cachedRawValue);
 
-        const telemetry = getTelemetry();
         const backend = getBackend();
         const { maxSizeBytes, warnSizeBytes } = getLimits();
 
@@ -97,7 +104,7 @@ export function usePersistedState<T extends PersistedValue>(initial: T, key: str
             let serializedSizeInBytes = getStringSizeInBytes(serializedValue);
 
             if (serializedSizeInBytes > maxSizeBytes) {
-              console.warn(`usePersistedState: payload muito grande (${serializedSizeInBytes} bytes) para a chave "${key}". Aplicando trimming...`);
+              telemetry.addBreadcrumb('usePersistedState.payload_too_large', { key, serializedSizeInBytes, action: 'trimming' }, 'native-storage');
 
               const trimmer = getTrimmer(key);
               if (trimmer) {
@@ -108,11 +115,13 @@ export function usePersistedState<T extends PersistedValue>(initial: T, key: str
               serializedSizeInBytes = getStringSizeInBytes(serializedValue);
 
               if (serializedSizeInBytes > maxSizeBytes) {
-                console.error(`usePersistedState: payload ainda muito grande após trimming (${serializedSizeInBytes} bytes) para a chave "${key}". Não salvando.`);
+                telemetry.reportMessage('usePersistedState_payload_still_too_large', {
+                  extra: { key, serializedSizeInBytes },
+                });
                 return;
               }
             } else if (serializedSizeInBytes > warnSizeBytes) {
-              console.warn(`usePersistedState: payload grande detectado (${serializedSizeInBytes} bytes) para a chave "${key}".`);
+              telemetry.addBreadcrumb('usePersistedState.payload_large', { key, serializedSizeInBytes }, 'native-storage');
             }
 
             const caller = trace || getCallerLabel('usePersistedState_write');
@@ -126,7 +135,6 @@ export function usePersistedState<T extends PersistedValue>(initial: T, key: str
                 .then(() => {
                   const durationMs = Date.now() - writeStartAt;
                   telemetry.addBreadcrumb('AsyncStorage.setItem.success', { key, caller, durationMs, sizeBytes: serializedSizeInBytes }, 'native-storage');
-                  console.log(`[${trace ?? ''}]: usePersistedState: valor salvo com sucesso (${serializedSizeInBytes} bytes)`, key);
                 })
                 .catch((error) => {
                   const durationMs = Date.now() - writeStartAt;
@@ -140,7 +148,9 @@ export function usePersistedState<T extends PersistedValue>(initial: T, key: str
                     },
                     'native-storage',
                   );
-                  console.error(`[${trace ?? ''}]: usePersistedState: erro ao salvar storage`, error);
+                  telemetry.reportMessage('usePersistedState_write_error', {
+                    extra: { trace, key, message: error instanceof Error ? error.message : String(error) },
+                  });
                 })
                 .finally(() => {
                   entry.pendingWrites = Math.max(0, entry.pendingWrites - 1);
@@ -148,14 +158,18 @@ export function usePersistedState<T extends PersistedValue>(initial: T, key: str
                 });
             });
           } catch (error) {
-            console.error(`[${trace ?? ''}]: usePersistedState: erro ao serializar após interações`, error);
+            telemetry.reportMessage('usePersistedState_serialize_error', {
+              extra: { trace, message: error instanceof Error ? error.message : String(error) },
+            });
           } finally {
             entry.scheduledAsyncPersistence = Math.max(0, entry.scheduledAsyncPersistence - 1);
             maybeEvictCacheEntry(key, entry);
           }
         });
       } catch (error) {
-        console.error(`[${trace ?? ''}]: usePersistedState: erro ao salvar storage`, error);
+        telemetry.reportMessage('usePersistedState_save_error', {
+          extra: { trace, message: error instanceof Error ? error.message : String(error) },
+        });
       }
     },
     [key],

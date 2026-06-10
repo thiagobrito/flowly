@@ -12,8 +12,7 @@ module.exports = {
   apps: {
     'ios.release': {
       type: 'ios.app',
-      build:
-        'xcodebuild -workspace ios/reactnativeboilerplate.xcworkspace -scheme reactnativeboilerplate -configuration Release -sdk iphonesimulator -arch x86_64 -derivedDataPath ios/build',
+      build: 'xcodebuild -workspace ios/reactnativeboilerplate.xcworkspace -scheme reactnativeboilerplate -configuration Release -sdk iphonesimulator -arch x86_64 -derivedDataPath ios/build',
       binaryPath: 'ios/build/Build/Products/Release-iphonesimulator/reactnativeboilerplate.app',
     },
     'android.release': {

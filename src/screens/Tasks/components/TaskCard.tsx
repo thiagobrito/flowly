@@ -24,14 +24,14 @@ type CheckIconProps = {
 function CheckIcon({ isSelected, isDark, accent }: CheckIconProps) {
   if (isSelected) {
     return (
-      <View className="h-6 w-6 items-center justify-center rounded-full" style={{ backgroundColor: accent }}>
+      <View className="size-6 items-center justify-center rounded-full" style={{ backgroundColor: accent }}>
         <Check size={14} color="#ffffff" />
       </View>
     );
   }
   return (
     <View
-      className="h-5 w-5 rounded-full border"
+      className="size-5 rounded-full border"
       style={{
         borderColor: isDark ? 'rgba(255,255,255,0.16)' : 'rgba(0,0,0,0.12)',
       }}
@@ -166,7 +166,7 @@ export default function TaskCard({ highlight, task, selected, isDark, onComplete
           <Animated.View style={cardStyle}>
             <View accessibilityRole="button" accessibilityState={{ selected: isSelected }} className="active:opacity-80">
               <View className="flex-row items-center overflow-hidden rounded-2xl p-3" style={{ borderColor, backgroundColor, borderWidth: 1.5 }}>
-                <View className="h-11 w-11 items-center justify-center rounded-2xl" style={{ backgroundColor: `${accent}22` }}>
+                <View className="size-11 items-center justify-center rounded-2xl" style={{ backgroundColor: `${accent}22` }}>
                   {AreaIcon ? <AreaIcon size={20} color={accent} /> : null}
                 </View>
 
@@ -202,7 +202,7 @@ export default function TaskCard({ highlight, task, selected, isDark, onComplete
                 </View>
 
                 <Pressable onPress={handlePress} accessibilityRole="button" accessibilityState={{ selected: isSelected }} className="active:opacity-80">
-                  <View className="ml-2 h-6 w-6 items-center justify-center">
+                  <View className="ml-2 size-6 items-center justify-center">
                     <CheckIcon isSelected={isSelected} isDark={isDark} accent={accent} />
                   </View>
                 </Pressable>

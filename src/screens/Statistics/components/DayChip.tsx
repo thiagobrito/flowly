@@ -11,7 +11,7 @@ export default function DayChip({ day, onPress }: { day: ProgressDay; onPress: (
     );
   }
   return (
-    <Pressable onPress={onPress} className="h-12 w-12 items-center justify-center rounded-full bg-white/70 dark:bg-white/10">
+    <Pressable onPress={onPress} className="size-12 items-center justify-center rounded-full bg-white/70 dark:bg-white/10">
       <Text className="text-sm font-medium text-zinc-500 dark:text-zinc-300">{day.day}</Text>
     </Pressable>
   );

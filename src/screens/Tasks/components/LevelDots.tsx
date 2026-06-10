@@ -12,7 +12,7 @@ export default function LevelDots({ value, accent, isDark }: any) {
       {LEVEL_DOTS.map((level) => (
         <View
           key={level}
-          className="h-1.5 w-1.5 rounded-full"
+          className="size-1.5 rounded-full"
           style={{
             marginRight: level === LEVEL_DOTS.length ? 0 : 3,
             backgroundColor: level <= value ? accent : emptyColor,

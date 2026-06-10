@@ -45,7 +45,9 @@ export function publishToListeners(entry: CacheEntry, rawValue: unknown): void {
     try {
       listener(rawValue);
     } catch (error) {
-      console.error('usePersistedState: erro ao notificar listeners', error);
+      getTelemetry().reportMessage('usePersistedState_listener_error', {
+        extra: { message: error instanceof Error ? error.message : String(error) },
+      });
     }
   });
 }
@@ -136,7 +138,7 @@ export function ensureHydrated(entry: CacheEntry, key: string, caller: string): 
           parsed = JSON.parse(value);
         } catch (error) {
           status = 'parse_error';
-          console.error('storage: JSON parse error, resetting to initial', error);
+          telemetry.addBreadcrumb('AsyncStorage.getItem.parse_error', { key, caller, message: error instanceof Error ? error.message : String(error) }, 'native-storage');
         }
       }
 
@@ -169,7 +171,10 @@ export function ensureHydrated(entry: CacheEntry, key: string, caller: string): 
           extra: { key },
         });
       } else {
-        console.error('usePersistedState: erro ao ler storage', error);
+        telemetry.reportMessage('usePersistedState_read_error', {
+          tags: { action: 'read_error' },
+          extra: { key, message: error instanceof Error ? error.message : String(error) },
+        });
       }
 
       if (entry.version === versionAtStart && entry.cachedRawValue === undefined) {

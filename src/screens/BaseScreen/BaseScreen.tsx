@@ -13,13 +13,7 @@ import { useDeckGesture } from './useDeckGesture';
 
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
 
-export default function TodayFocusScreen<T>({
-  items,
-  initialIndex = 0,
-  keyExtractor,
-  renderItem,
-  onIndexChange,
-}: TodayFocusScreenProps<T>) {
+export default function TodayFocusScreen<T>({ items, initialIndex = 0, keyExtractor, renderItem, onIndexChange }: TodayFocusScreenProps<T>) {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
 
@@ -45,11 +39,7 @@ export default function TodayFocusScreen<T>({
 
   return (
     <View className="flex-1 bg-white dark:bg-black">
-      <LinearGradient
-        colors={isDark ? ['#0b1220', '#070b14', '#000000'] : ['#cfe3f5', '#eaf1f8', '#f7f8fa']}
-        locations={[0, 0.45, 1]}
-        style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 }}
-      />
+      <LinearGradient colors={isDark ? ['#0b1220', '#070b14', '#000000'] : ['#cfe3f5', '#eaf1f8', '#f7f8fa']} locations={[0, 0.45, 1]} style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 }} />
 
       <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
         <View className="flex-1 px-3">

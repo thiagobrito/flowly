@@ -43,7 +43,7 @@ export default function SocialButtons({ isDark, onGoogle, onApple }: SocialButto
 
       <View className="mt-4 flex-row" style={{ gap: 12 }}>
         <SocialButton label="Google" isDark={isDark} onPress={onGoogle}>
-          <View className="h-5 w-5 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-700">
+          <View className="size-5 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-700">
             <Text className="text-xs font-bold text-[#4285F4]">G</Text>
           </View>
         </SocialButton>

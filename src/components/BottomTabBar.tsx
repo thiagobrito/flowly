@@ -24,29 +24,13 @@ const PROGRESS_TAB: SideTab = {
   Icon: BarChart3,
 };
 
-function SideTabButton({
-  tab,
-  active,
-  isDark,
-  onPress,
-}: {
-  tab: SideTab;
-  active: boolean;
-  isDark: boolean;
-  onPress: () => void;
-}) {
+function SideTabButton({ tab, active, isDark, onPress }: { tab: SideTab; active: boolean; isDark: boolean; onPress: () => void }) {
   const activeColor = '#3b82f6';
   const inactiveColor = isDark ? '#52525b' : '#a1a1aa';
   const color = active ? activeColor : inactiveColor;
 
   return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={tab.label}
-      accessibilityState={{ selected: active }}
-      className="h-12 w-16 items-center justify-center active:opacity-70"
-    >
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={tab.label} accessibilityState={{ selected: active }} className="h-12 w-16 items-center justify-center active:opacity-70">
       <tab.Icon size={26} color={color} />
     </Pressable>
   );
@@ -56,12 +40,7 @@ export default function BottomTabBar({ active, onChange }: BottomTabBarProps) {
   const isDark = useColorScheme() === 'dark';
 
   return (
-    <BlurView
-      pointerEvents="box-none"
-      intensity={10}
-      tint={isDark ? 'dark' : 'light'}
-      className="absolute inset-x-0 -bottom-5 px-6"
-    >
+    <BlurView pointerEvents="box-none" intensity={10} tint={isDark ? 'dark' : 'light'} className="absolute inset-x-0 -bottom-5 px-6">
       <View
         className="flex-row items-center justify-between rounded-3xl bg-white px-6 dark:bg-zinc-900"
         style={{
@@ -104,12 +83,7 @@ export default function BottomTabBar({ active, onChange }: BottomTabBarProps) {
           </LinearGradient>
         </Pressable>
 
-        <SideTabButton
-          tab={PROGRESS_TAB}
-          active={active === PROGRESS_TAB.key}
-          isDark={isDark}
-          onPress={() => onChange('progress')}
-        />
+        <SideTabButton tab={PROGRESS_TAB} active={active === PROGRESS_TAB.key} isDark={isDark} onPress={() => onChange('progress')} />
       </View>
     </BlurView>
   );

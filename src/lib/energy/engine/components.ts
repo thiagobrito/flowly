@@ -48,10 +48,7 @@ const rawSubScores = (metrics: HealthMetrics, config: EnergyConfig): RawSub[] =>
       key: 'timeAwake',
       // "Horário atual": blends continuous time-awake depletion with the
       // circadian alertness at the current moment.
-      value:
-        metrics.wakeTime == null
-          ? circadianAlertness(metrics.now)
-          : 0.6 * timeAwakeScore(metrics.wakeTime, metrics.now, ranges) + 0.4 * circadianAlertness(metrics.now),
+      value: metrics.wakeTime == null ? circadianAlertness(metrics.now) : 0.6 * timeAwakeScore(metrics.wakeTime, metrics.now, ranges) + 0.4 * circadianAlertness(metrics.now),
     },
     {
       key: 'workoutToday',
@@ -63,8 +60,7 @@ const rawSubScores = (metrics: HealthMetrics, config: EnergyConfig): RawSub[] =>
     },
     {
       key: 'restingHeartRate',
-      value:
-        metrics.restingHeartRate == null ? null : linear(metrics.restingHeartRate, ranges.rhrWorst, ranges.rhrBest),
+      value: metrics.restingHeartRate == null ? null : linear(metrics.restingHeartRate, ranges.rhrWorst, ranges.rhrBest),
     },
     {
       key: 'deepSleep',
@@ -80,10 +76,7 @@ const rawSubScores = (metrics: HealthMetrics, config: EnergyConfig): RawSub[] =>
     },
     {
       key: 'trainingLoad7d',
-      value:
-        metrics.trainingLoad7d == null
-          ? null
-          : trainingLoadScore(metrics.trainingLoad7d, ranges.trainingLoadOptimal, ranges.trainingLoadMax),
+      value: metrics.trainingLoad7d == null ? null : trainingLoadScore(metrics.trainingLoad7d, ranges.trainingLoadOptimal, ranges.trainingLoadMax),
     },
   ];
 };

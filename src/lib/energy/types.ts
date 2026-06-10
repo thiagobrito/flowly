@@ -44,17 +44,7 @@ export interface HealthMetrics {
   trainingLoad7d: number | null;
 }
 
-export type MetricKey =
-  | 'sleepHours'
-  | 'wakeTime'
-  | 'timeAwake'
-  | 'workoutToday'
-  | 'hrv'
-  | 'restingHeartRate'
-  | 'deepSleep'
-  | 'remSleep'
-  | 'sleepVariability'
-  | 'trainingLoad7d';
+export type MetricKey = 'sleepHours' | 'wakeTime' | 'timeAwake' | 'workoutToday' | 'hrv' | 'restingHeartRate' | 'deepSleep' | 'remSleep' | 'sleepVariability' | 'trainingLoad7d';
 
 /** A single normalized contribution to the final Energy Score. */
 export interface SubScore {
