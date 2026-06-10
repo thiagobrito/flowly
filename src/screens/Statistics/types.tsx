@@ -1,5 +1,7 @@
 import type { LucideIcon } from 'lucide-react-native';
 
+import type { Task } from '../NewTask/data';
+
 export type ProgressDay = {
   /** ISO date (`YYYY-MM-DD`), usado como chave e para o request. */
   date: string;
@@ -49,4 +51,5 @@ export type ProgressData = {
   daily: ProgressDaily;
   stats: ProgressStat[];
   metrics: ProgressMetric[];
+  concludedTasks: Task[];
 };

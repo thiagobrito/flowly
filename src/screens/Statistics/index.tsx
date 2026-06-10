@@ -4,6 +4,7 @@ import { ActivityIndicator, ScrollView, Text, useColorScheme, View } from 'react
 
 import { computeFlowlyEnergy, flowlyInputFromMetrics, getHealthProvider, useEnergyScore } from '@/lib/energy';
 
+import ConcludedTasksTable from './components/ConcludedTasksTable';
 import DayChip from './components/DayChip';
 import ProgressRing from './components/ProgressRing';
 import SleepCard from './components/SleepCard';
@@ -16,7 +17,7 @@ export default function Statistics() {
   const [data, setData] = useState<ProgressData | null>(null);
   const [loading, setLoading] = useState(true);
   const energyInfo = useEnergyScore();
-  const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  const [selectedDay, setSelectedDay] = useState<string>(new Date().toISOString());
   const [energyScore, setEnergyScore] = useState<number | null>(null);
 
   useEffect(() => {
@@ -28,19 +29,23 @@ export default function Statistics() {
 
   useEffect(() => {
     let active = true;
-    fetchProgress(selectedDay ?? undefined)
-      .then((response: any) => {
-        if (active) {
-          setData(response);
 
-          if (!selectedDay || selectedDay !== response.selectedDay) {
-            setSelectedDay(response.selectedDay);
+    if (selectedDay) {
+      fetchProgress(selectedDay)
+        .then((response: any) => {
+          if (active) {
+            setData(response);
+
+            if (!selectedDay || selectedDay !== response.selectedDay) {
+              setSelectedDay(response.selectedDay);
+            }
           }
-        }
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
+        })
+        .finally(() => {
+          if (active) setLoading(false);
+        });
+    }
+
     return () => {
       active = false;
     };
@@ -102,6 +107,10 @@ export default function Statistics() {
 
         <View className="mt-7">
           <SleepCard energyInfo={energyInfo} isDark={isDark} />
+        </View>
+
+        <View className="mt-7">
+          <ConcludedTasksTable tasks={data.concludedTasks ?? []} isDark={isDark} />
         </View>
 
         {/* }

@@ -7,7 +7,6 @@ import { api } from '@/lib/network';
 import type { Task } from '../NewTask/data';
 import Header from './components/Header';
 import TaskCard from './components/TaskCard';
-import FilterTasksToShow from './filter';
 import { prioritizeTasks } from './priorization';
 
 type TasksProps = {
@@ -15,12 +14,23 @@ type TasksProps = {
   onLogout?: () => void;
 };
 
+function OrganizeTasks(tasks: any): any {
+  return tasks.map((task: any) => ({
+    ...task,
+    // eslint-disable-next-line no-underscore-dangle -- campo `_id` retornado pela API MongoDB
+    id: task.id ?? (task as Task & { _id?: string })._id ?? '',
+    randomId: Math.random().toString(36).substring(2, 15),
+  }));
+}
+
 export default function Tasks({ onEdit, onLogout }: TasksProps) {
   const isDark = useColorScheme() === 'dark';
-  const [tasks, setTasks] = useState<Task[]>([]);
   const [updateId, setUpdateId] = useState<any>(0);
   const [loading, setLoading] = useState(true);
   const [energyScore, setEnergyScore] = useState<number>(0);
+
+  const [concludedTasks, setConcludedTasks] = useState<Task[]>([]);
+  const [visibleTasks, setVisibleTasks] = useState<Task[]>([]);
 
   const handleDelete = (task: Task) => {
     Alert.alert('Deletar atividade', `Deseja remover "${task.name}"?`, [
@@ -41,14 +51,11 @@ export default function Tasks({ onEdit, onLogout }: TasksProps) {
   };
 
   const fetchTasks = useCallback(async () => {
-    const response = await api.get<{ result: Task[] }>('/tasks');
-    const taskList = response.result.map((task) => ({
-      ...task,
-      // eslint-disable-next-line no-underscore-dangle -- campo `_id` retornado pela API MongoDB
-      id: task.id ?? (task as Task & { _id?: string })._id ?? '',
-      randomId: Math.random().toString(36).substring(2, 15),
-    }));
-    setTasks(taskList);
+    const response = await api.get<any>('/tasks', { params: { date: new Date().toISOString() } });
+
+    setConcludedTasks(OrganizeTasks(response.concludedTasks));
+    setVisibleTasks(OrganizeTasks(response.visibleTasks));
+
     setLoading(false);
   }, []);
 
@@ -63,7 +70,6 @@ export default function Tasks({ onEdit, onLogout }: TasksProps) {
     fetchTasks();
   }, [fetchTasks, updateId]);
 
-  const { concludedTasks, visibleTasks } = useMemo(() => FilterTasksToShow(tasks), [tasks]);
   const prioritizedTasks = useMemo(() => prioritizeTasks(visibleTasks, energyScore), [visibleTasks, energyScore]);
 
   if (loading) {
