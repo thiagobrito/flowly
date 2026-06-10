@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Platform, ScrollView, Text, useColorScheme, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, AppState, Platform, ScrollView, Text, useColorScheme, View } from 'react-native';
 
-import { computeFlowlyEnergy, flowlyInputFromMetrics, getHealthProvider } from '@/lib/energy';
+import { computeEnergyAtMoment, flowlyInputFromMetrics, getHealthProvider } from '@/lib/energy';
 import { api } from '@/lib/network';
 
 import type { Task } from '../NewTask/data';
@@ -28,6 +28,7 @@ export default function Tasks({ onEdit, onLogout }: TasksProps) {
   const [updateId, setUpdateId] = useState<any>(0);
   const [loading, setLoading] = useState(true);
   const [energyScore, setEnergyScore] = useState<number>(0);
+  const [energyLevel, setEnergyLevel] = useState<number>(0);
 
   const [concludedTasks, setConcludedTasks] = useState<Task[]>([]);
   const [visibleTasks, setVisibleTasks] = useState<Task[]>([]);
@@ -59,18 +60,39 @@ export default function Tasks({ onEdit, onLogout }: TasksProps) {
     setLoading(false);
   }, []);
 
-  useEffect(() => {
+  const refreshEnergy = useCallback(() => {
     const metrics = getHealthProvider().collect() as any;
     const input = flowlyInputFromMetrics(metrics, 8);
-    const now = computeFlowlyEnergy(input);
-    setEnergyScore(now.energyScore);
+    const result = computeEnergyAtMoment(input, new Date().toISOString());
+    setEnergyScore(result.energyScore);
+    setEnergyLevel(result.energyLevel);
   }, []);
+
+  const appState = useRef(AppState.currentState);
+
+  useEffect(() => {
+    refreshEnergy();
+
+    const interval = setInterval(refreshEnergy, 60_000);
+
+    const subscription = AppState.addEventListener('change', (nextState) => {
+      if (appState.current.match(/inactive|background/) && nextState === 'active') {
+        refreshEnergy();
+      }
+      appState.current = nextState;
+    });
+
+    return () => {
+      clearInterval(interval);
+      subscription.remove();
+    };
+  }, [refreshEnergy]);
 
   useEffect(() => {
     fetchTasks();
   }, [fetchTasks, updateId]);
 
-  const prioritizedTasks = useMemo(() => prioritizeTasks(visibleTasks, energyScore), [visibleTasks, energyScore]);
+  const prioritizedTasks = useMemo(() => prioritizeTasks(visibleTasks, energyLevel), [visibleTasks, energyLevel]);
 
   if (loading) {
     return (

@@ -46,6 +46,7 @@ export type ProgressMetric = {
 export type ProgressData = {
   title: string;
   impactScore: number;
+  energyScore: number;
   selectedDay: string;
   days: ProgressDay[];
   daily: ProgressDaily;

@@ -2,7 +2,7 @@ import { BatteryFull, CheckCircle, HandFist } from 'lucide-react-native';
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, ScrollView, Text, useColorScheme, View } from 'react-native';
 
-import { computeFlowlyEnergy, flowlyInputFromMetrics, useEnergyScore } from '@/lib/energy';
+import { flowlyInputFromMetrics, useEnergyScore } from '@/lib/energy';
 
 import ConcludedTasksTable from './components/ConcludedTasksTable';
 import DayChip from './components/DayChip';
@@ -17,18 +17,13 @@ export default function Statistics() {
   const isDark = useColorScheme() === 'dark';
   const [data, setData] = useState<ProgressData | null>(null);
   const [loading, setLoading] = useState(true);
-  const energyInfo = useEnergyScore();
   const [selectedDay, setSelectedDay] = useState<string>(new Date().toISOString());
+  const energyInfo = useEnergyScore();
 
   const flowlyInput = useMemo(() => {
     if (!energyInfo.metrics) return null;
     return flowlyInputFromMetrics(energyInfo.metrics, 8);
   }, [energyInfo.metrics]);
-
-  const energyScore = useMemo(() => {
-    if (!flowlyInput) return null;
-    return computeFlowlyEnergy(flowlyInput).energyScore;
-  }, [flowlyInput]);
 
   useEffect(() => {
     let active = true;
@@ -86,7 +81,7 @@ export default function Statistics() {
               <Text className="text-lg font-semibold text-zinc-700 dark:text-zinc-200">Pontos de Energia</Text>
               <View className="flex-row items-center gap-2">
                 <BatteryFull size={24} color={isDark ? '#e4e4e7' : '#3b82f6'} />
-                <Text className="ml-2 text-xl font-extrabold text-zinc-900 dark:text-zinc-50">{energyScore ?? 0}</Text>
+                <Text className="ml-2 text-xl font-extrabold text-zinc-900 dark:text-zinc-50">{data.energyScore}</Text>
               </View>
             </View>
 

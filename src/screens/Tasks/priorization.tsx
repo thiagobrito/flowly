@@ -83,17 +83,16 @@ export function computeUrgency(frequency: FrequencyConfig, now: Date = new Date(
  * FlowScore = ((I + 1)^2 * (1 + 0.5*O) * (1 + 0.25*T) * C) / (E + 1)
  *
  * @param task Task a ser avaliada.
- * @param currentEnergy Energia atual do usuário na escala 0-5. Caso a origem
+ * @param energyLevel Energia atual do usuário na escala 0-5. Caso a origem
  *   seja o `useEnergyScore` (0-100), converta antes com `score / 20`.
  * @param now Data de referência para o cálculo da urgência.
  */
-export function computeFlowScore(task: PrioritizableTask, currentEnergy: number, now: Date = new Date()): FlowScoreResult {
+export function computeFlowScore(task: PrioritizableTask, energyLevel: number, now: Date = new Date()): FlowScoreResult {
   const I = clamp(task.impact ?? 0, 0, 5);
   const E = clamp(task.energy ?? 0, 0, 5);
   const O: 0 | 1 = task.goalAligned || task.goalId ? 1 : 0;
   const T = computeUrgency(task.frequency, now);
-  const energy = clamp(currentEnergy, 0, 5);
-  const C = clamp(1 - Math.abs(energy - E) / 5, 0, 1);
+  const C = clamp(1 - Math.abs(energyLevel - E) / 5, 0, 1);
 
   const flowScore = ((I + 1) ** 2 * (1 + 0.5 * O) * (1 + 0.25 * T) * C) / (E + 1);
 
@@ -109,9 +108,9 @@ export function computeFlowScore(task: PrioritizableTask, currentEnergy: number,
  * @param currentEnergy Energia atual do usuário (0-5).
  * @param now Data de referência para a urgência.
  */
-export function prioritizeTasks(tasks: PrioritizableTask[], currentEnergy: number, now: Date = new Date()): PrioritizableTask[] {
+export function prioritizeTasks(tasks: PrioritizableTask[], energyLevel: number, now: Date = new Date()): PrioritizableTask[] {
   return tasks
-    .map((task) => computeFlowScore(task, currentEnergy, now))
+    .map((task) => computeFlowScore(task, energyLevel, now))
     .sort((a, b) => {
       if (b.flowScore !== a.flowScore) return b.flowScore - a.flowScore;
       if (b.components.T !== a.components.T) return b.components.T - a.components.T;
