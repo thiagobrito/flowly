@@ -147,7 +147,7 @@ export const generateEnergyCurve = (input: FlowlyEngineInput, config: FlowlyEngi
     points.push({
       time,
       hoursAwake,
-      energyScore: energyFromContext(context, hoursAwake, time, config).doubleEnergyScore,
+      energyScore: energyFromContext(context, hoursAwake, time, config).energyScore,
     });
   }
   return points;
