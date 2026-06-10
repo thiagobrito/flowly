@@ -1,11 +1,12 @@
 import { BatteryFull, CheckCircle, HandFist } from 'lucide-react-native';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, ScrollView, Text, useColorScheme, View } from 'react-native';
 
-import { computeFlowlyEnergy, flowlyInputFromMetrics, getHealthProvider, useEnergyScore } from '@/lib/energy';
+import { computeFlowlyEnergy, flowlyInputFromMetrics, useEnergyScore } from '@/lib/energy';
 
 import ConcludedTasksTable from './components/ConcludedTasksTable';
 import DayChip from './components/DayChip';
+import EnergyDayChart from './components/EnergyDayChart';
 import ProgressRing from './components/ProgressRing';
 import SleepCard from './components/SleepCard';
 import StatCard from './components/StatsCard';
@@ -18,14 +19,16 @@ export default function Statistics() {
   const [loading, setLoading] = useState(true);
   const energyInfo = useEnergyScore();
   const [selectedDay, setSelectedDay] = useState<string>(new Date().toISOString());
-  const [energyScore, setEnergyScore] = useState<number | null>(null);
 
-  useEffect(() => {
-    const metrics = getHealthProvider().collect() as any;
-    const input = flowlyInputFromMetrics(metrics, 8);
-    const now = computeFlowlyEnergy(input);
-    setEnergyScore(now.energyScore);
-  }, [energyInfo]);
+  const flowlyInput = useMemo(() => {
+    if (!energyInfo.metrics) return null;
+    return flowlyInputFromMetrics(energyInfo.metrics, 8);
+  }, [energyInfo.metrics]);
+
+  const energyScore = useMemo(() => {
+    if (!flowlyInput) return null;
+    return computeFlowlyEnergy(flowlyInput).energyScore;
+  }, [flowlyInput]);
 
   useEffect(() => {
     let active = true;
@@ -107,6 +110,10 @@ export default function Statistics() {
 
         <View className="mt-7">
           <SleepCard energyInfo={energyInfo} isDark={isDark} />
+        </View>
+
+        <View className="mt-7">
+          <EnergyDayChart input={flowlyInput} tasks={data.concludedTasks ?? []} selectedDay={selectedDay} isDark={isDark} />
         </View>
 
         <View className="mt-7">
