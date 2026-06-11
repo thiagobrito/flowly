@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, AppState, Platform, ScrollView, Text, useColorScheme, View } from 'react-native';
 
 import { computeEnergyAtMoment, flowlyInputFromMetrics, getHealthProvider } from '@/lib/energy';
@@ -7,7 +7,6 @@ import { api } from '@/lib/network';
 import type { Task } from '../NewTask/data';
 import Header from './components/Header';
 import TaskCard from './components/TaskCard';
-import { prioritizeTasks } from './priorization';
 
 type TasksProps = {
   onEdit?: (task: Task) => void;
@@ -52,13 +51,14 @@ export default function Tasks({ onEdit, onLogout }: TasksProps) {
   };
 
   const fetchTasks = useCallback(async () => {
-    const response = await api.get<any>('/tasks', { params: { date: new Date().toISOString() } });
+    if (!energyLevel) return;
+    const response = await api.get<any>('/tasks', { params: { date: new Date().toISOString(), energyLevel } });
 
     setConcludedTasks(OrganizeTasks(response.concludedTasks));
     setVisibleTasks(OrganizeTasks(response.visibleTasks));
 
     setLoading(false);
-  }, []);
+  }, [energyLevel]);
 
   const refreshEnergy = useCallback(() => {
     const metrics = getHealthProvider().collect() as any;
@@ -92,8 +92,6 @@ export default function Tasks({ onEdit, onLogout }: TasksProps) {
     fetchTasks();
   }, [fetchTasks, updateId]);
 
-  const prioritizedTasks = useMemo(() => prioritizeTasks(visibleTasks, energyLevel), [visibleTasks, energyLevel]);
-
   if (loading) {
     return (
       <View className="flex-1 items-center justify-center">
@@ -107,7 +105,7 @@ export default function Tasks({ onEdit, onLogout }: TasksProps) {
       <Header isDark={isDark} energyScore={energyScore} onLogout={onLogout} />
 
       <ScrollView className="mt-2 flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 70 }}>
-        {prioritizedTasks.map((task, index) => (
+        {visibleTasks.map((task, index) => (
           <TaskCard key={task.randomId} highlight={index === 0} task={task} selected={false} isDark={isDark} onComplete={() => setUpdateId(updateId + 1)} onEdit={() => onEdit?.(task)} onDelete={() => handleDelete(task)} />
         ))}
 
