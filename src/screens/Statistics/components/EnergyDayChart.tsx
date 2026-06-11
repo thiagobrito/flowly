@@ -147,7 +147,7 @@ export default function EnergyDayChart({ input, tasks, selectedDay, isDark }: En
 
     const hourly = Array.from({ length: HOURS_IN_DAY + 1 }, (_, hour) => energyAt(hour));
 
-    const taskMarkers: TaskMarker[] = tasks
+    const sortedMarkers = tasks
       .flatMap((task) =>
         (task.completed ?? [])
           .map((iso) => new Date(iso))
@@ -158,6 +158,13 @@ export default function EnergyDayChart({ input, tasks, selectedDay, isDark }: En
           }),
       )
       .sort((a, b) => a.hour - b.hour);
+
+    const seenTitles = new Set<string>();
+    const taskMarkers = sortedMarkers.filter((marker) => {
+      if (seenTitles.has(marker.title)) return false;
+      seenTitles.add(marker.title);
+      return true;
+    });
 
     return { curve: hourly, markers: taskMarkers };
   }, [input, tasks, day]);
