@@ -12,8 +12,10 @@ const ACCENT = '#3b82f6';
 const MARKER_COLOR = '#22c55e';
 
 const CHART_HEIGHT = 220;
-const PADDING = { top: 34, right: 14, bottom: 26, left: 30 } as const;
+const PADDING = { top: 46, right: 14, bottom: 26, left: 30 } as const;
 const HOURS_IN_DAY = 24;
+/** Linhas da faixa de rótulos no topo, para alternar e evitar sobreposição. */
+const LABEL_ROWS = [12, 26] as const;
 
 type EnergyDayChartProps = {
   input: FlowlyEngineInput | null;
@@ -71,6 +73,33 @@ function markerTextAnchor(x: number, width: number): TextAnchor {
   if (x < PADDING.left + 40) return 'start';
   if (x > width - PADDING.right - 40) return 'end';
   return 'middle';
+}
+
+const LABEL_FONT_SIZE = 9;
+/** Largura média por caractere (fontSize 9, semibold) — usada para estimar quanto cabe no rótulo. */
+const AVG_CHAR_WIDTH = 5.1;
+
+function maxLabelChars(x: number, width: number, anchor: TextAnchor): number {
+  const leftBound = PADDING.left;
+  const rightBound = width - PADDING.right;
+  const margin = 6;
+
+  let availablePx: number;
+  if (anchor === 'start') {
+    availablePx = rightBound - x - margin;
+  } else if (anchor === 'end') {
+    availablePx = x - leftBound - margin;
+  } else {
+    availablePx = 2 * Math.min(x - leftBound, rightBound - x) - margin;
+  }
+
+  return Math.max(12, Math.floor(availablePx / AVG_CHAR_WIDTH));
+}
+
+function truncateTitle(title: string, maxChars: number): string {
+  if (title.length <= maxChars) return title;
+  if (maxChars <= 1) return '…';
+  return `${title.slice(0, maxChars - 1)}…`;
 }
 
 /** Converte a lista de pontos em um path suavizado (Catmull-Rom -> Bézier). */
@@ -188,16 +217,16 @@ export default function EnergyDayChart({ input, tasks, selectedDay, isDark }: En
             {markers.map((marker, index) => {
               const x = xFor(marker.hour);
               const y = yFor(marker.energy);
-              // Alterna a altura dos rótulos para reduzir sobreposição.
-              const labelY = Math.max(10, y - 12 - (index % 2) * 12);
-              const title = marker.title.length > 18 ? `${marker.title.slice(0, 17)}…` : marker.title;
+              // Rótulos ficam numa faixa fixa no topo, fora da área da curva.
+              const labelY = LABEL_ROWS[index % LABEL_ROWS.length] ?? LABEL_ROWS[0];
               const anchor = markerTextAnchor(x, width);
+              const title = truncateTitle(marker.title, maxLabelChars(x, width, anchor));
 
               return (
                 <G key={`${marker.title}-${marker.hour}`}>
-                  <Line x1={x} y1={y} x2={x} y2={CHART_HEIGHT - PADDING.bottom} stroke={MARKER_COLOR} strokeWidth={1} strokeDasharray="3 3" opacity={0.6} />
+                  <Line x1={x} y1={labelY + 3} x2={x} y2={CHART_HEIGHT - PADDING.bottom} stroke={MARKER_COLOR} strokeWidth={1} strokeDasharray="3 3" opacity={0.6} />
                   <Circle cx={x} cy={y} r={4.5} fill={MARKER_COLOR} stroke={isDark ? '#18181b' : '#ffffff'} strokeWidth={1.5} />
-                  <SvgText x={x} y={labelY} fontSize={9} fontWeight="600" fill={labelColor} textAnchor={anchor}>
+                  <SvgText x={x} y={labelY} fontSize={LABEL_FONT_SIZE} fontWeight="600" fill={labelColor} textAnchor={anchor}>
                     {title}
                   </SvgText>
                 </G>
