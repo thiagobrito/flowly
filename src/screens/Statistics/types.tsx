@@ -44,6 +44,9 @@ export type ProgressMetric = {
 };
 
 export type ProgressData = {
+  totalScore: number;
+  totalPoints: number;
+  averageFromLast7Days: number;
   title: string;
   impactScore: number;
   energyScore: number;

@@ -91,7 +91,7 @@ export default function Statistics() {
             </View>
           </View>
 
-          <ProgressRing percent={data.daily.percent} isDark={isDark} />
+          <ProgressRing totalScore={data.totalScore} averageFromLast7Days={data.averageFromLast7Days} isDark={isDark} />
         </View>
 
         <View className="mt-7 flex-row" style={{ gap: 10 }}>

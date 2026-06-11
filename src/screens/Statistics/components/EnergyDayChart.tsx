@@ -1,7 +1,7 @@
 import { Zap } from 'lucide-react-native';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Text, View } from 'react-native';
-import Svg, { Circle, Defs, G, Line, LinearGradient, Path, Stop, Text as SvgText } from 'react-native-svg';
+import Svg, { Circle, Defs, G, Line, LinearGradient, Path, Rect, Stop, Text as SvgText } from 'react-native-svg';
 
 import { startOfLocalDay } from '@/lib/date';
 import { computeEnergyAtMoment, type FlowlyEngineInput } from '@/lib/energy';
@@ -12,10 +12,12 @@ const ACCENT = '#3b82f6';
 const MARKER_COLOR = '#22c55e';
 
 const CHART_HEIGHT = 220;
-const PADDING = { top: 46, right: 14, bottom: 26, left: 30 } as const;
+const PADDING = { top: 20, right: 14, bottom: 26, left: 30 } as const;
 const HOURS_IN_DAY = 24;
-/** Linhas da faixa de rótulos no topo, para alternar e evitar sobreposição. */
-const LABEL_ROWS = [12, 26] as const;
+const HIT_RADIUS = 16;
+const TOOLTIP_PADDING_H = 8;
+const TOOLTIP_PADDING_V = 6;
+const TOOLTIP_LINE_HEIGHT = 13;
 
 type EnergyDayChartProps = {
   input: FlowlyEngineInput | null;
@@ -30,6 +32,7 @@ type TaskMarker = {
   /** Hora do dia (fração), ex.: 14.5 = 14h30. */
   hour: number;
   energy: number;
+  completedAt: Date;
 };
 
 /** Reancora wakeTime/bedTime do input no dia selecionado, preservando os horários. */
@@ -69,37 +72,57 @@ function hourTextAnchor(hour: number): TextAnchor {
   return 'middle';
 }
 
-function markerTextAnchor(x: number, width: number): TextAnchor {
-  if (x < PADDING.left + 40) return 'start';
-  if (x > width - PADDING.right - 40) return 'end';
-  return 'middle';
-}
-
-const LABEL_FONT_SIZE = 9;
-/** Largura média por caractere (fontSize 9, semibold) — usada para estimar quanto cabe no rótulo. */
+/** Largura média por caractere (fontSize ~10) — usada para estimar largura do tooltip. */
 const AVG_CHAR_WIDTH = 5.1;
-
-function maxLabelChars(x: number, width: number, anchor: TextAnchor): number {
-  const leftBound = PADDING.left;
-  const rightBound = width - PADDING.right;
-  const margin = 6;
-
-  let availablePx: number;
-  if (anchor === 'start') {
-    availablePx = rightBound - x - margin;
-  } else if (anchor === 'end') {
-    availablePx = x - leftBound - margin;
-  } else {
-    availablePx = 2 * Math.min(x - leftBound, rightBound - x) - margin;
-  }
-
-  return Math.max(12, Math.floor(availablePx / AVG_CHAR_WIDTH));
-}
 
 function truncateTitle(title: string, maxChars: number): string {
   if (title.length <= maxChars) return title;
   if (maxChars <= 1) return '…';
   return `${title.slice(0, maxChars - 1)}…`;
+}
+
+function formatCompletedTime(date: Date): string {
+  return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+}
+
+function maxTooltipTitleChars(width: number): number {
+  const plotWidth = Math.max(0, width - PADDING.left - PADDING.right);
+  return Math.max(12, Math.floor((plotWidth - TOOLTIP_PADDING_H * 2) / AVG_CHAR_WIDTH));
+}
+
+type TooltipLayout = {
+  rectX: number;
+  rectY: number;
+  rectW: number;
+  rectH: number;
+  title: string;
+  time: string;
+  textX: number;
+  textAnchor: TextAnchor;
+};
+
+function computeTooltipLayout(marker: TaskMarker, x: number, y: number, width: number): TooltipLayout {
+  const maxChars = maxTooltipTitleChars(width);
+  const title = truncateTitle(marker.title, maxChars);
+  const time = formatCompletedTime(marker.completedAt);
+
+  const titleWidth = title.length * AVG_CHAR_WIDTH;
+  const timeWidth = time.length * AVG_CHAR_WIDTH * 0.9;
+  const rectW = Math.min(Math.max(titleWidth, timeWidth) + TOOLTIP_PADDING_H * 2, width - PADDING.left - PADDING.right);
+  const rectH = TOOLTIP_PADDING_V * 2 + TOOLTIP_LINE_HEIGHT * 2;
+
+  const showBelow = y - rectH - 12 < PADDING.top;
+  const rectY = showBelow ? y + 12 : y - rectH - 12;
+
+  const leftBound = PADDING.left;
+  const rightBound = width - PADDING.right;
+  let rectX = x - rectW / 2;
+  if (rectX < leftBound) rectX = leftBound;
+  if (rectX + rectW > rightBound) rectX = rightBound - rectW;
+
+  const textX = rectX + rectW / 2;
+
+  return { rectX, rectY, rectW, rectH, title, time, textX, textAnchor: 'middle' };
 }
 
 /** Converte a lista de pontos em um path suavizado (Catmull-Rom -> Bézier). */
@@ -128,12 +151,19 @@ function smoothPath(points: Point[]): string {
 
 export default function EnergyDayChart({ input, tasks, selectedDay, isDark }: EnergyDayChartProps) {
   const [width, setWidth] = useState(0);
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
 
   const mutedColor = isDark ? '#a1a1aa' : '#71717a';
   const gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
   const labelColor = isDark ? '#e4e4e7' : '#3f3f46';
+  const tooltipBg = isDark ? '#27272a' : '#ffffff';
+  const tooltipBorder = isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)';
 
   const day = useMemo(() => startOfLocalDay(selectedDay), [selectedDay]);
+
+  useEffect(() => {
+    setSelectedIndex(null);
+  }, [selectedDay]);
 
   const { curve, markers } = useMemo(() => {
     if (!input) return { curve: [] as number[], markers: [] as TaskMarker[] };
@@ -147,24 +177,17 @@ export default function EnergyDayChart({ input, tasks, selectedDay, isDark }: En
 
     const hourly = Array.from({ length: HOURS_IN_DAY + 1 }, (_, hour) => energyAt(hour));
 
-    const sortedMarkers = tasks
+    const taskMarkers = tasks
       .flatMap((task) =>
         (task.completed ?? [])
           .map((iso) => new Date(iso))
           .filter((date) => !Number.isNaN(date.getTime()) && isSameLocalDay(date, day))
           .map((date) => {
             const hour = date.getHours() + date.getMinutes() / 60;
-            return { title: task.name, hour, energy: energyAt(hour) };
+            return { title: task.name, hour, energy: energyAt(hour), completedAt: date };
           }),
       )
       .sort((a, b) => a.hour - b.hour);
-
-    const seenTitles = new Set<string>();
-    const taskMarkers = sortedMarkers.filter((marker) => {
-      if (seenTitles.has(marker.title)) return false;
-      seenTitles.add(marker.title);
-      return true;
-    });
 
     return { curve: hourly, markers: taskMarkers };
   }, [input, tasks, day]);
@@ -178,6 +201,9 @@ export default function EnergyDayChart({ input, tasks, selectedDay, isDark }: En
   const linePoints = curve.map((energy, hour) => ({ x: xFor(hour), y: yFor(energy) }));
   const lineD = smoothPath(linePoints);
   const areaD = lineD ? `${lineD} L ${xFor(HOURS_IN_DAY)} ${yFor(0)} L ${xFor(0)} ${yFor(0)} Z` : '';
+
+  const selectedMarker = selectedIndex !== null ? markers[selectedIndex] : null;
+  const selectedTooltip = selectedMarker && selectedIndex !== null ? computeTooltipLayout(selectedMarker, xFor(selectedMarker.hour), yFor(selectedMarker.energy), width) : null;
 
   const header = (
     <View className="flex-row items-center gap-2.5 px-3 py-2">
@@ -221,24 +247,33 @@ export default function EnergyDayChart({ input, tasks, selectedDay, isDark }: En
             {areaD ? <Path d={areaD} fill="url(#energyFill)" /> : null}
             {lineD ? <Path d={lineD} stroke={ACCENT} strokeWidth={2} fill="none" /> : null}
 
+            {selectedIndex !== null ? <Rect x={0} y={0} width={width} height={CHART_HEIGHT} fill="transparent" onPress={() => setSelectedIndex(null)} /> : null}
+
             {markers.map((marker, index) => {
               const x = xFor(marker.hour);
               const y = yFor(marker.energy);
-              // Rótulos ficam numa faixa fixa no topo, fora da área da curva.
-              const labelY = LABEL_ROWS[index % LABEL_ROWS.length] ?? LABEL_ROWS[0];
-              const anchor = markerTextAnchor(x, width);
-              const title = truncateTitle(marker.title, maxLabelChars(x, width, anchor));
+              const isSelected = selectedIndex === index;
 
               return (
-                <G key={`${marker.title}-${marker.hour}`}>
-                  <Line x1={x} y1={labelY + 3} x2={x} y2={CHART_HEIGHT - PADDING.bottom} stroke={MARKER_COLOR} strokeWidth={1} strokeDasharray="3 3" opacity={0.6} />
-                  <Circle cx={x} cy={y} r={4.5} fill={MARKER_COLOR} stroke={isDark ? '#18181b' : '#ffffff'} strokeWidth={1.5} />
-                  <SvgText x={x} y={labelY} fontSize={LABEL_FONT_SIZE} fontWeight="600" fill={labelColor} textAnchor={anchor}>
-                    {title}
-                  </SvgText>
+                <G key={`${marker.title}-${marker.hour}-${marker.completedAt.getTime()}`}>
+                  {isSelected ? <Line x1={x} y1={PADDING.top} x2={x} y2={CHART_HEIGHT - PADDING.bottom} stroke={MARKER_COLOR} strokeWidth={1} strokeDasharray="3 3" opacity={0.6} /> : null}
+                  <Circle cx={x} cy={y} r={HIT_RADIUS} fill="transparent" onPress={() => setSelectedIndex((current) => (current === index ? null : index))} />
+                  <Circle cx={x} cy={y} r={isSelected ? 6 : 4.5} fill={MARKER_COLOR} stroke={isDark ? '#18181b' : '#ffffff'} strokeWidth={1.5} />
                 </G>
               );
             })}
+
+            {selectedMarker && selectedTooltip ? (
+              <G>
+                <Rect x={selectedTooltip.rectX} y={selectedTooltip.rectY} width={selectedTooltip.rectW} height={selectedTooltip.rectH} rx={6} fill={tooltipBg} stroke={tooltipBorder} strokeWidth={1} />
+                <SvgText x={selectedTooltip.textX} y={selectedTooltip.rectY + TOOLTIP_PADDING_V + 10} fontSize={10} fontWeight="600" fill={labelColor} textAnchor={selectedTooltip.textAnchor}>
+                  {selectedTooltip.title}
+                </SvgText>
+                <SvgText x={selectedTooltip.textX} y={selectedTooltip.rectY + TOOLTIP_PADDING_V + TOOLTIP_LINE_HEIGHT + 10} fontSize={9} fill={mutedColor} textAnchor={selectedTooltip.textAnchor}>
+                  {selectedTooltip.time}
+                </SvgText>
+              </G>
+            ) : null}
           </Svg>
         ) : (
           <View style={{ height: CHART_HEIGHT }} className="items-center justify-center">
