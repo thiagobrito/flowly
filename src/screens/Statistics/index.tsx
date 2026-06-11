@@ -34,10 +34,6 @@ export default function Statistics() {
         .then((response: any) => {
           if (active) {
             setData(response);
-
-            if (!selectedDay || selectedDay !== response.selectedDay) {
-              setSelectedDay(response.selectedDay);
-            }
           }
         })
         .finally(() => {
