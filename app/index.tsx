@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import type { TabKey } from '@/components/BottomTabBar';
 import BottomTabBar from '@/components/BottomTabBar';
 import { useSession } from '@/lib/auth';
+import Config from '@/screens/Config';
 import NewTask from '@/screens/NewTask';
 import type { Task } from '@/screens/NewTask/data';
 import Statistics from '@/screens/Statistics';
@@ -16,12 +17,13 @@ type ActiveScreenProps = {
   tab: TabKey;
   onLogout: () => void;
   onTabChange: (tab: TabKey) => void;
+  onOpenConfig: () => void;
   editingTask: Task | null;
   onEdit: (task: Task) => void;
   onEditDone: () => void;
 };
 
-function ActiveScreen({ tab, onLogout, onTabChange, editingTask, onEdit, onEditDone }: ActiveScreenProps) {
+function ActiveScreen({ tab, onLogout, onTabChange, onOpenConfig, editingTask, onEdit, onEditDone }: ActiveScreenProps) {
   if (tab === 'new') {
     return (
       <NewTask
@@ -34,7 +36,7 @@ function ActiveScreen({ tab, onLogout, onTabChange, editingTask, onEdit, onEditD
     );
   }
   if (tab === 'progress') return <Statistics />;
-  return <Tasks onLogout={onLogout} onEdit={onEdit} />;
+  return <Tasks onLogout={onLogout} onEdit={onEdit} onOpenConfig={onOpenConfig} />;
 }
 
 function Background({ isDark }: { isDark: boolean }) {
@@ -44,6 +46,7 @@ function Background({ isDark }: { isDark: boolean }) {
 function Home() {
   const isDark = useColorScheme() === 'dark';
   const [tab, setTab] = useState<TabKey>('home');
+  const [showConfig, setShowConfig] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const { isHydrated, isAuthenticated, signOut } = useSession();
 
@@ -83,9 +86,13 @@ function Home() {
 
       <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
         <View className="flex-1 px-3 pt-2">
-          <ActiveScreen tab={tab} onLogout={handleLogout} onTabChange={setTab} editingTask={editingTask} onEdit={handleEdit} onEditDone={() => setEditingTask(null)} />
+          {showConfig ? (
+            <Config onBack={() => setShowConfig(false)} />
+          ) : (
+            <ActiveScreen tab={tab} onLogout={handleLogout} onTabChange={handleTabChange} onOpenConfig={() => setShowConfig(true)} editingTask={editingTask} onEdit={handleEdit} onEditDone={() => setEditingTask(null)} />
+          )}
 
-          <BottomTabBar active={tab} onChange={handleTabChange} />
+          {!showConfig ? <BottomTabBar active={tab} onChange={handleTabChange} /> : null}
         </View>
       </SafeAreaView>
     </View>

@@ -9,6 +9,7 @@ type HeaderProps = {
   isDark: boolean;
   energyScore: number;
   onLogout?: () => void;
+  onOpenConfig?: () => void;
 };
 
 function BatteryData({ energyScore }: { energyScore: number }) {
@@ -26,7 +27,7 @@ function BatteryData({ energyScore }: { energyScore: number }) {
   );
 }
 
-export default function Header({ isDark, energyScore, onLogout }: HeaderProps) {
+export default function Header({ isDark, energyScore, onLogout, onOpenConfig }: HeaderProps) {
   return (
     <View className="flex-row items-start justify-between pt-2">
       <View className="flex-col">
@@ -34,7 +35,7 @@ export default function Header({ isDark, energyScore, onLogout }: HeaderProps) {
       </View>
 
       <View className="flex-row items-center" style={{ gap: 8 }}>
-        <Pressable onPress={() => {}} accessibilityRole="button" accessibilityLabel="Settings" className="size-10 items-center justify-center rounded-full bg-white/40 dark:bg-white/10">
+        <Pressable onPress={onOpenConfig} accessibilityRole="button" accessibilityLabel="Settings" className="size-10 items-center justify-center rounded-full bg-white/40 dark:bg-white/10">
           <SlidersHorizontal size={18} color={isDark ? '#e4e4e7' : '#27272a'} />
         </Pressable>
 

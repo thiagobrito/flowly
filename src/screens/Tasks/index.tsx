@@ -12,6 +12,7 @@ import TaskCard from './components/TaskCard';
 type TasksProps = {
   onEdit?: (task: Task) => void;
   onLogout?: () => void;
+  onOpenConfig?: () => void;
 };
 
 function OrganizeTasks(tasks: any): any {
@@ -23,7 +24,7 @@ function OrganizeTasks(tasks: any): any {
   }));
 }
 
-export default function Tasks({ onEdit, onLogout }: TasksProps) {
+export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
   const isDark = useColorScheme() === 'dark';
   const [updateId, setUpdateId] = useState<any>(0);
   const [loading, setLoading] = useState(true);
@@ -103,7 +104,7 @@ export default function Tasks({ onEdit, onLogout }: TasksProps) {
 
   return (
     <View className="flex-1">
-      <Header isDark={isDark} energyScore={energyScore} onLogout={onLogout} />
+      <Header isDark={isDark} energyScore={energyScore} onLogout={onLogout} onOpenConfig={onOpenConfig} />
 
       <ScrollView className="mt-2 flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 70 }}>
         {visibleTasks.map((task, index) => (
