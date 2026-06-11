@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { Text, View } from 'react-native';
 import Svg, { Circle, Defs, G, Line, LinearGradient, Path, Stop, Text as SvgText } from 'react-native-svg';
 
+import { startOfLocalDay } from '@/lib/date';
 import { computeEnergyAtMoment, type FlowlyEngineInput } from '@/lib/energy';
 
 import type { Task } from '../../NewTask/data';
@@ -103,12 +104,7 @@ export default function EnergyDayChart({ input, tasks, selectedDay, isDark }: En
   const gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
   const labelColor = isDark ? '#e4e4e7' : '#3f3f46';
 
-  const day = useMemo(() => {
-    const parsed = new Date(selectedDay);
-    const base = Number.isNaN(parsed.getTime()) ? new Date() : parsed;
-    base.setHours(0, 0, 0, 0);
-    return base;
-  }, [selectedDay]);
+  const day = useMemo(() => startOfLocalDay(selectedDay), [selectedDay]);
 
   const { curve, markers } = useMemo(() => {
     if (!input) return { curve: [] as number[], markers: [] as TaskMarker[] };

@@ -2,6 +2,7 @@ import { BatteryFull, CheckCircle, HandFist } from 'lucide-react-native';
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, ScrollView, Text, useColorScheme, View } from 'react-native';
 
+import { toLocalISOString } from '@/lib/date';
 import { flowlyInputFromMetrics, useEnergyScore } from '@/lib/energy';
 
 import ConcludedTasksTable from './components/ConcludedTasksTable';
@@ -17,7 +18,7 @@ export default function Statistics() {
   const isDark = useColorScheme() === 'dark';
   const [data, setData] = useState<ProgressData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [selectedDay, setSelectedDay] = useState<string>(new Date().toISOString());
+  const [selectedDay, setSelectedDay] = useState<string>(() => toLocalISOString());
   const energyInfo = useEnergyScore();
 
   const flowlyInput = useMemo(() => {

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, AppState, Platform, ScrollView, Text, useColorScheme, View } from 'react-native';
 
+import { toLocalISOString } from '@/lib/date';
 import { computeEnergyAtMoment, flowlyInputFromMetrics, getHealthProvider } from '@/lib/energy';
 import { api } from '@/lib/network';
 
@@ -52,7 +53,7 @@ export default function Tasks({ onEdit, onLogout }: TasksProps) {
 
   const fetchTasks = useCallback(async () => {
     if (!energyLevel) return;
-    const response = await api.get<any>('/tasks', { params: { date: new Date().toISOString(), energyLevel } });
+    const response = await api.get<any>('/tasks', { params: { date: toLocalISOString(), energyLevel } });
 
     setConcludedTasks(OrganizeTasks(response.concludedTasks));
     setVisibleTasks(OrganizeTasks(response.visibleTasks));
@@ -63,7 +64,7 @@ export default function Tasks({ onEdit, onLogout }: TasksProps) {
   const refreshEnergy = useCallback(() => {
     const metrics = getHealthProvider().collect() as any;
     const input = flowlyInputFromMetrics(metrics, 8);
-    const result = computeEnergyAtMoment(input, new Date().toISOString());
+    const result = computeEnergyAtMoment(input, toLocalISOString());
     setEnergyScore(result.doubleEnergyScore);
     setEnergyLevel(result.energyLevel);
   }, []);

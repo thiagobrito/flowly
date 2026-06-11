@@ -10,9 +10,10 @@ from pathlib import Path
 from .utils import BUILD_DIR, ROOT, capture, log
 
 ENV_FILE = BUILD_DIR / ".env"
+ROOT_ENV_LOCAL = ROOT / ".env.local"
 
 
-def _load_env_file(path: Path) -> None:
+def _load_env_file(path: Path, *, prefix: str | None = None) -> None:
     """Carrega pares KEY=VALUE de um arquivo .env para os.environ (sem sobrescrever)."""
     if not path.exists():
         return
@@ -22,6 +23,8 @@ def _load_env_file(path: Path) -> None:
             continue
         key, _, value = line.partition("=")
         key = key.strip()
+        if prefix and not key.startswith(prefix):
+            continue
         value = value.strip().strip('"').strip("'")
         os.environ.setdefault(key, value)
 
@@ -84,6 +87,8 @@ class Config:
 
 def load_config() -> Config:
     _load_env_file(ENV_FILE)
+    # Sentry CLI roda dentro do xcodebuild e precisa do token no ambiente do processo pai.
+    _load_env_file(ROOT_ENV_LOCAL, prefix="SENTRY_")
     app = _read_app_json()
     ios_cfg = app.get("expo", {}).get("ios", {})
     bundle_id = os.environ.get("BUNDLE_ID") or ios_cfg.get("bundleIdentifier", "")

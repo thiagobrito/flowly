@@ -4,6 +4,7 @@ import { Pressable, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
+import { toLocalISOString } from '@/lib/date';
 import { api } from '@/lib/network';
 
 import type { Task } from '../../NewTask/data';
@@ -87,9 +88,9 @@ export default function TaskCard({ highlight, task, selected, isDark, onComplete
 
     try {
       if (isSelected) {
-        await api.post('/tasks/undo', { taskId: task.id, date: new Date().toISOString() });
+        await api.post('/tasks/undo', { taskId: task.id, date: toLocalISOString() });
       } else {
-        await api.post('/tasks/complete', { taskId: task.id, date: new Date().toISOString() });
+        await api.post('/tasks/complete', { taskId: task.id, date: toLocalISOString() });
       }
     } catch {
       setIsSelected((prev) => !prev);
