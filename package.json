@@ -28,6 +28,7 @@
     "@expo/env": "^2.3.0",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-community/datetimepicker": "8.4.4",
+    "@sentry/react-native": "^8.13.0",
     "expo": "^54.0.35",
     "expo-blur": "~15.0.8",
     "expo-build-properties": "~1.0.10",

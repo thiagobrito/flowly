@@ -19,7 +19,7 @@
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       },
-      "buildNumber": "10",
+      "buildNumber": "11",
       "appleTeamId": "WCZL6FK4U7"
     },
     "android": {
@@ -36,7 +36,7 @@
         "android.permission.health.READ_EXERCISE",
         "android.permission.health.READ_ACTIVE_CALORIES_BURNED"
       ],
-      "versionCode": 2026061010
+      "versionCode": 2026061011
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -47,8 +47,8 @@
       [
         "react-native-health",
         {
-          "healthSharePermission": "Permitir que o Flowly leia seus dados de sa\u00fade para calcular seu Energy Score.",
-          "healthUpdatePermission": "Permitir que o Flowly atualize seus dados de sa\u00fade."
+          "healthSharePermission": "Permitir que o Flowly leia seus dados de saúde para calcular seu Energy Score.",
+          "healthUpdatePermission": "Permitir que o Flowly atualize seus dados de saúde."
         }
       ],
       "react-native-health-connect",
@@ -60,6 +60,14 @@
             "targetSdkVersion": 35,
             "minSdkVersion": 26
           }
+        }
+      ],
+      [
+        "@sentry/react-native/expo",
+        {
+          "url": "https://sentry.io/",
+          "project": "flowly-mobile",
+          "organization": "149-digital"
         }
       ]
     ],
