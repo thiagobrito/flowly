@@ -1,5 +1,9 @@
-import { BatteryFull, LogOut, SlidersHorizontal } from 'lucide-react-native';
+import { LogOut, SlidersHorizontal, Zap } from 'lucide-react-native';
 import { Pressable, Text, View } from 'react-native';
+
+import { energyScoreToLevel } from '@/lib/energy';
+
+import LevelDots from './LevelDots';
 
 type HeaderProps = {
   isDark: boolean;
@@ -8,14 +12,16 @@ type HeaderProps = {
 };
 
 function BatteryData({ energyScore }: { energyScore: number }) {
-  let color = 'bg-red-800/80';
-  if (energyScore >= 80) color = 'bg-green-800/80';
-  if (energyScore >= 40) color = 'bg-yellow-600/70';
+  // transforme energyScore para o nivel de energia (0 a 5)
+  const energyLevel = energyScoreToLevel(energyScore);
 
   return (
-    <View className={`flex flex-row ${color} rounded-xl px-2`}>
-      <BatteryFull className="my-auto flex" size={28} color="white" />
-      <Text className="ml-2 flex rounded-xl text-lg text-white">Energia corporal de {energyScore}%</Text>
+    <View className="flex flex-col">
+      <Text className="text-zinc-900 dark:text-zinc-50">Sua energia corporal</Text>
+      <View className="flex flex-row">
+        <Zap size={22} color="#22c55e" style={{ marginRight: 6 }} />
+        <LevelDots value={energyLevel || 0} accent="#22c55e" isDark={false} big />
+      </View>
     </View>
   );
 }
@@ -24,7 +30,6 @@ export default function Header({ isDark, energyScore, onLogout }: HeaderProps) {
   return (
     <View className="flex-row items-start justify-between pt-2">
       <View className="flex-col">
-        <Text className="text-xl font-bold text-zinc-900 dark:text-zinc-50">Suas atividades,</Text>
         <BatteryData energyScore={energyScore} />
       </View>
 

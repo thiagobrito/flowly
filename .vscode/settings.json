@@ -21,5 +21,8 @@
   "prettier.ignorePath": ".gitignore",
   "[javascriptreact]": {
     "editor.defaultFormatter": "vscode.typescript-language-features"
+  },
+  "[typescriptreact]": {
+    "editor.defaultFormatter": "vscode.typescript-language-features"
   } // Don't run prettier for files listed in .gitignore
 }
