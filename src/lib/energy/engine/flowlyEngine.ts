@@ -91,6 +91,7 @@ const energyFromContext = (context: DayContext, hoursAwake: number, momentIso: s
     energyScore,
     doubleEnergyScore: Math.min(energyScore * 2, 100),
     energyLevel: energyScoreToLevel(energyScore),
+    doubleEnergyLevel: Math.min(energyScoreToLevel(energyScore) * 2, 100),
     band: resolveBand(energyScore, config.bands),
     components: {
       sleepNeedHours: context.sleepNeedHours,

@@ -66,7 +66,7 @@ export default function Tasks({ onEdit, onLogout }: TasksProps) {
     const input = flowlyInputFromMetrics(metrics, 8);
     const result = computeEnergyAtMoment(input, toLocalISOString());
     setEnergyScore(result.doubleEnergyScore);
-    setEnergyLevel(result.energyLevel);
+    setEnergyLevel(result.doubleEnergyLevel);
   }, []);
 
   const appState = useRef(AppState.currentState);

@@ -137,6 +137,8 @@ export interface FlowlyEnergyResult {
   doubleEnergyScore: number;
   /** Same energy expressed on the 0-5 scale used by the task engine. */
   energyLevel: number;
+  /** Same energy expressed on the 0-5 scale used by the task engine. */
+  doubleEnergyLevel: number;
   band: EnergyBand;
   components: FlowlyEnergyComponents;
   /** ISO timestamp of the evaluated moment. */
