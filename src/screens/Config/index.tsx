@@ -1,8 +1,9 @@
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { Alert, Pressable, ScrollView, Text, useColorScheme, View } from 'react-native';
 
 import AccountSection from './Account';
 import ConfigHeader from './components/ConfigHeader';
+import Goals from './Goals';
 import IntegrationSection from './Integration';
 
 type ConfigProps = {
@@ -11,6 +12,7 @@ type ConfigProps = {
 
 export default function Config({ onBack }: ConfigProps) {
   const isDark = useColorScheme() === 'dark';
+  const [showGoals, setShowGoals] = useState(false);
 
   const handleDeleteAccount = useCallback(() => {
     Alert.alert('Deletar conta', 'Tem certeza? Esta ação é irreversível e todos os seus dados serão removidos.', [
@@ -26,12 +28,16 @@ export default function Config({ onBack }: ConfigProps) {
     ]);
   }, []);
 
+  if (showGoals) {
+    return <Goals onBack={() => setShowGoals(false)} />;
+  }
+
   return (
     <View className="flex-1">
       <ConfigHeader isDark={isDark} onBack={onBack} />
 
       <ScrollView className="mt-4 flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 110 }}>
-        <AccountSection isDark={isDark} />
+        <AccountSection isDark={isDark} onOpenGoals={() => setShowGoals(true)} />
         <IntegrationSection isDark={isDark} />
 
         <Pressable
