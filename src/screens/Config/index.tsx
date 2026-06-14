@@ -1,6 +1,9 @@
 import { useCallback, useState } from 'react';
 import { Alert, Pressable, ScrollView, Text, useColorScheme, View } from 'react-native';
 
+import { useSession } from '@/lib/auth';
+import { api } from '@/lib/network';
+
 import AccountSection from './Account';
 import ConfigHeader from './components/ConfigHeader';
 import Goals from './Goals';
@@ -13,20 +16,21 @@ type ConfigProps = {
 export default function Config({ onBack }: ConfigProps) {
   const isDark = useColorScheme() === 'dark';
   const [showGoals, setShowGoals] = useState(false);
+  const { signOut } = useSession();
 
-  const handleDeleteAccount = useCallback(() => {
+  const handleDeleteAccount = useCallback(async () => {
     Alert.alert('Deletar conta', 'Tem certeza? Esta ação é irreversível e todos os seus dados serão removidos.', [
       { text: 'Cancelar', style: 'cancel' },
       {
         text: 'Deletar',
         style: 'destructive',
-        onPress: () => {
-          // TODO: api.delete('/auth/account') quando o backend estiver disponível
-          Alert.alert('Em desenvolvimento', 'A exclusão de conta estará disponível em breve.');
+        onPress: async () => {
+          await api.delete('/auth/delete');
+          signOut();
         },
       },
     ]);
-  }, []);
+  }, [signOut]);
 
   if (showGoals) {
     return <Goals onBack={() => setShowGoals(false)} />;
