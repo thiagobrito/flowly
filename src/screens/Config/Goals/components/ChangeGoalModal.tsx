@@ -12,7 +12,7 @@ type ChangeGoalModalProps = {
 };
 
 type OptionRowProps = {
-  label: string;
+  label: any;
   selected: boolean;
   isDark: boolean;
   onPress: () => void;
@@ -97,8 +97,8 @@ export default function ChangeGoalModal({ visible, isDark, onClose, onConfirm }:
           </View>
 
           {step === 1
-            ? CHANGE_REASONS.map((item) => <OptionRow key={item} label={item} selected={reason === item} isDark={isDark} onPress={() => setReason(item)} />)
-            : CHANGE_ACTIONS.map((item) => <OptionRow key={item} label={item} selected={action === item} isDark={isDark} onPress={() => setAction(item)} />)}
+            ? CHANGE_REASONS.map((item) => <OptionRow key={item.id} label={item.label} selected={reason === item.id} isDark={isDark} onPress={() => setReason(item.id)} />)
+            : CHANGE_ACTIONS.map((item) => <OptionRow key={item.id} label={item.label} selected={action === item.id} isDark={isDark} onPress={() => setAction(item.id)} />)}
 
           <Pressable onPress={handlePrimary} disabled={!canContinue} accessibilityRole="button" className="mt-3 items-center rounded-2xl py-3.5 active:opacity-85" style={{ backgroundColor: '#6366f1', opacity: canContinue ? 1 : 0.4 }}>
             <Text className="text-base font-semibold text-white">{step === 1 ? 'Continuar' : 'Confirmar'}</Text>

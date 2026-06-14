@@ -1,6 +1,6 @@
-import { HeartPulse, Timer, TrendingUp, Zap } from 'lucide-react-native';
-import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, Text, TextInput, useColorScheme, View } from 'react-native';
+import { GoalIcon, HeartPulse, Timer, TrendingUp, Zap } from 'lucide-react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, useColorScheme, View } from 'react-native';
 
 import { api } from '@/lib/network';
 
@@ -25,6 +25,7 @@ export default function NewTask({ task, onCreate, onSuccess }: NewTaskProps) {
   const [impact, setImpact] = useState(task?.impact ?? 3);
   const [frequency, setFrequency] = useState<FrequencyConfig | null>(task?.frequency ?? null);
   const [area, setArea] = useState<string | null>(task?.area ?? null);
+  const [labels, setLabels] = useState<string[]>(['SAÚDE', 'FLOWLY']);
 
   const canSubmit = useMemo(() => name.trim().length > 0 && isFrequencyConfigValid(frequency) && area !== null, [name, frequency, area]);
   let buttonBackground = isDark ? 'rgba(255,255,255,0.12)' : 'rgba(10, 21, 241, 0.08)';
@@ -59,6 +60,18 @@ export default function NewTask({ task, onCreate, onSuccess }: NewTaskProps) {
     onSuccess?.();
   };
 
+  useEffect(() => {
+    const fetchLabels = async () => {
+      const goalLabels = await api.get<string[]>(`/goals/labels`);
+      setLabels(goalLabels);
+    };
+    fetchLabels();
+  }, []);
+
+  if (labels.length === 0) {
+    return <ActivityIndicator />;
+  }
+
   return (
     <View className="flex-1">
       <Text className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">{isEditing ? 'Editar atividade' : 'Nova atividade'}</Text>
@@ -90,8 +103,14 @@ export default function NewTask({ task, onCreate, onSuccess }: NewTaskProps) {
         </View>
 
         <View className="mt-6">
-          <SectionHeader label="Área da vida" Icon={HeartPulse} accent="#8b5cf6" />
+          <SectionHeader label="Área da vida ou metas" Icon={HeartPulse} accent="#8b5cf6" />
           <View className="-mx-1 flex-row flex-wrap">
+            {labels.map((item) => (
+              <View key={item} className="w-1/2 p-1">
+                <OptionChip label={item} Icon={GoalIcon} selected={area === item} accent="#ef4444" isDark={isDark} onPress={() => setArea(item)} className="w-full" />
+              </View>
+            ))}
+
             {LIFE_AREAS.map((item) => (
               <View key={item.id} className="w-1/2 p-1">
                 <OptionChip label={item.label} Icon={item.Icon} selected={area === item.id} accent={item.accent} isDark={isDark} onPress={() => setArea(item.id)} className="w-full" />

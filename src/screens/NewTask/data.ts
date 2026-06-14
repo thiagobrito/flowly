@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react-native';
-import { CalendarClock, CalendarRange, CircleCheckBig, Repeat, Sun } from 'lucide-react-native';
+import { CalendarClock, CalendarRange, CircleCheckBig, GoalIcon, Repeat, Sun } from 'lucide-react-native';
 
 import { LIFE_AREAS, type LifeArea } from '../common';
 
@@ -105,6 +105,9 @@ export type Task = {
 const MONTHS_SHORT = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'] as const;
 
 export function getLifeArea(id: string): LifeArea | undefined {
+  const found = LIFE_AREAS.find((area) => area.id === id);
+  if (!found) return { id, label: id, Icon: GoalIcon, accent: '#ef4444' };
+
   return LIFE_AREAS.find((area) => area.id === id);
 }
 

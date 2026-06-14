@@ -1,4 +1,4 @@
-import { Check, Pencil, Trash2, TrendingUp, Zap } from 'lucide-react-native';
+import { Check, GoalIcon, Pencil, Trash2, TrendingUp, Zap } from 'lucide-react-native';
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -168,7 +168,7 @@ export default function TaskCard({ highlight, task, selected, isDark, onComplete
             <View accessibilityRole="button" accessibilityState={{ selected: isSelected }} className="active:opacity-80">
               <View className="flex-row items-center overflow-hidden rounded-2xl p-3" style={{ borderColor, backgroundColor, borderWidth: 1.5 }}>
                 <View className="size-11 items-center justify-center rounded-2xl" style={{ backgroundColor: `${accent}22` }}>
-                  {AreaIcon ? <AreaIcon size={20} color={accent} /> : null}
+                  {AreaIcon ? <AreaIcon size={20} color={accent} /> : <GoalIcon size={20} color="#000000" />}
                 </View>
 
                 <View className="ml-3 flex-1">
@@ -177,7 +177,7 @@ export default function TaskCard({ highlight, task, selected, isDark, onComplete
                   <View className="mt-1.5 flex-row items-center">
                     <View className="rounded-full px-2 py-0.5" style={{ backgroundColor: `${accent}22`, marginRight: 8 }}>
                       <Text className="text-xs font-semibold" style={{ color: accent }}>
-                        {area?.label}
+                        {area?.label || task.area}
                       </Text>
                     </View>
 

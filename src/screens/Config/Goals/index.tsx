@@ -1,13 +1,15 @@
 import { ChevronLeft, RefreshCw } from 'lucide-react-native';
-import { useCallback, useState } from 'react';
-import { Alert, Pressable, ScrollView, Text, useColorScheme, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Alert, Pressable, ScrollView, Text, useColorScheme, View } from 'react-native';
+
+import { HttpError } from '@/lib/network';
 
 import SectionTitle from '../components/SectionTitle';
-import ChangeGoalModal from './components/ChangeGoalModal';
 import CycleCard from './components/CycleCard';
 import FocusCard from './components/FocusCard';
 import VisionCard from './components/VisionCard';
-import { MOCK_GOALS_DATA } from './data';
+import { createEmptyGoalsData, fetchGoals, type GoalsData } from './data';
+import EditGoals from './EditGoals';
 
 type GoalsProps = {
   onBack: () => void;
@@ -15,12 +17,18 @@ type GoalsProps = {
 
 export default function Goals({ onBack }: GoalsProps) {
   const isDark = useColorScheme() === 'dark';
-  const [showChangeModal, setShowChangeModal] = useState(false);
-  const [vision, setVision] = useState(MOCK_GOALS_DATA.vision);
-  const [isEditingVision, setIsEditingVision] = useState(false);
-  const [visionDraft, setVisionDraft] = useState(MOCK_GOALS_DATA.vision);
+  const emptyGoals = useMemo(() => createEmptyGoalsData(), []);
 
-  const data = { ...MOCK_GOALS_DATA, vision };
+  const [loading, setLoading] = useState(true);
+  const [showEdit, setShowEdit] = useState(false);
+  const [vision, setVision] = useState(emptyGoals.vision);
+  const [isEditingVision, setIsEditingVision] = useState(false);
+  const [visionDraft, setVisionDraft] = useState(emptyGoals.vision);
+  const [cycle, setCycle] = useState(emptyGoals.cycle);
+  const [mainGoal, setMainGoal] = useState(emptyGoals.mainGoal);
+  const [secondaryGoals, setSecondaryGoals] = useState(emptyGoals.secondaryGoals);
+
+  const data: GoalsData = { ...emptyGoals, vision, cycle, mainGoal, secondaryGoals, history: [] };
 
   const handleEditVision = useCallback(() => {
     setVisionDraft(vision);
@@ -41,11 +49,55 @@ export default function Goals({ onBack }: GoalsProps) {
     setIsEditingVision(false);
   }, [vision]);
 
-  const handleChangeConfirm = useCallback((reason: string, action: string) => {
-    setShowChangeModal(false);
-    // TODO: enviar para a API quando o backend estiver disponível
-    Alert.alert('Solicitação registrada', `Motivo: ${reason}\nAção: ${action}`);
+  const handleSaveGoals = useCallback((updated: Pick<GoalsData, 'vision' | 'cycle' | 'mainGoal' | 'secondaryGoals'>) => {
+    setVision(updated.vision);
+    setVisionDraft(updated.vision);
+    setCycle(updated.cycle);
+    setMainGoal(updated.mainGoal);
+    setSecondaryGoals(updated.secondaryGoals);
+    setShowEdit(false);
   }, []);
+
+  useEffect(() => {
+    let active = true;
+
+    fetchGoals()
+      .then((goals) => {
+        if (!active) return;
+
+        setVision(goals.vision);
+        setVisionDraft(goals.vision);
+        setCycle(goals.cycle);
+        setMainGoal(goals.mainGoal);
+        setSecondaryGoals(goals.secondaryGoals);
+      })
+      .catch((error) => {
+        if (!active) return;
+
+        if (error instanceof HttpError && error.status === 404) return;
+
+        Alert.alert('Erro', error.message);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  if (showEdit) {
+    return <EditGoals data={data} onBack={() => setShowEdit(false)} onSave={handleSaveGoals} />;
+  }
+
+  if (loading) {
+    return (
+      <View className="flex-1 items-center justify-center">
+        <ActivityIndicator color={isDark ? '#e4e4e7' : '#3b82f6'} />
+      </View>
+    );
+  }
 
   return (
     <View className="flex-1">
@@ -75,7 +127,7 @@ export default function Goals({ onBack }: GoalsProps) {
         </View>
 
         <Pressable
-          onPress={() => setShowChangeModal(true)}
+          onPress={() => setShowEdit(true)}
           accessibilityRole="button"
           className="mt-4 flex-row items-center justify-center rounded-2xl border px-4 py-3.5 active:opacity-80"
           style={{
@@ -87,8 +139,6 @@ export default function Goals({ onBack }: GoalsProps) {
           <Text className="ml-2 text-base font-semibold text-zinc-800 dark:text-zinc-100">Mudar Metas</Text>
         </Pressable>
       </ScrollView>
-
-      <ChangeGoalModal visible={showChangeModal} isDark={isDark} onClose={() => setShowChangeModal(false)} onConfirm={handleChangeConfirm} />
     </View>
   );
 }
