@@ -202,6 +202,9 @@ export default function EnergyDayChart({ input, tasks, selectedDay, isDark }: En
   const lineD = smoothPath(linePoints);
   const areaD = lineD ? `${lineD} L ${xFor(HOURS_IN_DAY)} ${yFor(0)} L ${xFor(0)} ${yFor(0)} Z` : '';
 
+  const isToday = isSameLocalDay(day, new Date());
+  const nowHour = new Date().getHours() + new Date().getMinutes() / 60;
+
   const selectedMarker = selectedIndex !== null ? markers[selectedIndex] : null;
   const selectedTooltip = selectedMarker && selectedIndex !== null ? computeTooltipLayout(selectedMarker, xFor(selectedMarker.hour), yFor(selectedMarker.energy), width) : null;
 
@@ -246,6 +249,8 @@ export default function EnergyDayChart({ input, tasks, selectedDay, isDark }: En
 
             {areaD ? <Path d={areaD} fill="url(#energyFill)" /> : null}
             {lineD ? <Path d={lineD} stroke={ACCENT} strokeWidth={2} fill="none" /> : null}
+
+            {isToday ? <Line x1={xFor(nowHour)} y1={PADDING.top} x2={xFor(nowHour)} y2={CHART_HEIGHT - PADDING.bottom} stroke={mutedColor} strokeWidth={1} opacity={0.75} /> : null}
 
             {selectedIndex !== null ? <Rect x={0} y={0} width={width} height={CHART_HEIGHT} fill="transparent" onPress={() => setSelectedIndex(null)} /> : null}
 
