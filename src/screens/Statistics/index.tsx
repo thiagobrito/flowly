@@ -2,8 +2,8 @@ import { BatteryFull, CheckCircle, HandFist } from 'lucide-react-native';
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, ScrollView, Text, useColorScheme, View } from 'react-native';
 
-import { toLocalISOString } from '@/lib/date';
-import { flowlyInputFromMetrics, useEnergyScore } from '@/lib/energy';
+import { startOfLocalDay, toLocalISOString } from '@/lib/date';
+import { flowlyInputFromMetrics, lastDaysRange, useEnergyScore } from '@/lib/energy';
 
 import ConcludedTasksTable from './components/ConcludedTasksTable';
 import DayChip from './components/DayChip';
@@ -19,7 +19,14 @@ export default function Statistics() {
   const [data, setData] = useState<ProgressData | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedDay, setSelectedDay] = useState<string>(() => toLocalISOString());
-  const energyInfo = useEnergyScore();
+
+  const energyRange = useMemo(() => {
+    const dayStart = startOfLocalDay(selectedDay);
+    const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000 - 1);
+    return lastDaysRange(1, dayEnd);
+  }, [selectedDay]);
+
+  const energyInfo = useEnergyScore({ range: energyRange });
 
   const flowlyInput = useMemo(() => {
     if (!energyInfo.metrics) return null;
