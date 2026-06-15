@@ -14,12 +14,16 @@ type LevelScaleProps = {
   isDark: boolean;
 };
 
-function firstLetterToUpperCase(text: string): string {
-  return text.charAt(0).toUpperCase() + text.slice(1).toLowerCase();
+function firstLetterToUpperCase(text: string | number | null | undefined): string {
+  const normalized = String(text ?? '');
+  if (!normalized) return '';
+
+  return normalized.charAt(0).toUpperCase() + normalized.slice(1).toLowerCase();
 }
 
 export function LevelScale({ value, onChange, Icon, accent, isDark }: LevelScaleProps) {
-  const label = LEVEL_LABELS[Math.max(0, Math.min(4, value - 1))];
+  const safeValue = Number.isFinite(Number(value)) ? Math.max(1, Math.min(5, Number(value))) : 3;
+  const label = LEVEL_LABELS[safeValue - 1];
   const emptyBarColor = isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)';
 
   return (
@@ -28,7 +32,7 @@ export function LevelScale({ value, onChange, Icon, accent, isDark }: LevelScale
         <Icon size={18} color={accent} style={{ marginRight: 10 }} />
         <View className="flex-1 flex-row items-center">
           {LEVELS.map((level) => {
-            const isFilled = level <= value;
+            const isFilled = level <= safeValue;
             const isLast = level === LEVELS.length;
 
             return (
@@ -52,7 +56,7 @@ export function LevelScale({ value, onChange, Icon, accent, isDark }: LevelScale
           })}
         </View>
         <Text className="w-5 text-center text-sm font-semibold text-zinc-700 dark:text-zinc-200" style={{ marginLeft: 10 }}>
-          {value}
+          {safeValue}
         </Text>
       </View>
       <Text className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">{label}</Text>
