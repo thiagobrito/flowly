@@ -1,7 +1,9 @@
 import type { LucideIcon } from 'lucide-react-native';
-import { Minus, Plus } from 'lucide-react-native';
-import { Pressable, Text, View } from 'react-native';
+import { Minus, Plus, Trash2 } from 'lucide-react-native';
+import { useState } from 'react';
+import { Pressable, Text, TextInput, View } from 'react-native';
 
+import type { Subtask } from './data';
 import { LEVEL_LABELS, WEEKDAYS } from './data';
 
 const LEVELS = [1, 2, 3, 4, 5] as const;
@@ -262,6 +264,77 @@ export function WeekdayToggles({ value, onChange, accent, isDark }: WeekdayToggl
           </Pressable>
         );
       })}
+    </View>
+  );
+}
+
+type SubtaskEditorProps = {
+  value: Subtask[];
+  onChange: (subtasks: Subtask[]) => void;
+  accent: string;
+  isDark: boolean;
+};
+
+export function SubtaskEditor({ value, onChange, accent, isDark }: SubtaskEditorProps) {
+  const [draft, setDraft] = useState('');
+
+  const addSubtask = () => {
+    const name = draft.trim();
+    if (!name) return;
+    const subtask: Subtask = { id: Math.random().toString(36).substring(2, 15), name, done: false };
+    onChange([...value, subtask]);
+    setDraft('');
+  };
+
+  const removeSubtask = (id: string) => {
+    onChange(value.filter((item) => item.id !== id));
+  };
+
+  const hasDraft = draft.trim().length > 0;
+  let buttonBg = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
+  let iconColor = isDark ? '#71717a' : '#a1a1aa';
+  if (hasDraft) {
+    buttonBg = accent;
+    iconColor = '#ffffff';
+  }
+
+  return (
+    <View>
+      <View className="flex-row items-center">
+        <TextInput
+          value={draft}
+          onChangeText={setDraft}
+          onSubmitEditing={addSubtask}
+          returnKeyType="done"
+          blurOnSubmit={false}
+          placeholder="Ex: Comprar leite"
+          placeholderTextColor={isDark ? '#71717a' : '#a1a1aa'}
+          className="flex-1 rounded-2xl border border-zinc-200 bg-white/70 px-4 py-3 text-base text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800/60 dark:text-zinc-50"
+        />
+        <Pressable onPress={addSubtask} disabled={draft.trim().length === 0} accessibilityRole="button" accessibilityLabel="Adicionar sub-tarefa" className="ml-2 active:opacity-80">
+          <View className="size-12 items-center justify-center rounded-2xl" style={{ backgroundColor: buttonBg }}>
+            <Plus size={20} color={iconColor} />
+          </View>
+        </Pressable>
+      </View>
+
+      {value.map((item) => (
+        <View
+          key={item.id}
+          className="mt-2 flex-row items-center justify-between rounded-2xl border px-4 py-3"
+          style={{
+            borderColor: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)',
+            backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.5)',
+          }}
+        >
+          <Text className="flex-1 text-base text-zinc-800 dark:text-zinc-100" numberOfLines={1}>
+            {item.name}
+          </Text>
+          <Pressable onPress={() => removeSubtask(item.id)} accessibilityRole="button" accessibilityLabel={`Remover ${item.name}`} className="ml-3 active:opacity-70">
+            <Trash2 size={18} color="#ef4444" />
+          </Pressable>
+        </View>
+      ))}
     </View>
   );
 }

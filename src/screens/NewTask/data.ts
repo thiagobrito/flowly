@@ -24,12 +24,15 @@ export type TriggerEvent = {
   label: string;
 };
 
+export type Subtask = { id: string; name: string; done: boolean };
+
 export type NewTaskPayload = {
   name: string;
   energy: number;
   impact: number;
   frequency: FrequencyConfig;
   area: string;
+  subtasks?: Subtask[];
 };
 
 export const FREQUENCIES: Frequency[] = [
@@ -100,6 +103,7 @@ export type Task = {
   impact?: number;
   frequency: FrequencyConfig;
   completed?: string[];
+  subtasks?: Subtask[];
 };
 
 const MONTHS_SHORT = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'] as const;

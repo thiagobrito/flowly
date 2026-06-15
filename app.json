@@ -2,7 +2,7 @@
   "expo": {
     "name": "Flowly",
     "slug": "flowly-m-gvdcsjo9xgnlwu4indg",
-    "version": "2026.06.14",
+    "version": "2026.06.15",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -19,7 +19,7 @@
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       },
-      "buildNumber": "3",
+      "buildNumber": "1",
       "appleTeamId": "WCZL6FK4U7"
     },
     "android": {
@@ -36,7 +36,7 @@
         "android.permission.health.READ_EXERCISE",
         "android.permission.health.READ_ACTIVE_CALORIES_BURNED"
       ],
-      "versionCode": 2026061403
+      "versionCode": 2026061501
     },
     "web": {
       "favicon": "./assets/favicon.png",

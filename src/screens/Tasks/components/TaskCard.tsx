@@ -1,4 +1,4 @@
-import { Check, GoalIcon, Pencil, Trash2, TrendingUp, Zap } from 'lucide-react-native';
+import { Check, ChevronDown, ChevronRight, GoalIcon, Pencil, Trash2, TrendingUp, Zap } from 'lucide-react-native';
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -7,7 +7,7 @@ import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 
 import { toLocalISOString } from '@/lib/date';
 import { api } from '@/lib/network';
 
-import type { Task } from '../../NewTask/data';
+import type { Subtask, Task } from '../../NewTask/data';
 import { describeFrequency, getFrequencyMeta, getLifeArea } from '../../NewTask/data';
 import LevelDots from './LevelDots';
 
@@ -52,6 +52,8 @@ type TaskCardProps = {
 
 export default function TaskCard({ highlight, task, selected, isDark, onComplete, onEdit, onDelete }: TaskCardProps) {
   const [isSelected, setIsSelected] = useState(selected);
+  const [expanded, setExpanded] = useState(false);
+  const [localSubtasks, setLocalSubtasks] = useState<Subtask[]>(task.subtasks ?? []);
   const opacity = useSharedValue(1);
   const scale = useSharedValue(1);
   const translateX = useSharedValue(0);
@@ -112,6 +114,20 @@ export default function TaskCard({ highlight, task, selected, isDark, onComplete
     onDelete();
   };
 
+  const toggleSubtask = async (subtask: Subtask) => {
+    const nextDone = !subtask.done;
+    setLocalSubtasks((prev) => prev.map((item) => (item.id === subtask.id ? { ...item, done: nextDone } : item)));
+
+    try {
+      await api.post('/tasks/subtask', { taskId: task.id, subtaskId: subtask.id, done: nextDone });
+    } catch {
+      setLocalSubtasks((prev) => prev.map((item) => (item.id === subtask.id ? { ...item, done: subtask.done } : item)));
+    }
+  };
+
+  const hasSubtasks = localSubtasks.length > 0;
+  const doneCount = localSubtasks.filter((item) => item.done).length;
+
   const panGesture = Gesture.Pan()
     .activeOffsetX([-15, 15])
     .failOffsetY([-12, 12])
@@ -166,47 +182,78 @@ export default function TaskCard({ highlight, task, selected, isDark, onComplete
         <GestureDetector gesture={panGesture}>
           <Animated.View style={cardStyle}>
             <View accessibilityRole="button" accessibilityState={{ selected: isSelected }} className="active:opacity-80">
-              <View className="flex-row items-center overflow-hidden rounded-2xl p-3" style={{ borderColor, backgroundColor, borderWidth: 1.5 }}>
-                <View className="size-11 items-center justify-center rounded-2xl" style={{ backgroundColor: `${accent}22` }}>
-                  {AreaIcon ? <AreaIcon size={20} color={accent} /> : <GoalIcon size={20} color="#22c55e" />}
+              <View className="overflow-hidden rounded-2xl" style={{ borderColor, backgroundColor, borderWidth: 1.5 }}>
+                <View className="flex-row items-center p-3">
+                  <View className="size-11 items-center justify-center rounded-2xl" style={{ backgroundColor: `${accent}22` }}>
+                    {AreaIcon ? <AreaIcon size={20} color={accent} /> : <GoalIcon size={20} color="#22c55e" />}
+                  </View>
+
+                  <View className="ml-3 flex-1">
+                    <Text className="text-base font-semibold text-zinc-900 dark:text-zinc-50">{task.name}</Text>
+
+                    <View className="mt-1.5 flex-row items-center">
+                      <View className="rounded-full px-2 py-0.5" style={{ backgroundColor: `${accent}22`, marginRight: 8 }}>
+                        <Text className="text-xs font-semibold" style={{ color: accent }}>
+                          {area?.label || task.area}
+                        </Text>
+                      </View>
+
+                      <View className="flex-1 flex-row items-center">
+                        {FreqIcon ? <FreqIcon size={13} color={mutedColor} style={{ marginRight: 5 }} /> : null}
+                        <Text className="flex-1 text-xs font-medium" style={{ color: mutedColor }} numberOfLines={1}>
+                          {describeFrequency(task.frequency)}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <View className="mt-2.5 flex-row items-center">
+                      <View className="flex-row items-center" style={{ marginRight: 18 }}>
+                        <Zap size={13} color="#22c55e" style={{ marginRight: 6 }} />
+                        <LevelDots value={task.energy || 0} accent="#22c55e" isDark={isDark} />
+                      </View>
+
+                      <View className="flex-row items-center">
+                        <TrendingUp size={13} color="#3b82f6" style={{ marginRight: 6 }} />
+                        <LevelDots value={task.impact || 0} accent="#3b82f6" isDark={isDark} />
+                      </View>
+
+                      {hasSubtasks ? (
+                        <Pressable onPress={() => setExpanded((prev) => !prev)} accessibilityRole="button" accessibilityLabel="Mostrar sub-tarefas" accessibilityState={{ expanded }} className="ml-auto flex-row items-center active:opacity-70">
+                          <Text className="text-xs font-semibold" style={{ color: mutedColor, marginRight: 4 }}>
+                            {doneCount}/{localSubtasks.length}
+                          </Text>
+                          {expanded ? <ChevronDown size={16} color={mutedColor} /> : <ChevronRight size={16} color={mutedColor} />}
+                        </Pressable>
+                      ) : null}
+                    </View>
+                  </View>
+
+                  <Pressable onPress={handlePress} accessibilityRole="button" accessibilityState={{ selected: isSelected }} className="active:opacity-80">
+                    <View className="ml-2 size-6 items-center justify-center">
+                      <CheckIcon isSelected={isSelected} isDark={isDark} accent={accent} />
+                    </View>
+                  </Pressable>
                 </View>
 
-                <View className="ml-3 flex-1">
-                  <Text className="text-base font-semibold text-zinc-900 dark:text-zinc-50">{task.name}</Text>
+                {hasSubtasks && expanded ? (
+                  <View className="px-3 pb-3">
+                    <View className="border-t pt-2" style={{ borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }}>
+                      {localSubtasks.map((subtask) => {
+                        let subtaskColor = isDark ? '#e4e4e7' : '#3f3f46';
+                        if (subtask.done) subtaskColor = mutedColor;
 
-                  <View className="mt-1.5 flex-row items-center">
-                    <View className="rounded-full px-2 py-0.5" style={{ backgroundColor: `${accent}22`, marginRight: 8 }}>
-                      <Text className="text-xs font-semibold" style={{ color: accent }}>
-                        {area?.label || task.area}
-                      </Text>
-                    </View>
-
-                    <View className="flex-1 flex-row items-center">
-                      {FreqIcon ? <FreqIcon size={13} color={mutedColor} style={{ marginRight: 5 }} /> : null}
-                      <Text className="flex-1 text-xs font-medium" style={{ color: mutedColor }} numberOfLines={1}>
-                        {describeFrequency(task.frequency)}
-                      </Text>
-                    </View>
-                  </View>
-
-                  <View className="mt-2.5 flex-row items-center">
-                    <View className="flex-row items-center" style={{ marginRight: 18 }}>
-                      <Zap size={13} color="#22c55e" style={{ marginRight: 6 }} />
-                      <LevelDots value={task.energy || 0} accent="#22c55e" isDark={isDark} />
-                    </View>
-
-                    <View className="flex-row items-center">
-                      <TrendingUp size={13} color="#3b82f6" style={{ marginRight: 6 }} />
-                      <LevelDots value={task.impact || 0} accent="#3b82f6" isDark={isDark} />
+                        return (
+                          <Pressable key={subtask.id} onPress={() => toggleSubtask(subtask)} accessibilityRole="button" accessibilityState={{ checked: subtask.done }} className="flex-row items-center py-2 active:opacity-70">
+                            <CheckIcon isSelected={subtask.done} isDark={isDark} accent={accent} />
+                            <Text className="ml-3 flex-1 text-sm" style={{ color: subtaskColor, textDecorationLine: subtask.done ? 'line-through' : 'none' }}>
+                              {subtask.name}
+                            </Text>
+                          </Pressable>
+                        );
+                      })}
                     </View>
                   </View>
-                </View>
-
-                <Pressable onPress={handlePress} accessibilityRole="button" accessibilityState={{ selected: isSelected }} className="active:opacity-80">
-                  <View className="ml-2 size-6 items-center justify-center">
-                    <CheckIcon isSelected={isSelected} isDark={isDark} accent={accent} />
-                  </View>
-                </Pressable>
+                ) : null}
               </View>
             </View>
           </Animated.View>
