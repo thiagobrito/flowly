@@ -14,6 +14,10 @@ type LevelScaleProps = {
   isDark: boolean;
 };
 
+function firstLetterToUpperCase(text: string): string {
+  return text.charAt(0).toUpperCase() + text.slice(1).toLowerCase();
+}
+
 export function LevelScale({ value, onChange, Icon, accent, isDark }: LevelScaleProps) {
   const label = LEVEL_LABELS[Math.max(0, Math.min(4, value - 1))];
   const emptyBarColor = isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)';
@@ -58,6 +62,7 @@ export function LevelScale({ value, onChange, Icon, accent, isDark }: LevelScale
 
 type OptionChipProps = {
   label: string;
+  isGoal?: boolean;
   Icon?: LucideIcon;
   selected: boolean;
   accent?: string;
@@ -66,11 +71,12 @@ type OptionChipProps = {
   className?: string;
 };
 
-export function OptionChip({ label, Icon, selected, accent = '#3b82f6', isDark, onPress, className = '' }: OptionChipProps) {
+export function OptionChip({ label, isGoal, Icon, selected, accent = '#3b82f6', isDark, onPress, className = '' }: OptionChipProps) {
   let iconColor = isDark ? '#a1a1aa' : '#71717a';
   let borderColor = isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)';
   let backgroundColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.7)';
   let textColor = isDark ? '#e4e4e7' : '#3f3f46';
+  const goalBorderColor = isGoal ? '#22c55e' : (null as string | null);
 
   if (selected) {
     iconColor = accent;
@@ -82,10 +88,12 @@ export function OptionChip({ label, Icon, selected, accent = '#3b82f6', isDark, 
   return (
     <Pressable onPress={onPress} accessibilityRole="button" accessibilityState={{ selected }} className={`active:opacity-80 ${className}`}>
       <View
-        className="w-full flex-row items-center justify-center rounded-2xl border p-3"
+        className="w-full flex-row items-center justify-center rounded-2xl p-3"
         style={{
           borderColor,
           backgroundColor,
+          borderWidth: 1,
+          ...(goalBorderColor ? { borderColor: goalBorderColor } : {}),
         }}
       >
         {Icon ? <Icon size={16} color={iconColor} /> : null}
@@ -97,7 +105,7 @@ export function OptionChip({ label, Icon, selected, accent = '#3b82f6', isDark, 
           }}
           numberOfLines={1}
         >
-          {label}
+          {firstLetterToUpperCase(label)}
         </Text>
       </View>
     </Pressable>

@@ -106,7 +106,7 @@ const MONTHS_SHORT = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 's
 
 export function getLifeArea(id: string): LifeArea | undefined {
   const found = LIFE_AREAS.find((area) => area.id === id);
-  if (!found) return { id, label: id, Icon: GoalIcon, accent: '#ef4444' };
+  if (!found) return { id, label: id, Icon: GoalIcon, accent: '#22c55e' };
 
   return LIFE_AREAS.find((area) => area.id === id);
 }

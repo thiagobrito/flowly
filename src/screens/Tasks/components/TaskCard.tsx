@@ -168,7 +168,7 @@ export default function TaskCard({ highlight, task, selected, isDark, onComplete
             <View accessibilityRole="button" accessibilityState={{ selected: isSelected }} className="active:opacity-80">
               <View className="flex-row items-center overflow-hidden rounded-2xl p-3" style={{ borderColor, backgroundColor, borderWidth: 1.5 }}>
                 <View className="size-11 items-center justify-center rounded-2xl" style={{ backgroundColor: `${accent}22` }}>
-                  {AreaIcon ? <AreaIcon size={20} color={accent} /> : <GoalIcon size={20} color="#000000" />}
+                  {AreaIcon ? <AreaIcon size={20} color={accent} /> : <GoalIcon size={20} color="#22c55e" />}
                 </View>
 
                 <View className="ml-3 flex-1">

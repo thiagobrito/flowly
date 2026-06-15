@@ -107,7 +107,7 @@ export default function NewTask({ task, onCreate, onSuccess }: NewTaskProps) {
           <View className="-mx-1 flex-row flex-wrap">
             {labels.map((item) => (
               <View key={item} className="w-1/2 p-1">
-                <OptionChip label={item} Icon={GoalIcon} selected={area === item} accent="#ef4444" isDark={isDark} onPress={() => setArea(item)} className="w-full" />
+                <OptionChip label={item} isGoal Icon={GoalIcon} selected={area === item} accent="#22c55e" isDark={isDark} onPress={() => setArea(item)} className="w-full" />
               </View>
             ))}
 
