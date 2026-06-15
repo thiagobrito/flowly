@@ -1,11 +1,11 @@
-import { GoalIcon, HeartPulse, ListChecks, Timer, TrendingUp, Zap } from 'lucide-react-native';
+import { Clock, GoalIcon, HeartPulse, ListChecks, Timer, TrendingUp, Zap } from 'lucide-react-native';
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, useColorScheme, View } from 'react-native';
 
 import { api } from '@/lib/network';
 
 import { LIFE_AREAS } from '../common';
-import { LevelScale, OptionChip, SectionHeader, SubtaskEditor } from './components';
+import { EstimatedTimePicker, LevelScale, OptionChip, SectionHeader, SubtaskEditor } from './components';
 import type { FrequencyConfig, NewTaskPayload, Subtask, Task } from './data';
 import { isFrequencyConfigValid } from './data';
 import { FrequencyPicker } from './FrequencyPicker';
@@ -26,6 +26,7 @@ export default function NewTask({ task, onCreate, onSuccess }: NewTaskProps) {
   const [frequency, setFrequency] = useState<FrequencyConfig | null>(task?.frequency ?? null);
   const [area, setArea] = useState<string | null>(task?.area ?? null);
   const [subtasks, setSubtasks] = useState<Subtask[]>(task?.subtasks ?? []);
+  const [estimatedMinutes, setEstimatedMinutes] = useState<number | null>(task?.estimatedMinutes ?? null);
   const [labels, setLabels] = useState<string[]>(['SAÚDE', 'FLOWLY']);
 
   const canSubmit = useMemo(() => name.trim().length > 0 && isFrequencyConfigValid(frequency) && area !== null, [name, frequency, area]);
@@ -49,6 +50,7 @@ export default function NewTask({ task, onCreate, onSuccess }: NewTaskProps) {
       frequency,
       area,
       subtasks,
+      estimatedMinutes,
     } as any;
 
     if (isEditing) {
@@ -97,6 +99,11 @@ export default function NewTask({ task, onCreate, onSuccess }: NewTaskProps) {
         <View className="mt-6">
           <SectionHeader label="Impacto esperado" Icon={TrendingUp} accent="#3b82f6" />
           <LevelScale value={impact} onChange={setImpact} Icon={TrendingUp} accent="#3b82f6" isDark={isDark} />
+        </View>
+
+        <View className="mt-6">
+          <SectionHeader label="Tempo estimado" Icon={Clock} accent="#14b8a6" />
+          <EstimatedTimePicker value={estimatedMinutes} onChange={setEstimatedMinutes} accent="#14b8a6" isDark={isDark} />
         </View>
 
         <View className="mt-6">

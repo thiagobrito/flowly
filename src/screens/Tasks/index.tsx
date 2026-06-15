@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { GoalIcon } from 'lucide-react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, AppState, Platform, ScrollView, Text, useColorScheme, View } from 'react-native';
 
 import { toLocalISOString } from '@/lib/date';
@@ -6,6 +7,9 @@ import { computeEnergyAtMoment, flowlyInputFromMetrics, getHealthProvider } from
 import { api } from '@/lib/network';
 
 import type { Task } from '../NewTask/data';
+import { getLifeArea } from '../NewTask/data';
+import type { FilterArea } from './components/FilterDrawer';
+import FilterDrawer from './components/FilterDrawer';
 import Header from './components/Header';
 import TaskCard from './components/TaskCard';
 
@@ -33,6 +37,35 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
 
   const [concludedTasks, setConcludedTasks] = useState<Task[]>([]);
   const [visibleTasks, setVisibleTasks] = useState<Task[]>([]);
+
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [selectedAreas, setSelectedAreas] = useState<string[]>([]);
+
+  const filterAreas = useMemo<FilterArea[]>(() => {
+    const counts = new Map<string, number>();
+    [...visibleTasks, ...concludedTasks].forEach((task) => {
+      counts.set(task.area, (counts.get(task.area) ?? 0) + 1);
+    });
+
+    return Array.from(counts.entries()).map(([id, count]) => {
+      const area = getLifeArea(id);
+      return {
+        id,
+        label: area?.label ?? id,
+        Icon: area?.Icon ?? GoalIcon,
+        accent: area?.accent ?? '#71717a',
+        count,
+      };
+    });
+  }, [visibleTasks, concludedTasks]);
+
+  const filteredVisible = useMemo(() => (selectedAreas.length === 0 ? visibleTasks : visibleTasks.filter((task) => selectedAreas.includes(task.area))), [visibleTasks, selectedAreas]);
+
+  const filteredConcluded = useMemo(() => (selectedAreas.length === 0 ? concludedTasks : concludedTasks.filter((task) => selectedAreas.includes(task.area))), [concludedTasks, selectedAreas]);
+
+  const toggleArea = (id: string) => {
+    setSelectedAreas((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]));
+  };
 
   const handleDelete = (task: Task) => {
     Alert.alert('Deletar atividade', `Deseja remover "${task.name}"?`, [
@@ -104,21 +137,23 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
 
   return (
     <View className="flex-1">
-      <Header isDark={isDark} energyScore={energyScore} onLogout={onLogout} onOpenConfig={onOpenConfig} />
+      <Header isDark={isDark} energyScore={energyScore} onLogout={onLogout} onOpenConfig={onOpenConfig} onOpenFilter={() => setFilterOpen(true)} />
 
       <ScrollView className="mt-2 flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 70 }}>
-        {visibleTasks.map((task, index) => (
+        {filteredVisible.map((task, index) => (
           <TaskCard key={task.randomId} highlight={index === 0} task={task} selected={false} isDark={isDark} onComplete={() => setUpdateId(updateId + 1)} onEdit={() => onEdit?.(task)} onDelete={() => handleDelete(task)} />
         ))}
 
         <View className="w-full border-t border-zinc-200 dark:border-zinc-800" style={Platform.select({ web: { filter: 'grayscale(100%)' }, default: { opacity: 0.5 } })}>
-          <Text className="my-2 text-center text-sm text-zinc-400 dark:text-zinc-400">{concludedTasks.length} atividades já concluídas</Text>
+          <Text className="my-2 text-center text-sm text-zinc-400 dark:text-zinc-400">{filteredConcluded.length} atividades já concluídas</Text>
 
-          {concludedTasks.map((task: Task) => (
+          {filteredConcluded.map((task: Task) => (
             <TaskCard key={task.randomId} highlight={false} task={task} selected isDark={isDark} onComplete={() => setUpdateId(updateId + 1)} onEdit={() => onEdit?.(task)} onDelete={() => handleDelete(task)} />
           ))}
         </View>
       </ScrollView>
+
+      <FilterDrawer visible={filterOpen} isDark={isDark} areas={filterAreas} selected={selectedAreas} onToggle={toggleArea} onClear={() => setSelectedAreas([])} onClose={() => setFilterOpen(false)} />
     </View>
   );
 }

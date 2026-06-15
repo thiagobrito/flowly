@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 
 import type { Subtask } from './data';
-import { LEVEL_LABELS, WEEKDAYS } from './data';
+import { formatDuration, LEVEL_LABELS, WEEKDAYS } from './data';
 
 const LEVELS = [1, 2, 3, 4, 5] as const;
 
@@ -264,6 +264,94 @@ export function WeekdayToggles({ value, onChange, accent, isDark }: WeekdayToggl
           </Pressable>
         );
       })}
+    </View>
+  );
+}
+
+type EstimatedTimePickerProps = {
+  value: number | null;
+  onChange: (minutes: number | null) => void;
+  accent: string;
+  isDark: boolean;
+};
+
+const MINUTE_PRESETS = [5, 10, 15, 30, 45] as const;
+const HOUR_PRESETS = [1, 1.5, 2, 3, 4] as const;
+
+export function EstimatedTimePicker({ value, onChange, accent, isDark }: EstimatedTimePickerProps) {
+  const [unit, setUnit] = useState<'min' | 'h'>(value && value >= 60 ? 'h' : 'min');
+
+  const presets = unit === 'min' ? MINUTE_PRESETS : HOUR_PRESETS;
+  const presetToMinutes = (preset: number) => (unit === 'min' ? preset : Math.round(preset * 60));
+  const presetLabel = (preset: number) => {
+    if (unit === 'min') return `${preset}min`;
+    return preset % 1 === 0 ? `${preset}h` : `${preset}h30`;
+  };
+
+  const emptyBorder = isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)';
+  const emptyBg = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.5)';
+  const emptyText = isDark ? '#a1a1aa' : '#71717a';
+
+  const handleSelect = (minutes: number) => {
+    onChange(value === minutes ? null : minutes);
+  };
+
+  return (
+    <View>
+      <SegmentedToggle
+        options={[
+          { value: 'min', label: 'Minutos' },
+          { value: 'h', label: 'Horas' },
+        ]}
+        value={unit}
+        onChange={(next) => setUnit(next as 'min' | 'h')}
+        accent={accent}
+        isDark={isDark}
+      />
+
+      <View className="-mx-1 mt-3 flex-row flex-wrap">
+        {presets.map((preset) => {
+          const minutes = presetToMinutes(preset);
+          const selected = value === minutes;
+
+          return (
+            <View key={preset} className="p-1">
+              <Pressable onPress={() => handleSelect(minutes)} accessibilityRole="button" accessibilityState={{ selected }} className="active:opacity-80">
+                <View
+                  className="rounded-full px-4 py-2"
+                  style={{
+                    borderWidth: 1,
+                    borderColor: selected ? accent : emptyBorder,
+                    backgroundColor: selected ? `${accent}18` : emptyBg,
+                  }}
+                >
+                  <Text className="text-sm font-semibold" style={{ color: selected ? accent : emptyText }}>
+                    {presetLabel(preset)}
+                  </Text>
+                </View>
+              </Pressable>
+            </View>
+          );
+        })}
+      </View>
+
+      <View
+        className="mt-3 flex-row items-center justify-between rounded-2xl px-4 py-3"
+        style={{
+          borderWidth: 1,
+          borderColor: value ? accent : emptyBorder,
+          backgroundColor: value ? `${accent}12` : emptyBg,
+        }}
+      >
+        <Text className="text-base font-semibold" style={{ color: value ? accent : emptyText }}>
+          {formatDuration(value)}
+        </Text>
+        {value ? (
+          <Pressable onPress={() => onChange(null)} accessibilityRole="button" accessibilityLabel="Limpar estimativa" className="active:opacity-70">
+            <Text className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Limpar</Text>
+          </Pressable>
+        ) : null}
+      </View>
     </View>
   );
 }

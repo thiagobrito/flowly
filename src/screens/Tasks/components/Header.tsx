@@ -1,4 +1,4 @@
-import { LogOut, SlidersHorizontal, Zap } from 'lucide-react-native';
+import { ListChecks, LogOut, SlidersHorizontal, Zap } from 'lucide-react-native';
 import { Pressable, Text, View } from 'react-native';
 
 import { energyScoreToLevel } from '@/lib/energy';
@@ -10,6 +10,7 @@ type HeaderProps = {
   energyScore: number;
   onLogout?: () => void;
   onOpenConfig?: () => void;
+  onOpenFilter?: () => void;
 };
 
 function BatteryData({ energyScore }: { energyScore: number }) {
@@ -27,11 +28,17 @@ function BatteryData({ energyScore }: { energyScore: number }) {
   );
 }
 
-export default function Header({ isDark, energyScore, onLogout, onOpenConfig }: HeaderProps) {
+export default function Header({ isDark, energyScore, onLogout, onOpenConfig, onOpenFilter }: HeaderProps) {
   return (
     <View className="flex-row items-start justify-between pt-2">
-      <View className="flex-col">
-        <BatteryData energyScore={energyScore} />
+      <View className="flex-row items-center">
+        <Pressable onPress={onOpenFilter} accessibilityRole="button" accessibilityLabel="Sair" className="size-10 items-center justify-center rounded-full bg-white/40 dark:bg-white/10">
+          <ListChecks size={18} color={isDark ? '#e4e4e7' : '#27272a'} />
+        </Pressable>
+
+        <View className="ml-3 flex-col">
+          <BatteryData energyScore={energyScore} />
+        </View>
       </View>
 
       <View className="flex-row items-center" style={{ gap: 8 }}>

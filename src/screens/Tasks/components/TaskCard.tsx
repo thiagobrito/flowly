@@ -1,4 +1,4 @@
-import { Check, ChevronDown, ChevronRight, GoalIcon, Pencil, Trash2, TrendingUp, Zap } from 'lucide-react-native';
+import { Check, ChevronDown, ChevronRight, Clock, GoalIcon, Pencil, Trash2, TrendingUp, Zap } from 'lucide-react-native';
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -8,7 +8,7 @@ import { toLocalISOString } from '@/lib/date';
 import { api } from '@/lib/network';
 
 import type { Subtask, Task } from '../../NewTask/data';
-import { describeFrequency, getFrequencyMeta, getLifeArea } from '../../NewTask/data';
+import { describeFrequency, formatDuration, getFrequencyMeta, getLifeArea } from '../../NewTask/data';
 import LevelDots from './LevelDots';
 
 const ACTION_WIDTH = 80;
@@ -216,6 +216,15 @@ export default function TaskCard({ highlight, task, selected, isDark, onComplete
                         <TrendingUp size={13} color="#3b82f6" style={{ marginRight: 6 }} />
                         <LevelDots value={task.impact || 0} accent="#3b82f6" isDark={isDark} />
                       </View>
+
+                      {task.estimatedMinutes ? (
+                        <View className="flex-row items-center" style={{ marginLeft: 18 }}>
+                          <Clock size={13} color="#14b8a6" style={{ marginRight: 5 }} />
+                          <Text className="text-xs font-semibold" style={{ color: '#14b8a6' }}>
+                            {formatDuration(task.estimatedMinutes)}
+                          </Text>
+                        </View>
+                      ) : null}
 
                       {hasSubtasks ? (
                         <Pressable onPress={() => setExpanded((prev) => !prev)} accessibilityRole="button" accessibilityLabel="Mostrar sub-tarefas" accessibilityState={{ expanded }} className="ml-auto flex-row items-center active:opacity-70">

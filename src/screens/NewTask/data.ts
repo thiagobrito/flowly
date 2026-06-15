@@ -33,6 +33,7 @@ export type NewTaskPayload = {
   frequency: FrequencyConfig;
   area: string;
   subtasks?: Subtask[];
+  estimatedMinutes?: number | null;
 };
 
 export const FREQUENCIES: Frequency[] = [
@@ -94,6 +95,17 @@ export function isFrequencyConfigValid(config: FrequencyConfig | null): config i
 
 export const LEVEL_LABELS = ['Muito baixo', 'Baixo', 'Médio', 'Alto', 'Muito alto'] as const;
 
+export function formatDuration(minutes: number | null | undefined): string {
+  if (!minutes || minutes <= 0) return 'Sem estimativa';
+
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+
+  if (hours === 0) return `${mins}min`;
+  if (mins === 0) return `${hours}h`;
+  return `${hours}h ${mins}min`;
+}
+
 export type Task = {
   id: string;
   randomId: string;
@@ -104,6 +116,7 @@ export type Task = {
   frequency: FrequencyConfig;
   completed?: string[];
   subtasks?: Subtask[];
+  estimatedMinutes?: number | null;
 };
 
 const MONTHS_SHORT = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'] as const;
