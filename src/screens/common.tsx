@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react-native';
-import { Bird, BookOpen, Briefcase, HeartPulse, Home, Smile, Sparkles, Users, Wallet } from 'lucide-react-native';
+import { Bird, BookOpen, Briefcase, GoalIcon, HeartPulse, Home, Smile, Sparkles, Users, Wallet } from 'lucide-react-native';
 
 export type LifeArea = {
   id: string;
@@ -18,8 +18,11 @@ export const LIFE_AREAS: LifeArea[] = [
   { id: 'home', label: 'Casa', Icon: Home, accent: '#14b8a6' },
   { id: 'spirituality', label: 'Espiritualidade', Icon: Sparkles, accent: '#a855f7' },
   { id: 'other', label: 'Outros', Icon: Bird, accent: '#a855f7' },
+  { id: 'goal', label: 'Metas', Icon: GoalIcon, accent: '#22c55e' },
 ];
 
 export function GetLifeArea(id: string): LifeArea | undefined {
-  return LIFE_AREAS.find((area) => area.id === id);
+  const result = LIFE_AREAS.find((area) => area.id === id);
+  if (!result) return { id, label: id, Icon: GoalIcon, accent: '#22c55e' };
+  return result;
 }

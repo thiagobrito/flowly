@@ -61,6 +61,9 @@ export default function Statistics() {
     );
   }
 
+  const { stats } = data;
+  const statsMultiLine = stats.length > 3;
+
   return (
     <View className="flex-1">
       <ScrollView className="mt-4 flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 110 }}>
@@ -101,9 +104,11 @@ export default function Statistics() {
           <ProgressRing totalScore={data.totalScore} averageFromLast7Days={data.averageFromLast7Days} isDark={isDark} />
         </View>
 
-        <View className="mt-7 flex-row" style={{ gap: 10 }}>
-          {data.stats.map((stat) => (
-            <StatCard key={stat.id} stat={stat} isDark={isDark} />
+        <View className={`mt-7 flex-row${statsMultiLine ? ' flex-wrap' : ''}`} style={{ gap: 10 }}>
+          {stats.map((stat) => (
+            <View key={stat.id} className={statsMultiLine ? 'w-[31%]' : 'flex-1'}>
+              <StatCard stat={stat} isDark={isDark} />
+            </View>
           ))}
         </View>
 
