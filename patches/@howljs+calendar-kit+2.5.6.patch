@@ -1,0 +1,26 @@
+diff --git a/node_modules/@howljs/calendar-kit/src/components/DraggingEvent.tsx b/node_modules/@howljs/calendar-kit/src/components/DraggingEvent.tsx
+index 7ce7378..ff830e1 100644
+--- a/node_modules/@howljs/calendar-kit/src/components/DraggingEvent.tsx
++++ b/node_modules/@howljs/calendar-kit/src/components/DraggingEvent.tsx
+@@ -120,7 +120,7 @@ export const DraggingEvent: FC<DraggingEventProps> = ({
+     return clampValues(columnIndex, 0, totalResources - 1);
+   }, [totalResources, hourWidth]);
+ 
+-  const internalDayIndex = useSharedValue(getDayIndex(dragStartUnix.value));
++  const internalDayIndex = useSharedValue(0);
+ 
+   useAnimatedReaction(
+     () => dragStartUnix.value,
+diff --git a/node_modules/@howljs/calendar-kit/src/hooks/usePinchToZoom.tsx b/node_modules/@howljs/calendar-kit/src/hooks/usePinchToZoom.tsx
+index 99f269a..f03d4b1 100644
+--- a/node_modules/@howljs/calendar-kit/src/hooks/usePinchToZoom.tsx
++++ b/node_modules/@howljs/calendar-kit/src/hooks/usePinchToZoom.tsx
+@@ -26,7 +26,7 @@ const usePinchToZoom = () => {
+     allowPinchToZoom,
+   } = useCalendar();
+ 
+-  const startOffsetY = useSharedValue(offsetY.value);
++  const startOffsetY = useSharedValue(0);
+   const pinchGestureRef = useRef<GestureType | undefined>(undefined);
+   const startScale = useSharedValue(1);
+   const lastScale = useSharedValue(1);

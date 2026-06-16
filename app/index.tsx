@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import type { TabKey } from '@/components/BottomTabBar';
 import BottomTabBar from '@/components/BottomTabBar';
 import { useSession } from '@/lib/auth';
+import Calendar from '@/screens/Calendar';
 import Config from '@/screens/Config';
 import NewTask from '@/screens/NewTask';
 import type { Task } from '@/screens/NewTask/data';
@@ -35,6 +36,7 @@ function ActiveScreen({ tab, onLogout, onTabChange, onOpenConfig, editingTask, o
       />
     );
   }
+  if (tab === 'calendar') return <Calendar onEdit={onEdit} />;
   if (tab === 'progress') return <Statistics />;
   return <Tasks onLogout={onLogout} onEdit={onEdit} onOpenConfig={onOpenConfig} />;
 }

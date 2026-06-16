@@ -106,6 +106,12 @@ export function formatDuration(minutes: number | null | undefined): string {
   return `${hours}h ${mins}min`;
 }
 
+/** Horário agendado de uma tarefa num dia: início (ISO) e duração em minutos. */
+export type ScheduledSlot = {
+  dateTime: string;
+  duration: number;
+};
+
 export type Task = {
   id: string;
   randomId: string;
@@ -117,6 +123,8 @@ export type Task = {
   completed?: string[];
   subtasks?: Subtask[];
   estimatedMinutes?: number | null;
+  /** Agendamentos da tarefa (momento + duração), vindos do servidor. */
+  schedule?: ScheduledSlot[];
 };
 
 const MONTHS_SHORT = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'] as const;
