@@ -271,10 +271,11 @@ export default function Calendar({ onEdit }: CalendarProps) {
       const startISO = event.start?.dateTime;
       if (!task) return;
 
-      const buttons: { text: string; style?: 'cancel' | 'destructive'; onPress?: () => void }[] = [{ text: 'Editar', onPress: () => onEdit?.(task) }];
+      const buttons: any = [];
       if (!task.done) {
         buttons.push({ text: 'Concluir tarefa', onPress: () => markTaskAsDone(task) });
       }
+      buttons.push({ text: 'Editar', onPress: () => onEdit?.(task) });
 
       if (startISO) {
         const dateKey = localDateKey(new Date(startISO));
