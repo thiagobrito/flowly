@@ -1,8 +1,8 @@
 import type { CalendarKitHandle, OnEventResponse, PackedEvent } from '@howljs/calendar-kit';
 import { CalendarBody, CalendarContainer } from '@howljs/calendar-kit';
-import { TrendingUp, Zap } from 'lucide-react-native';
+import { CircleCheckIcon, TrendingUp, Zap } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, StyleSheet, Text, useColorScheme, View } from 'react-native';
+import { ActivityIndicator, Alert, InteractionManager, StyleSheet, Text, useColorScheme, View } from 'react-native';
 
 import { APP_TIME_ZONE, localDateKey, toLocalISOString } from '@/lib/date';
 import { api } from '@/lib/network';
@@ -77,7 +77,7 @@ export default function Calendar({ onEdit }: CalendarProps) {
 
   const fetchTasks = useCallback(async () => {
     try {
-      const response = await api.get<any>('/tasks', { params: { date: toLocalISOString(), energyLevel: 5 } });
+      const response = await api.get<any>('/tasks', { params: { date: visibleDate, energyLevel: 5 } });
 
       // concat with concluded tasks
       const visible = [...response.visibleTasks.map((task: Task) => ({ ...task, done: false })), ...response.concludedTasks.map((task: Task) => ({ ...task, done: true }))];
@@ -88,7 +88,7 @@ export default function Calendar({ onEdit }: CalendarProps) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [visibleDate]);
 
   useEffect(() => {
     fetchTasks();
@@ -104,17 +104,15 @@ export default function Calendar({ onEdit }: CalendarProps) {
 
       return (
         <View className="flex flex-col gap-2">
-          <View className="flex flex-row justify-between">
-            <Text className="my-auto max-w-[250px] text-gray-800" numberOfLines={2} style={{ fontSize: 13, fontWeight: '600' }}>
+          <View className="flex flex-row items-center justify-between">
+            <Text className="max-w-[270px] text-gray-800" numberOfLines={2} style={{ fontSize: 12, fontWeight: '500' }}>
               {event.title}
             </Text>
-            <Text className="my-auto" style={{ color: 'white', fontSize: 12, fontWeight: 'bold', marginTop: 'auto' }}>
-              {task.done ? 'Concluído' : ''}
-            </Text>
+            {task.done ? <CircleCheckIcon className="my-auto flex justify-end" size={22} color="white" /> : null}
           </View>
 
           {showEnergyAndImpact ? (
-            <View className="flex w-[145px] flex-row items-center rounded-full bg-white/80 p-1">
+            <View className="-mt-1 flex w-[145px] flex-row items-center rounded-full bg-white/80 p-1">
               <View className="flex-row items-center" style={{ marginRight: 18 }}>
                 <Zap size={13} color="#22c55e" style={{ marginRight: 6 }} />
                 <LevelDots value={task.energy || 0} accent="#22c55e" isDark={isDark} />
@@ -301,9 +299,22 @@ export default function Calendar({ onEdit }: CalendarProps) {
     [scheduleAndSyncTask],
   );
 
-  const goToday = useCallback(() => {
-    calendarRef.current?.goToDate({ date: toLocalISOString(), hourScroll: true, animatedDate: true });
+  const scrollToCurrentHour = useCallback((animated = true) => {
+    InteractionManager.runAfterInteractions(() => {
+      setTimeout(() => {
+        calendarRef.current?.goToDate({ hourScroll: true, animatedHour: animated });
+      }, 50);
+    });
   }, []);
+
+  const handleCalendarLoad = useCallback(() => {
+    scrollToCurrentHour(true);
+  }, [scrollToCurrentHour]);
+
+  const goToday = useCallback(() => {
+    calendarRef.current?.goToDate({ date: toLocalISOString(), hourScroll: false, animatedDate: true });
+    scrollToCurrentHour(true);
+  }, [scrollToCurrentHour]);
 
   if (loading) {
     return (
@@ -336,6 +347,8 @@ export default function Calendar({ onEdit }: CalendarProps) {
           allowDragToEdit
           dragStep={DRAG_STEP_MIN}
           spaceFromBottom={80}
+          scrollToNow={false}
+          onLoad={handleCalendarLoad}
           onPressEvent={handlePressEvent}
           onDragEventEnd={handleDragEventEnd}
           onDateChanged={setVisibleDate}
