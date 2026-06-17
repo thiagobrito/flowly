@@ -40,7 +40,7 @@ function TaskChip({
   const pan = useMemo(
     () =>
       Gesture.Pan()
-        .minDistance(8)
+        .activateAfterLongPress(250)
         .onStart((event) => {
           runOnJS(onDragStart)(task, event.absoluteX, event.absoluteY);
         })

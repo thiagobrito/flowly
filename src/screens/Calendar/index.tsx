@@ -1,5 +1,6 @@
-import type { CalendarKitHandle, OnEventResponse } from '@howljs/calendar-kit';
+import type { CalendarKitHandle, OnEventResponse, PackedEvent } from '@howljs/calendar-kit';
 import { CalendarBody, CalendarContainer } from '@howljs/calendar-kit';
+import { TrendingUp, Zap } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, StyleSheet, Text, useColorScheme, View } from 'react-native';
 
@@ -8,6 +9,7 @@ import { api } from '@/lib/network';
 
 import type { ScheduledSlot, Task } from '../NewTask/data';
 import { formatDuration, getLifeArea } from '../NewTask/data';
+import LevelDots from '../Tasks/components/LevelDots';
 import CalendarHeaderBar, { type CalendarViewMode } from './components/CalendarHeaderBar';
 import UnscheduledTray from './components/UnscheduledTray';
 import type { CalendarTaskEvent } from './eventMapping';
@@ -76,7 +78,10 @@ export default function Calendar({ onEdit }: CalendarProps) {
   const fetchTasks = useCallback(async () => {
     try {
       const response = await api.get<any>('/tasks', { params: { date: toLocalISOString(), energyLevel: 5 } });
-      const visible = response?.visibleTasks ?? response?.tasks ?? response;
+
+      // concat with concluded tasks
+      const visible = [...response.visibleTasks.map((task: Task) => ({ ...task, done: false })), ...response.concludedTasks.map((task: Task) => ({ ...task, done: true }))];
+      // const visible = response?.visibleTasks ?? response?.tasks ?? response;
       setTasks(organizeTasks(visible));
     } catch {
       setTasks([]);
@@ -91,6 +96,41 @@ export default function Calendar({ onEdit }: CalendarProps) {
 
   const { events, unscheduled } = useMemo(() => buildCalendarEvents(tasks), [tasks]);
   const theme = useMemo(() => buildCalendarTheme(isDark), [isDark]);
+
+  const renderCalendarEvent = useCallback(
+    (event: PackedEvent) => {
+      const { task } = event as unknown as CalendarTaskEvent;
+      const showEnergyAndImpact = task?.estimatedMinutes && task?.estimatedMinutes >= 60;
+
+      return (
+        <View className="flex flex-col gap-2">
+          <View className="flex flex-row justify-between">
+            <Text className="my-auto max-w-[250px] text-gray-800" numberOfLines={2} style={{ fontSize: 13, fontWeight: '600' }}>
+              {event.title}
+            </Text>
+            <Text className="my-auto" style={{ color: 'white', fontSize: 12, fontWeight: 'bold', marginTop: 'auto' }}>
+              {task.done ? 'Concluído' : ''}
+            </Text>
+          </View>
+
+          {showEnergyAndImpact ? (
+            <View className="flex w-[145px] flex-row items-center rounded-full bg-white/80 p-1">
+              <View className="flex-row items-center" style={{ marginRight: 18 }}>
+                <Zap size={13} color="#22c55e" style={{ marginRight: 6 }} />
+                <LevelDots value={task.energy || 0} accent="#22c55e" isDark={isDark} />
+              </View>
+
+              <View className="flex-row items-center">
+                <TrendingUp size={13} color="#3b82f6" style={{ marginRight: 6 }} />
+                <LevelDots value={task.impact || 0} accent="#3b82f6" isDark={isDark} />
+              </View>
+            </View>
+          ) : null}
+        </View>
+      );
+    },
+    [isDark],
+  );
 
   const dateLabel = useMemo(() => {
     const date = new Date(visibleDate);
@@ -190,6 +230,21 @@ export default function Calendar({ onEdit }: CalendarProps) {
     [clearScheduleLocally, fetchTasks, restoreTask],
   );
 
+  const markTaskAsDone = useCallback(
+    async (task: Task) => {
+      const snapshot = task;
+      setTasks((prev) => prev.map((item) => (item.id === task.id ? { ...item, done: true } : item)));
+
+      try {
+        await api.post('/tasks/complete', { taskId: task.id, date: toLocalISOString() });
+        fetchTasks();
+      } catch {
+        restoreTask(snapshot);
+      }
+    },
+    [fetchTasks, restoreTask],
+  );
+
   const handleDragEnd = useCallback(
     (task: Task, x: number, y: number) => {
       const dropISO = resolveDropISO(x, y);
@@ -215,6 +270,9 @@ export default function Calendar({ onEdit }: CalendarProps) {
       if (!task) return;
 
       const buttons: { text: string; style?: 'cancel' | 'destructive'; onPress?: () => void }[] = [{ text: 'Editar', onPress: () => onEdit?.(task) }];
+      if (!task.done) {
+        buttons.push({ text: 'Concluir tarefa', onPress: () => markTaskAsDone(task) });
+      }
 
       if (startISO) {
         const dateKey = localDateKey(new Date(startISO));
@@ -225,7 +283,7 @@ export default function Calendar({ onEdit }: CalendarProps) {
 
       Alert.alert(task.name, undefined, buttons);
     },
-    [onEdit, removeFromDayAndSyncTask],
+    [onEdit, removeFromDayAndSyncTask, markTaskAsDone],
   );
 
   const handleDragEventEnd = useCallback(
@@ -282,7 +340,7 @@ export default function Calendar({ onEdit }: CalendarProps) {
           onDragEventEnd={handleDragEventEnd}
           onDateChanged={setVisibleDate}
         >
-          <CalendarBody showNowIndicator />
+          <CalendarBody showNowIndicator renderEvent={renderCalendarEvent} />
         </CalendarContainer>
       </View>
 

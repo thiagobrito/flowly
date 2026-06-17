@@ -26,7 +26,7 @@ export function getTaskDurationMin(task: Task): number {
 
 function eventColor(task: Task): string {
   let areaColor = getLifeArea(task.area)?.accent;
-  if (areaColor) areaColor += '60';
+  if (areaColor) areaColor += '80';
   return areaColor ?? FALLBACK_COLOR;
 }
 

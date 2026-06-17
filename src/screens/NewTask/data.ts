@@ -125,6 +125,8 @@ export type Task = {
   estimatedMinutes?: number | null;
   /** Agendamentos da tarefa (momento + duração), vindos do servidor. */
   schedule?: ScheduledSlot[];
+  /** Flag client-side: tarefa concluída hoje (Calendar/Tasks). */
+  done?: boolean;
 };
 
 const MONTHS_SHORT = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'] as const;

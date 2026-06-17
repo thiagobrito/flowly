@@ -1,6 +1,6 @@
 import { BatteryFull, CheckCircle, HandFist } from 'lucide-react-native';
-import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, ScrollView, Text, useColorScheme, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Alert, RefreshControl, ScrollView, Text, useColorScheme, View } from 'react-native';
 
 import { startOfLocalDay, toLocalISOString } from '@/lib/date';
 import { flowlyInputFromMetrics, lastDaysRange, useEnergyScore } from '@/lib/energy';
@@ -18,6 +18,7 @@ export default function Statistics() {
   const isDark = useColorScheme() === 'dark';
   const [data, setData] = useState<ProgressData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [selectedDay, setSelectedDay] = useState<string>(() => toLocalISOString());
 
   const energyRange = useMemo(() => {
@@ -27,11 +28,24 @@ export default function Statistics() {
   }, [selectedDay]);
 
   const energyInfo = useEnergyScore({ range: energyRange });
+  const { refresh: refreshEnergy } = energyInfo;
 
   const flowlyInput = useMemo(() => {
     if (!energyInfo.metrics) return null;
     return flowlyInputFromMetrics(energyInfo.metrics, 8);
   }, [energyInfo.metrics]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      const [response] = await Promise.all([fetchProgress(selectedDay), refreshEnergy()]);
+      setData(response);
+    } catch {
+      Alert.alert('Erro', 'Não foi possível recarregar as estatísticas.');
+    } finally {
+      setRefreshing(false);
+    }
+  }, [selectedDay, refreshEnergy]);
 
   useEffect(() => {
     let active = true;
@@ -66,7 +80,12 @@ export default function Statistics() {
 
   return (
     <View className="flex-1">
-      <ScrollView className="mt-4 flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 110 }}>
+      <ScrollView
+        className="mt-4 flex-1"
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 110 }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={isDark ? '#e4e4e7' : '#3b82f6'} colors={['#3b82f6']} />}
+      >
         <View className="flex-row items-center justify-between">
           {data.days.map((day) => (
             <DayChip key={day.date} day={day} onPress={() => setSelectedDay(day.date)} />

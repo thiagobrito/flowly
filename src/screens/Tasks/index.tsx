@@ -1,6 +1,6 @@
 import { GoalIcon } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, AppState, Platform, ScrollView, Text, useColorScheme, View } from 'react-native';
+import { ActivityIndicator, Alert, AppState, Platform, RefreshControl, ScrollView, Text, useColorScheme, View } from 'react-native';
 
 import { toLocalISOString } from '@/lib/date';
 import { computeEnergyAtMoment, flowlyInputFromMetrics, getHealthProvider } from '@/lib/energy';
@@ -32,6 +32,7 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
   const isDark = useColorScheme() === 'dark';
   const [updateId, setUpdateId] = useState<any>(0);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [energyScore, setEnergyScore] = useState<number>(0);
   const [energyLevel, setEnergyLevel] = useState<number>(0);
 
@@ -101,7 +102,25 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
     const result = computeEnergyAtMoment(input, toLocalISOString());
     setEnergyScore(result.doubleEnergyScore);
     setEnergyLevel(result.doubleEnergyLevel);
+    return result;
   }, []);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      const result = refreshEnergy();
+      const response = await api.get<any>('/tasks', {
+        params: { date: toLocalISOString(), energyLevel: result.doubleEnergyLevel },
+      });
+
+      setConcludedTasks(OrganizeTasks(response.concludedTasks));
+      setVisibleTasks(OrganizeTasks(response.visibleTasks));
+    } catch {
+      Alert.alert('Erro', 'Não foi possível recarregar as atividades.');
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refreshEnergy]);
 
   const appState = useRef(AppState.currentState);
 
@@ -139,7 +158,12 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
     <View className="flex-1">
       <Header isDark={isDark} energyScore={energyScore} onLogout={onLogout} onOpenConfig={onOpenConfig} onOpenFilter={() => setFilterOpen(true)} />
 
-      <ScrollView className="mt-2 flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 70 }}>
+      <ScrollView
+        className="mt-2 flex-1"
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 70 }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={isDark ? '#e4e4e7' : '#3b82f6'} colors={['#3b82f6']} />}
+      >
         {filteredVisible.map((task, index) => (
           <TaskCard key={task.randomId} highlight={index === 0} task={task} selected={false} isDark={isDark} onComplete={() => setUpdateId(updateId + 1)} onEdit={() => onEdit?.(task)} onDelete={() => handleDelete(task)} />
         ))}
