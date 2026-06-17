@@ -4,13 +4,13 @@ import { CircleCheckIcon, TrendingUp, Zap } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, InteractionManager, StyleSheet, Text, useColorScheme, View } from 'react-native';
 
-import { APP_TIME_ZONE, localDateKey, toLocalISOString } from '@/lib/date';
+import { APP_TIME_ZONE, localDateKey, startOfLocalDay, toLocalISOString } from '@/lib/date';
 import { api } from '@/lib/network';
 
 import type { ScheduledSlot, Task } from '../NewTask/data';
 import { formatDuration, getLifeArea } from '../NewTask/data';
 import LevelDots from '../Tasks/components/LevelDots';
-import CalendarHeaderBar, { type CalendarViewMode } from './components/CalendarHeaderBar';
+import CalendarHeaderBar from './components/CalendarHeaderBar';
 import UnscheduledTray from './components/UnscheduledTray';
 import type { CalendarTaskEvent } from './eventMapping';
 import { buildCalendarEvents, getTaskDurationMin } from './eventMapping';
@@ -65,13 +65,13 @@ export default function Calendar({ onEdit }: CalendarProps) {
   const calendarRef = useRef<CalendarKitHandle>(null);
   const calendarWrapRef = useRef<View>(null);
   const screenRootRef = useRef<View>(null);
+  const hasScrolledToHourRef = useRef(false);
   const calendarBounds = useRef<CalendarBounds | null>(null);
   const screenOrigin = useRef({ x: 0, y: 0 });
   const lastPress = useRef<{ id: string; ts: number }>({ id: '', ts: 0 });
 
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState<CalendarViewMode>('day');
   const [visibleDate, setVisibleDate] = useState<string>(() => toLocalISOString());
   const [drag, setDrag] = useState<DragState | null>(null);
 
@@ -81,7 +81,6 @@ export default function Calendar({ onEdit }: CalendarProps) {
 
       // concat with concluded tasks
       const visible = [...response.visibleTasks.map((task: Task) => ({ ...task, done: false })), ...response.concludedTasks.map((task: Task) => ({ ...task, done: true }))];
-      // const visible = response?.visibleTasks ?? response?.tasks ?? response;
       setTasks(organizeTasks(visible));
     } catch {
       setTasks([]);
@@ -94,7 +93,12 @@ export default function Calendar({ onEdit }: CalendarProps) {
     fetchTasks();
   }, [fetchTasks]);
 
-  const { events, unscheduled } = useMemo(() => buildCalendarEvents(tasks), [tasks]);
+  const visibleDateKeys = useMemo(() => {
+    const start = startOfLocalDay(visibleDate);
+    return new Set([localDateKey(start)]);
+  }, [visibleDate]);
+
+  const { events, unscheduled } = useMemo(() => buildCalendarEvents(tasks, visibleDateKeys), [tasks, visibleDateKeys]);
   const theme = useMemo(() => buildCalendarTheme(isDark), [isDark]);
 
   const renderCalendarEvent = useCallback(
@@ -133,9 +137,9 @@ export default function Calendar({ onEdit }: CalendarProps) {
   const dateLabel = useMemo(() => {
     const date = new Date(visibleDate);
     if (Number.isNaN(date.getTime())) return '';
-    const formatter = new Intl.DateTimeFormat('pt-BR', viewMode === 'week' ? { day: '2-digit', month: 'long' } : { weekday: 'long', day: '2-digit', month: 'long' });
+    const formatter = new Intl.DateTimeFormat('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' });
     return formatter.format(date);
-  }, [visibleDate, viewMode]);
+  }, [visibleDate]);
 
   const syncCalendarBounds = useCallback(() => {
     calendarWrapRef.current?.measureInWindow((x, y, width, height) => {
@@ -301,20 +305,29 @@ export default function Calendar({ onEdit }: CalendarProps) {
 
   const scrollToCurrentHour = useCallback((animated = true) => {
     InteractionManager.runAfterInteractions(() => {
-      setTimeout(() => {
-        calendarRef.current?.goToDate({ hourScroll: true, animatedHour: animated });
-      }, 50);
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          calendarRef.current?.goToDate({ hourScroll: true, animatedHour: animated });
+        });
+      });
     });
   }, []);
 
-  const handleCalendarLoad = useCallback(() => {
+  const handleCalendarLayout = useCallback(() => {
+    syncCalendarBounds();
+    if (hasScrolledToHourRef.current) return;
+    hasScrolledToHourRef.current = true;
     scrollToCurrentHour(true);
-  }, [scrollToCurrentHour]);
+  }, [scrollToCurrentHour, syncCalendarBounds]);
 
   const goToday = useCallback(() => {
-    calendarRef.current?.goToDate({ date: toLocalISOString(), hourScroll: false, animatedDate: true });
-    scrollToCurrentHour(true);
-  }, [scrollToCurrentHour]);
+    calendarRef.current?.goToDate({
+      date: toLocalISOString(),
+      hourScroll: true,
+      animatedDate: true,
+      animatedHour: true,
+    });
+  }, []);
 
   if (loading) {
     return (
@@ -328,14 +341,14 @@ export default function Calendar({ onEdit }: CalendarProps) {
 
   return (
     <View ref={screenRootRef} className="flex-1" onLayout={syncCalendarBounds}>
-      <CalendarHeaderBar viewMode={viewMode} dateLabel={dateLabel} isDark={isDark} onChangeViewMode={setViewMode} onPrev={() => calendarRef.current?.goToPrevPage()} onNext={() => calendarRef.current?.goToNextPage()} onToday={goToday} />
+      <CalendarHeaderBar dateLabel={dateLabel} isDark={isDark} onPrev={() => calendarRef.current?.goToPrevPage()} onNext={() => calendarRef.current?.goToNextPage()} onToday={goToday} />
 
       <UnscheduledTray tasks={unscheduled} isDark={isDark} scrollEnabled={!drag} onDragStart={handleDragStart} onDragMove={handleDragMove} onDragEnd={handleDragEnd} />
 
-      <View ref={calendarWrapRef} className="flex-1 overflow-hidden rounded-2xl" onLayout={syncCalendarBounds}>
+      <View ref={calendarWrapRef} className="flex-1 overflow-hidden rounded-2xl" onLayout={handleCalendarLayout}>
         <CalendarContainer
           ref={calendarRef}
-          numberOfDays={viewMode === 'week' ? 7 : 1}
+          numberOfDays={1}
           firstDay={7}
           initialDate={toLocalISOString()}
           timeZone={APP_TIME_ZONE}
@@ -348,7 +361,6 @@ export default function Calendar({ onEdit }: CalendarProps) {
           dragStep={DRAG_STEP_MIN}
           spaceFromBottom={80}
           scrollToNow={false}
-          onLoad={handleCalendarLoad}
           onPressEvent={handlePressEvent}
           onDragEventEnd={handleDragEventEnd}
           onDateChanged={setVisibleDate}

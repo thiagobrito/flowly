@@ -58,7 +58,7 @@ function TaskChip({
       <View accessibilityRole="button" className="mr-2 rounded-2xl border px-3 py-2" style={{ backgroundColor: background, borderColor, maxWidth: 200 }}>
         <View className="mb-2 flex-row items-center">
           <View className="mr-2 size-2.5 rounded-full" style={{ backgroundColor: accent }} />
-          <Text numberOfLines={1} className="text-sm font-semibold" style={{ color: titleColor }}>
+          <Text numberOfLines={1} className="max-w-[165px] text-sm" style={{ color: titleColor }}>
             {task.name}
           </Text>
         </View>
@@ -88,13 +88,6 @@ export default function UnscheduledTray({ tasks, isDark, scrollEnabled, onDragSt
 
   return (
     <View className="my-1">
-      <View className="mb-1.5 flex-row items-center justify-between">
-        <Text className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Sem horário</Text>
-        <Text className="text-[11px] text-zinc-400 dark:text-zinc-500" numberOfLines={1} style={{ flexShrink: 1, marginLeft: 8 }}>
-          Arraste uma tarefa até o horário no calendário
-        </Text>
-      </View>
-
       <ScrollView horizontal scrollEnabled={scrollEnabled} showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         {tasks.map((task) => (
           <TaskChip key={task.randomId || task.id} task={task} isDark={isDark} onDragStart={onDragStart} onDragMove={onDragMove} onDragEnd={onDragEnd} />

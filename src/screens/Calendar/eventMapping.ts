@@ -26,7 +26,7 @@ export function getTaskDurationMin(task: Task): number {
 
 function eventColor(task: Task): string {
   let areaColor = getLifeArea(task.area)?.accent;
-  if (areaColor) areaColor += '80';
+  if (areaColor) areaColor += '60';
   return areaColor ?? FALLBACK_COLOR;
 }
 
@@ -74,29 +74,43 @@ function scheduleSlots(task: Task): ScheduledSlot[] {
 /**
  * Converte as tarefas em eventos do calendário usando exclusivamente o
  * agendamento vindo do servidor: a lista `task.schedule` (momento + duração) e,
- * na ausência dela, a `frequency` do tipo `once`. Tarefas sem horário retornam
- * em `unscheduled` (bandeja).
+ * na ausência dela, a `frequency` do tipo `once`.
+ *
+ * O agendamento é por dia: um slot só vira evento quando o seu dia está dentro
+ * do intervalo exibido (`visibleDateKeys`). Tarefas que o servidor retornou como
+ * devidas no período mas que não têm slot para nenhum dia visível (ex.: uma
+ * tarefa diária agendada apenas em outro dia) caem em `unscheduled` (bandeja),
+ * em vez de virarem um evento invisível posicionado fora da tela.
+ *
+ * Quando `visibleDateKeys` não é informado, todos os slots viram eventos
+ * (comportamento legado, sem filtro por dia).
  */
-export function buildCalendarEvents(tasks: Task[]): MappingResult {
+export function buildCalendarEvents(tasks: Task[], visibleDateKeys?: Set<string>): MappingResult {
   const events: CalendarTaskEvent[] = [];
   const unscheduled: Task[] = [];
+
+  const isVisibleDay = (dateTime: string): boolean => {
+    return !visibleDateKeys || visibleDateKeys.has(localDateKey(new Date(dateTime)));
+  };
 
   for (const task of tasks) {
     if (!task.id) {
       unscheduled.push(task);
     } else {
-      const slots = scheduleSlots(task);
+      const visibleSlots = scheduleSlots(task).filter((slot) => {
+        return isVisibleDay(slot.dateTime);
+      });
 
-      if (slots.length > 0) {
-        for (const slot of slots) {
+      if (visibleSlots.length > 0) {
+        for (const slot of visibleSlots) {
           const dateKey = localDateKey(new Date(slot.dateTime));
           events.push(buildEvent(task, eventId(task.id, dateKey), slot.dateTime, slot.duration));
         }
       } else {
         const onceISO = getOnceStartISO(task);
-        if (onceISO) {
+        if (onceISO && isVisibleDay(onceISO)) {
           events.push(buildEvent(task, task.id, onceISO, getTaskDurationMin(task)));
-        } else {
+        } else if (!task.done) {
           unscheduled.push(task);
         }
       }
