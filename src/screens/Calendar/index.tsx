@@ -1,8 +1,8 @@
-import type { CalendarKitHandle, OnEventResponse, PackedEvent } from '@howljs/calendar-kit';
+import type { CalendarKitHandle, DateOrDateTime, OnEventResponse, PackedEvent } from '@howljs/calendar-kit';
 import { CalendarBody, CalendarContainer } from '@howljs/calendar-kit';
 import { CircleCheckIcon, TrendingUp, Zap } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, InteractionManager, StyleSheet, Text, useColorScheme, View } from 'react-native';
+import { ActivityIndicator, Alert, StyleSheet, Text, useColorScheme, View } from 'react-native';
 
 import { APP_TIME_ZONE, localDateKey, startOfLocalDay, toLocalISOString } from '@/lib/date';
 import { api } from '@/lib/network';
@@ -19,13 +19,34 @@ import { buildCalendarTheme } from './theme';
 
 type CalendarProps = {
   onEdit?: (task: Task) => void;
+  onCreateAt?: (dateTimeISO: string) => void;
 };
 
 const DOUBLE_PRESS_MS = 300;
 const DRAG_STEP_MIN = 15;
+/** Largura da coluna de horários (default `HOUR_WIDTH` do calendar-kit). */
 const HOUR_WIDTH = 60;
-/** Altura aproximada do cabeçalho interno do calendário (barra de dias + espaçamento). */
-const CALENDAR_HEADER_HEIGHT = 96;
+/** Altura da barra de dias do calendar-kit (default 60) + borda inferior (1px). */
+const DAY_BAR_HEIGHT = 61;
+/** Espaço entre a barra de dias e a primeira linha de hora (`spaceFromTop` do calendar-kit). */
+const SPACE_FROM_TOP = 16;
+/**
+ * Distância vertical exata entre o topo do calendário (`calendarWrapRef`) e a
+ * linha da hora inicial da grade. Substitui a antiga constante aproximada que
+ * causava desvio na identificação do horário ao arrastar/soltar.
+ */
+const GRID_TOP_OFFSET = DAY_BAR_HEIGHT + SPACE_FROM_TOP;
+
+/** Largura do card-fantasma exibido durante o arraste. */
+const GHOST_WIDTH = 100;
+/** Deslocamento horizontal: o dedo fica centralizado no card. */
+const GHOST_OFFSET_X = GHOST_WIDTH / 2;
+/**
+ * Deslocamento vertical: o topo do card-fantasma fica acima do dedo. O horário
+ * de início é resolvido a partir do topo visível do card (e não do dedo), para
+ * que a tarefa seja agendada exatamente onde o usuário a enxerga.
+ */
+const GHOST_OFFSET_Y = 28;
 
 type DragState = {
   task: Task;
@@ -46,6 +67,15 @@ const PT_LOCALE = {
   more: 'mais',
 };
 
+/** Arredonda um ISO para o múltiplo de minutos mais próximo (ex.: 15min). */
+function snapISOToStep(iso: string, stepMin: number): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+
+  const stepMs = stepMin * 60_000;
+  return toLocalISOString(new Date(Math.round(date.getTime() / stepMs) * stepMs));
+}
+
 function organizeTasks(tasks: unknown): Task[] {
   if (!Array.isArray(tasks)) return [];
 
@@ -60,12 +90,11 @@ function organizeTasks(tasks: unknown): Task[] {
   });
 }
 
-export default function Calendar({ onEdit }: CalendarProps) {
+export default function Calendar({ onEdit, onCreateAt }: CalendarProps) {
   const isDark = useColorScheme() === 'dark';
   const calendarRef = useRef<CalendarKitHandle>(null);
   const calendarWrapRef = useRef<View>(null);
   const screenRootRef = useRef<View>(null);
-  const hasScrolledToHourRef = useRef(false);
   const calendarBounds = useRef<CalendarBounds | null>(null);
   const screenOrigin = useRef({ x: 0, y: 0 });
   const lastPress = useRef<{ id: string; ts: number }>({ id: '', ts: 0 });
@@ -107,7 +136,7 @@ export default function Calendar({ onEdit }: CalendarProps) {
       const showEnergyAndImpact = task?.estimatedMinutes && task?.estimatedMinutes >= 60;
 
       return (
-        <View className="flex flex-col gap-2">
+        <View className="flex flex-1 flex-col gap-2">
           <View className="flex flex-row items-center justify-between">
             <Text className="max-w-[270px] text-gray-800" numberOfLines={2} style={{ fontSize: 12, fontWeight: '500' }}>
               {event.title}
@@ -150,20 +179,33 @@ export default function Calendar({ onEdit }: CalendarProps) {
     });
   }, []);
 
-  const resolveDropISO = useCallback((absoluteX: number, absoluteY: number): string | null => {
+  const resolveDropISO = useCallback((fingerX: number, fingerY: number): string | null => {
     const bounds = calendarBounds.current;
     if (!bounds) return null;
 
-    const scrollY = calendarRef.current?.getCurrentOffsetY() ?? 0;
-    const gridX = absoluteX - bounds.x - HOUR_WIDTH;
-    const gridY = absoluteY - bounds.y - CALENDAR_HEADER_HEIGHT + scrollY;
+    // O horário é resolvido a partir do topo visível do card-fantasma (o dedo
+    // fica `GHOST_OFFSET_Y` abaixo) e do seu centro horizontal.
+    const anchorX = fingerX;
+    const anchorY = fingerY - GHOST_OFFSET_Y;
 
-    if (gridX < 0 || gridY < 0 || gridX > bounds.width - HOUR_WIDTH || absoluteY > bounds.y + bounds.height) {
+    const scrollY = 60 + (calendarRef.current?.getCurrentOffsetY() ?? 0);
+    const gridX = anchorX - bounds.x - HOUR_WIDTH;
+    const gridY = anchorY - bounds.y - GRID_TOP_OFFSET + scrollY;
+
+    if (gridX < 0 || gridY < 0 || gridX > bounds.width - HOUR_WIDTH || anchorY > bounds.y + bounds.height) {
       return null;
     }
 
-    return calendarRef.current?.getDateByOffset({ x: gridX, y: gridY }) ?? null;
+    const iso = calendarRef.current?.getDateByOffset({ x: gridX, y: gridY });
+    return iso ? snapISOToStep(iso, DRAG_STEP_MIN) : null;
   }, []);
+
+  const handleLongPressBackground = useCallback(
+    (selection: DateOrDateTime) => {
+      if (selection.dateTime) onCreateAt?.(selection.dateTime);
+    },
+    [onCreateAt],
+  );
 
   const handleDragStart = useCallback((task: Task, x: number, y: number) => {
     calendarWrapRef.current?.measureInWindow((bx, by, width, height) => {
@@ -304,23 +346,6 @@ export default function Calendar({ onEdit }: CalendarProps) {
     [scheduleAndSyncTask],
   );
 
-  const scrollToCurrentHour = useCallback((animated = true) => {
-    InteractionManager.runAfterInteractions(() => {
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          calendarRef.current?.goToDate({ hourScroll: true, animatedHour: animated });
-        });
-      });
-    });
-  }, []);
-
-  const handleCalendarLayout = useCallback(() => {
-    syncCalendarBounds();
-    if (hasScrolledToHourRef.current) return;
-    hasScrolledToHourRef.current = true;
-    scrollToCurrentHour(true);
-  }, [scrollToCurrentHour, syncCalendarBounds]);
-
   const goToday = useCallback(() => {
     calendarRef.current?.goToDate({
       date: toLocalISOString(),
@@ -346,7 +371,7 @@ export default function Calendar({ onEdit }: CalendarProps) {
 
       <UnscheduledTray tasks={unscheduled} isDark={isDark} scrollEnabled={!drag} onDragStart={handleDragStart} onDragMove={handleDragMove} onDragEnd={handleDragEnd} />
 
-      <View ref={calendarWrapRef} className="flex-1 overflow-hidden rounded-2xl" onLayout={handleCalendarLayout}>
+      <View ref={calendarWrapRef} className="flex-1 overflow-hidden rounded-2xl" onLayout={syncCalendarBounds}>
         <CalendarContainer
           ref={calendarRef}
           numberOfDays={1}
@@ -360,10 +385,12 @@ export default function Calendar({ onEdit }: CalendarProps) {
           useAllDayEvent={false}
           allowDragToEdit
           dragStep={DRAG_STEP_MIN}
+          spaceFromTop={SPACE_FROM_TOP}
           spaceFromBottom={80}
-          scrollToNow={false}
+          scrollToNow
           onPressEvent={handlePressEvent}
           onDragEventEnd={handleDragEventEnd}
+          onLongPressBackground={handleLongPressBackground}
           onDateChanged={setVisibleDate}
         >
           <CalendarBody showNowIndicator renderEvent={renderCalendarEvent} />
@@ -375,9 +402,9 @@ export default function Calendar({ onEdit }: CalendarProps) {
           <View
             style={{
               position: 'absolute',
-              left: drag.x - screenOrigin.current.x - 100,
-              top: drag.y - screenOrigin.current.y - 28,
-              width: 200,
+              left: drag.x - screenOrigin.current.x - GHOST_OFFSET_X,
+              top: drag.y - screenOrigin.current.y - GHOST_OFFSET_Y,
+              width: GHOST_WIDTH,
               borderRadius: 16,
               paddingHorizontal: 12,
               paddingVertical: 10,

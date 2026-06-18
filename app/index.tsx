@@ -8,35 +8,34 @@ import type { TabKey } from '@/components/BottomTabBar';
 import BottomTabBar from '@/components/BottomTabBar';
 import { useSession } from '@/lib/auth';
 import Calendar from '@/screens/Calendar';
+import { onceFrequencyFromISO } from '@/screens/Calendar/scheduleSync';
 import Config from '@/screens/Config';
 import NewTask from '@/screens/NewTask';
-import type { Task } from '@/screens/NewTask/data';
+import type { FrequencyConfig, Task } from '@/screens/NewTask/data';
 import Statistics from '@/screens/Statistics';
 import Tasks from '@/screens/Tasks/index';
+
+type NewTaskDraft = {
+  initialFrequency: FrequencyConfig;
+  returnTab: TabKey;
+};
 
 type ActiveScreenProps = {
   tab: TabKey;
   onLogout: () => void;
-  onTabChange: (tab: TabKey) => void;
   onOpenConfig: () => void;
   editingTask: Task | null;
+  newTaskDraft: NewTaskDraft | null;
   onEdit: (task: Task) => void;
-  onEditDone: () => void;
+  onCreateAt: (dateTimeISO: string) => void;
+  onNewTaskSuccess: () => void;
 };
 
-function ActiveScreen({ tab, onLogout, onTabChange, onOpenConfig, editingTask, onEdit, onEditDone }: ActiveScreenProps) {
+function ActiveScreen({ tab, onLogout, onOpenConfig, editingTask, newTaskDraft, onEdit, onCreateAt, onNewTaskSuccess }: ActiveScreenProps) {
   if (tab === 'new') {
-    return (
-      <NewTask
-        task={editingTask}
-        onSuccess={() => {
-          onEditDone();
-          onTabChange('home');
-        }}
-      />
-    );
+    return <NewTask task={editingTask} initialFrequency={newTaskDraft?.initialFrequency} onSuccess={onNewTaskSuccess} />;
   }
-  if (tab === 'calendar') return <Calendar onEdit={onEdit} />;
+  if (tab === 'calendar') return <Calendar onEdit={onEdit} onCreateAt={onCreateAt} />;
   if (tab === 'progress') return <Statistics />;
   return <Tasks onLogout={onLogout} onEdit={onEdit} onOpenConfig={onOpenConfig} />;
 }
@@ -50,16 +49,34 @@ function Home() {
   const [tab, setTab] = useState<TabKey>('home');
   const [showConfig, setShowConfig] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [newTaskDraft, setNewTaskDraft] = useState<NewTaskDraft | null>(null);
   const { isHydrated, isAuthenticated, signOut } = useSession();
 
   const handleTabChange = (next: TabKey) => {
-    if (next === 'new') setEditingTask(null);
+    if (next === 'new') {
+      setEditingTask(null);
+      setNewTaskDraft(null);
+    }
     setTab(next);
   };
 
   const handleEdit = (task: Task) => {
     setEditingTask(task);
+    setNewTaskDraft(null);
     setTab('new');
+  };
+
+  const handleCreateAt = (dateTimeISO: string) => {
+    setEditingTask(null);
+    setNewTaskDraft({ initialFrequency: onceFrequencyFromISO(dateTimeISO), returnTab: 'calendar' });
+    setTab('new');
+  };
+
+  const handleNewTaskSuccess = () => {
+    const target = newTaskDraft?.returnTab ?? 'home';
+    setEditingTask(null);
+    setNewTaskDraft(null);
+    setTab(target);
   };
 
   if (!isHydrated) {
@@ -91,7 +108,7 @@ function Home() {
           {showConfig ? (
             <Config onBack={() => setShowConfig(false)} />
           ) : (
-            <ActiveScreen tab={tab} onLogout={handleLogout} onTabChange={handleTabChange} onOpenConfig={() => setShowConfig(true)} editingTask={editingTask} onEdit={handleEdit} onEditDone={() => setEditingTask(null)} />
+            <ActiveScreen tab={tab} onLogout={handleLogout} onOpenConfig={() => setShowConfig(true)} editingTask={editingTask} newTaskDraft={newTaskDraft} onEdit={handleEdit} onCreateAt={handleCreateAt} onNewTaskSuccess={handleNewTaskSuccess} />
           )}
 
           {!showConfig ? <BottomTabBar active={tab} onChange={handleTabChange} /> : null}

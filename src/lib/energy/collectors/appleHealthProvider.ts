@@ -1,7 +1,7 @@
 import type { AppleHealthKit as AppleHealthKitType, HealthInputOptions, HealthKitPermissions, HealthValue, HKWorkoutQueriedSampleType } from 'react-native-health';
 
 import type { DateRange, HealthMetrics, SleepNight } from '../types';
-import { average, DAY_MS, emptyMetrics, isoDayKey, isSameDay, lastDaysRange, minutesBetween, stdDev, sum } from './shared';
+import { average, DAY_MS, emptyMetrics, isSameDay, lastDaysRange, mainSleepSession, minutesBetween, sleepHistoryFromIntervals, stdDev, sum, unionMinutes } from './shared';
 import type { HealthDataProvider } from './types';
 
 /** Sleep sample as returned at runtime by `getSleepSamples`. */
@@ -53,7 +53,8 @@ const promisify = <T>(fn: (options: HealthInputOptions, cb: (err: string | null,
   });
 
 const sleepFromSamples = (samples: AppleSleepSample[]): Pick<HealthMetrics, 'sleepHours' | 'wakeTime' | 'bedTime' | 'sleepHistory' | 'deepSleepMin' | 'remSleepMin' | 'sleepVariability'> => {
-  const asleep = samples.filter((s) => ASLEEP_VALUES.has(s.value));
+  // Normalize to {start,end} so the shared interval helpers can merge overlaps.
+  const asleep = samples.filter((s) => ASLEEP_VALUES.has(s.value)).map((s) => ({ start: s.startDate, end: s.endDate, value: s.value }));
   if (!asleep.length) {
     return {
       sleepHours: null,
@@ -66,24 +67,17 @@ const sleepFromSamples = (samples: AppleSleepSample[]): Pick<HealthMetrics, 'sle
     };
   }
 
-  // Latest awakening across the asleep samples.
-  const wakeTime = asleep.reduce((latest, s) => (s.endDate > latest ? s.endDate : latest), asleep[0]!.endDate);
-  const wakeKey = isoDayKey(wakeTime);
-
-  // Samples belonging to the most recent night (bucketed by wake day).
-  const lastNight = asleep.filter((s) => isoDayKey(s.endDate) === wakeKey);
-  const lastNightMinutes = sum(lastNight.map((s) => minutesBetween(s.startDate, s.endDate)));
-  const bedTime = lastNight.reduce((earliest, s) => (s.startDate < earliest ? s.startDate : earliest), lastNight[0]!.startDate);
-  const deepMin = sum(lastNight.filter((s) => s.value === 'DEEP').map((s) => minutesBetween(s.startDate, s.endDate)));
-  const remMin = sum(lastNight.filter((s) => s.value === 'REM').map((s) => minutesBetween(s.startDate, s.endDate)));
+  // Main sleep session (longest recent cluster) — avoids lumping naps and
+  // double-counting overlapping samples from multiple data sources.
+  const mainNight = mainSleepSession(asleep);
+  const wakeTime = mainNight.reduce((latest, s) => (s.end > latest ? s.end : latest), mainNight[0]!.end);
+  const bedTime = mainNight.reduce((earliest, s) => (s.start < earliest ? s.start : earliest), mainNight[0]!.start);
+  const lastNightMinutes = unionMinutes(mainNight);
+  const deepMin = unionMinutes(mainNight.filter((s) => s.value === 'DEEP'));
+  const remMin = unionMinutes(mainNight.filter((s) => s.value === 'REM'));
 
   // Nightly totals across the range (sleep history + variability).
-  const perNight = new Map<string, number>();
-  asleep.forEach((s) => {
-    const key = isoDayKey(s.endDate);
-    perNight.set(key, (perNight.get(key) ?? 0) + minutesBetween(s.startDate, s.endDate));
-  });
-  const sleepHistory: SleepNight[] = [...perNight.entries()].map(([date, minutes]) => ({ date, sleepHours: minutes / 60 })).sort((a, b) => a.date.localeCompare(b.date));
+  const sleepHistory: SleepNight[] = sleepHistoryFromIntervals(asleep);
   const variability = stdDev(sleepHistory.map((n) => n.sleepHours));
 
   return {

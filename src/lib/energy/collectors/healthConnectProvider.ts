@@ -3,7 +3,7 @@ import type { Permission, RecordResult } from 'react-native-health-connect/lib/t
 import type { SleepStage } from 'react-native-health-connect/lib/typescript/types/base.types';
 
 import type { DateRange, HealthMetrics, SleepNight } from '../types';
-import { average, DAY_MS, emptyMetrics, isoDayKey, isSameDay, lastDaysRange, minutesBetween, stdDev, sum } from './shared';
+import { average, DAY_MS, emptyMetrics, isSameDay, lastDaysRange, mainSleepSession, minutesBetween, sleepHistoryFromIntervals, stdDev, sum, unionMinutes } from './shared';
 import type { HealthDataProvider } from './types';
 
 /** Health Connect `SleepSessionRecord.StageType` codes. */
@@ -35,12 +35,35 @@ const READ_PERMISSIONS: Permission[] = [
   { accessType: 'read', recordType: 'ActiveCaloriesBurned' },
 ];
 
-const stageMinutes = (stages: SleepStage[], stage: number): number => sum(stages.filter((s) => s.stage === stage).map((s) => minutesBetween(s.startTime, s.endTime)));
+/** One asleep interval, carrying the stage when the session reports stages. */
+interface AsleepSegment {
+  start: string;
+  end: string;
+  stage: number | null;
+}
 
-const asleepMinutes = (stages: SleepStage[]): number => sum(stages.filter((s) => ASLEEP_STAGES.has(s.stage)).map((s) => minutesBetween(s.startTime, s.endTime)));
+/**
+ * Flattens sessions into asleep intervals. Sessions that report stages
+ * contribute one interval per asleep stage; stage-less sessions contribute
+ * their whole span as a single (stage-unknown) interval.
+ */
+const segmentsFromSessions = (sessions: RecordResult<'SleepSession'>[]): AsleepSegment[] => {
+  const segments: AsleepSegment[] = [];
+  sessions.forEach((session) => {
+    const stages: SleepStage[] = session.stages ?? [];
+    const asleep = stages.filter((s) => ASLEEP_STAGES.has(s.stage));
+    if (asleep.length) {
+      asleep.forEach((s) => segments.push({ start: s.startTime, end: s.endTime, stage: s.stage }));
+    } else {
+      segments.push({ start: session.startTime, end: session.endTime, stage: null });
+    }
+  });
+  return segments;
+};
 
 const sleepFromSessions = (sessions: RecordResult<'SleepSession'>[]): Pick<HealthMetrics, 'sleepHours' | 'wakeTime' | 'bedTime' | 'sleepHistory' | 'deepSleepMin' | 'remSleepMin' | 'sleepVariability'> => {
-  if (!sessions.length) {
+  const segments = segmentsFromSessions(sessions);
+  if (!segments.length) {
     return {
       sleepHours: null,
       wakeTime: null,
@@ -52,31 +75,24 @@ const sleepFromSessions = (sessions: RecordResult<'SleepSession'>[]): Pick<Healt
     };
   }
 
-  const sorted = sessions.slice().sort((a, b) => a.endTime.localeCompare(b.endTime));
-  const last = sorted[sorted.length - 1]!;
-  const lastStages = last.stages ?? [];
-
-  // Duration falls back to the session span when no stages are present.
-  const lastMinutes = lastStages.length ? asleepMinutes(lastStages) : minutesBetween(last.startTime, last.endTime);
+  // Main sleep session (longest recent cluster) with overlaps merged once.
+  const mainNight = mainSleepSession(segments);
+  const wakeTime = mainNight.reduce((latest, s) => (s.end > latest ? s.end : latest), mainNight[0]!.end);
+  const bedTime = mainNight.reduce((earliest, s) => (s.start < earliest ? s.start : earliest), mainNight[0]!.start);
+  const lastMinutes = unionMinutes(mainNight);
+  const hasStages = mainNight.some((s) => s.stage != null);
 
   // Per-night totals (sleep history + variability).
-  const perNight = new Map<string, number>();
-  sorted.forEach((session) => {
-    const stages = session.stages ?? [];
-    const minutes = stages.length ? asleepMinutes(stages) : minutesBetween(session.startTime, session.endTime);
-    const key = isoDayKey(session.endTime);
-    perNight.set(key, (perNight.get(key) ?? 0) + minutes);
-  });
-  const sleepHistory: SleepNight[] = [...perNight.entries()].map(([date, minutes]) => ({ date, sleepHours: minutes / 60 })).sort((a, b) => a.date.localeCompare(b.date));
+  const sleepHistory: SleepNight[] = sleepHistoryFromIntervals(segments);
   const variability = stdDev(sleepHistory.map((n) => n.sleepHours));
 
   return {
     sleepHours: lastMinutes / 60,
-    wakeTime: last.endTime,
-    bedTime: last.startTime,
+    wakeTime,
+    bedTime,
     sleepHistory,
-    deepSleepMin: lastStages.length ? stageMinutes(lastStages, STAGE.DEEP) : null,
-    remSleepMin: lastStages.length ? stageMinutes(lastStages, STAGE.REM) : null,
+    deepSleepMin: hasStages ? unionMinutes(mainNight.filter((s) => s.stage === STAGE.DEEP)) : null,
+    remSleepMin: hasStages ? unionMinutes(mainNight.filter((s) => s.stage === STAGE.REM)) : null,
     sleepVariability: variability,
   };
 };

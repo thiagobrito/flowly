@@ -1,4 +1,4 @@
-import { Activity, BedDouble, Brain, MoonStar, Sunrise } from 'lucide-react-native';
+import { Activity, BedDouble, Brain, Moon, MoonStar, Sunrise } from 'lucide-react-native';
 import type { ComponentType } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
 
@@ -20,7 +20,7 @@ function formatMinutes(minutes: number): string {
   return formatHours(minutes / 60);
 }
 
-function formatWakeTime(iso: string): string {
+function formatClock(iso: string): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return '—';
   return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
@@ -49,7 +49,7 @@ export default function SleepCard({ energyInfo, isDark }: { energyInfo: UseEnerg
     elevation: 4,
   } as const;
 
-  const hasSleepData = metrics != null && (metrics.sleepHours != null || metrics.wakeTime != null || metrics.deepSleepMin != null || metrics.remSleepMin != null || metrics.sleepVariability != null);
+  const hasSleepData = metrics != null && (metrics.sleepHours != null || metrics.bedTime != null || metrics.wakeTime != null || metrics.deepSleepMin != null || metrics.remSleepMin != null || metrics.sleepVariability != null);
 
   const header = (
     <View className="flex-row items-center gap-2.5">
@@ -106,6 +106,12 @@ export default function SleepCard({ energyInfo, isDark }: { energyInfo: UseEnerg
           <Text className="mb-1 text-xs font-medium text-zinc-500 dark:text-zinc-400">Meta: {IDEAL_SLEEP_HOURS}h</Text>
         </View>
 
+        {metrics.bedTime != null && metrics.wakeTime != null && (
+          <Text className="mt-1 text-xs font-medium text-zinc-500 dark:text-zinc-400">
+            {formatClock(metrics.bedTime)} – {formatClock(metrics.wakeTime)}
+          </Text>
+        )}
+
         {sleepPercent != null && (
           <View className="mt-2 h-2 overflow-hidden rounded-full bg-violet-500/10 dark:bg-white/10">
             <View className="h-full rounded-full" style={{ width: `${sleepPercent}%`, backgroundColor: ACCENT }} />
@@ -114,7 +120,8 @@ export default function SleepCard({ energyInfo, isDark }: { energyInfo: UseEnerg
       </View>
 
       <View className="mt-4 flex-row flex-wrap" style={{ gap: 8 }}>
-        <SleepTile Icon={Sunrise} label="Despertar" value={metrics.wakeTime != null ? formatWakeTime(metrics.wakeTime) : null} isDark={isDark} />
+        <SleepTile Icon={Moon} label="Dormir" value={metrics.bedTime != null ? formatClock(metrics.bedTime) : null} isDark={isDark} />
+        <SleepTile Icon={Sunrise} label="Despertar" value={metrics.wakeTime != null ? formatClock(metrics.wakeTime) : null} isDark={isDark} />
         <SleepTile Icon={BedDouble} label="Sono profundo" value={metrics.deepSleepMin != null ? formatMinutes(metrics.deepSleepMin) : null} isDark={isDark} />
         <SleepTile Icon={Brain} label="Sono REM" value={metrics.remSleepMin != null ? formatMinutes(metrics.remSleepMin) : null} isDark={isDark} />
         <SleepTile Icon={Activity} label="Regularidade" value={metrics.sleepVariability != null ? `± ${formatHours(metrics.sleepVariability)}` : null} isDark={isDark} />

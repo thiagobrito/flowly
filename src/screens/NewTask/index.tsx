@@ -12,18 +12,19 @@ import { FrequencyPicker } from './FrequencyPicker';
 
 type NewTaskProps = {
   task?: Task | null;
+  initialFrequency?: FrequencyConfig | null;
   onCreate?: (payload: NewTaskPayload) => void;
   onSuccess?: () => void;
 };
 
-export default function NewTask({ task, onCreate, onSuccess }: NewTaskProps) {
+export default function NewTask({ task, initialFrequency, onCreate, onSuccess }: NewTaskProps) {
   const isDark = useColorScheme() === 'dark';
   const isEditing = !!task;
 
   const [name, setName] = useState(task?.name ?? '');
   const [energy, setEnergy] = useState(task?.energy ?? 3);
   const [impact, setImpact] = useState(task?.impact ?? 3);
-  const [frequency, setFrequency] = useState<FrequencyConfig | null>(task?.frequency ?? null);
+  const [frequency, setFrequency] = useState<FrequencyConfig | null>(task?.frequency ?? initialFrequency ?? null);
   const [area, setArea] = useState<string | null>(task?.area ?? null);
   const [subtasks, setSubtasks] = useState<Subtask[]>(task?.subtasks ?? []);
   const [estimatedMinutes, setEstimatedMinutes] = useState<number | null>(task?.estimatedMinutes ?? null);

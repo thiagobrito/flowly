@@ -1,10 +1,10 @@
 import { APP_TIME_ZONE, localDateKey } from '@/lib/date';
 import { api } from '@/lib/network';
 
-import type { ScheduledSlot, Task } from '../NewTask/data';
+import type { FrequencyConfig, ScheduledSlot, Task } from '../NewTask/data';
 import { getOnceStartISO, getTaskDurationMin } from './eventMapping';
 
-function toLocalTimeHM(date: Date): string {
+export function toLocalTimeHM(date: Date): string {
   const parts = new Intl.DateTimeFormat('en-US', {
     timeZone: APP_TIME_ZONE,
     hour: '2-digit',
@@ -15,6 +15,16 @@ function toLocalTimeHM(date: Date): string {
   const hour = parts.find((part) => part.type === 'hour')?.value ?? '00';
   const minute = parts.find((part) => part.type === 'minute')?.value ?? '00';
   return `${hour.padStart(2, '0')}:${minute.padStart(2, '0')}`;
+}
+
+/** Frequência `once` (data + hora locais) a partir de um instante ISO do calendário. */
+export function onceFrequencyFromISO(dateTimeISO: string): Extract<FrequencyConfig, { kind: 'once' }> {
+  const date = new Date(dateTimeISO);
+  return {
+    kind: 'once',
+    date: localDateKey(date),
+    time: toLocalTimeHM(date),
+  };
 }
 
 /** Slot atual da tarefa (do servidor): lista `schedule` ou horário de `once`. */

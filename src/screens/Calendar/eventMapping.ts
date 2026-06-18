@@ -26,7 +26,11 @@ export function getTaskDurationMin(task: Task): number {
 
 function eventColor(task: Task): string {
   let areaColor = getLifeArea(task.area)?.accent;
-  if (areaColor) areaColor += '60';
+
+  if (areaColor) {
+    if (task.done) areaColor += '20';
+    else areaColor += '90';
+  }
   return areaColor ?? FALLBACK_COLOR;
 }
 
@@ -45,15 +49,17 @@ function buildEvent(task: Task, id: string, startISO: string, durationMin: numbe
     start: { dateTime: toLocalISOString(start, APP_TIME_ZONE), timeZone: APP_TIME_ZONE },
     end: { dateTime: toLocalISOString(end, APP_TIME_ZONE), timeZone: APP_TIME_ZONE },
     color: eventColor(task),
+    hasBorder: !task.done,
     task,
   };
 }
 
 /** Monta um evento de calendário a partir de uma tarefa e um horário de início. */
+/*
 export function buildTaskEvent(task: Task, startISO: string, durationMin = getTaskDurationMin(task)): CalendarTaskEvent {
   return buildEvent(task, task.id, startISO, durationMin);
 }
-
+*/
 /** Horário inicial para tarefas de frequência `once` (data + hora). */
 export function getOnceStartISO(task: Task): string | null {
   if (task.frequency.kind !== 'once' || !task.frequency.date) return null;
@@ -111,6 +117,8 @@ export function buildCalendarEvents(tasks: Task[], visibleDateKeys?: Set<string>
         if (onceISO && isVisibleDay(onceISO)) {
           events.push(buildEvent(task, task.id, onceISO, getTaskDurationMin(task)));
         } else if (!task.done) {
+          // const scheduledForAnotherDay = task && task.schedule && task?.schedule?.length > 0 && task?.schedule?.filter((slot) => isVisibleDay(slot.dateTime)).length === 0;
+          // if (scheduledForAnotherDay) unscheduled.push(task);
           unscheduled.push(task);
         }
       }
