@@ -5,6 +5,7 @@ import { type PersistedRecord, usePersistedState } from '@/lib/storage';
 export type ConfigPreferences = PersistedRecord & {
   googleCalendarSync: boolean;
   healthEnabled: boolean;
+  taskRemindersEnabled: boolean;
   loaded?: boolean;
   lastUpdate?: string;
 };
@@ -14,6 +15,7 @@ const CONFIG_KEY = 'config_preferences_v1';
 const DEFAULT_PREFERENCES: ConfigPreferences = {
   googleCalendarSync: false,
   healthEnabled: false,
+  taskRemindersEnabled: true,
 };
 
 export function useConfigPreferences() {
@@ -33,10 +35,18 @@ export function useConfigPreferences() {
     [preferences, setPreferences],
   );
 
+  const setTaskRemindersEnabled = useCallback(
+    (enabled: boolean) => {
+      setPreferences({ ...preferences, taskRemindersEnabled: enabled });
+    },
+    [preferences, setPreferences],
+  );
+
   return {
     preferences,
     isHydrated: Boolean(preferences.loaded),
     setGoogleCalendarSync,
     setHealthEnabled,
+    setTaskRemindersEnabled,
   };
 }

@@ -6,11 +6,14 @@ import { ActivityIndicator, Alert, StyleSheet, Text, useColorScheme, View } from
 
 import { APP_TIME_ZONE, localDateKey, startOfLocalDay, toLocalISOString } from '@/lib/date';
 import { api } from '@/lib/network';
+import { syncTaskReminders } from '@/lib/taskReminders';
 
+import { useConfigPreferences } from '../Config/hooks/useConfigPreferences';
 import type { ScheduledSlot, Task } from '../NewTask/data';
 import { formatDuration, getLifeArea } from '../NewTask/data';
 import LevelDots from '../Tasks/components/LevelDots';
 import CalendarHeaderBar from './components/CalendarHeaderBar';
+import TaskDetailModal from './components/TaskDetailModal';
 import UnscheduledTray from './components/UnscheduledTray';
 import type { CalendarTaskEvent } from './eventMapping';
 import { buildCalendarEvents, getTaskDurationMin } from './eventMapping';
@@ -92,17 +95,23 @@ function organizeTasks(tasks: unknown): Task[] {
 
 export default function Calendar({ onEdit, onCreateAt }: CalendarProps) {
   const isDark = useColorScheme() === 'dark';
+  const { preferences } = useConfigPreferences();
+  const remindersEnabled = preferences.taskRemindersEnabled ?? true;
+  const remindersEnabledRef = useRef(remindersEnabled);
+  remindersEnabledRef.current = remindersEnabled;
   const calendarRef = useRef<CalendarKitHandle>(null);
   const calendarWrapRef = useRef<View>(null);
   const screenRootRef = useRef<View>(null);
   const calendarBounds = useRef<CalendarBounds | null>(null);
   const screenOrigin = useRef({ x: 0, y: 0 });
   const lastPress = useRef<{ id: string; ts: number }>({ id: '', ts: 0 });
+  const singlePressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [visibleDate, setVisibleDate] = useState<string>(() => toLocalISOString());
   const [drag, setDrag] = useState<DragState | null>(null);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
   const fetchTasks = useCallback(async () => {
     try {
@@ -121,6 +130,15 @@ export default function Calendar({ onEdit, onCreateAt }: CalendarProps) {
   useEffect(() => {
     fetchTasks();
   }, [fetchTasks]);
+
+  const clearSinglePressTimer = useCallback(() => {
+    if (singlePressTimer.current) {
+      clearTimeout(singlePressTimer.current);
+      singlePressTimer.current = null;
+    }
+  }, []);
+
+  useEffect(() => () => clearSinglePressTimer(), [clearSinglePressTimer]);
 
   const visibleDateKeys = useMemo(() => {
     const start = startOfLocalDay(visibleDate);
@@ -252,6 +270,7 @@ export default function Calendar({ onEdit, onCreateAt }: CalendarProps) {
       try {
         await syncTaskScheduleToServer(task, startISO, durationMin);
         fetchTasks();
+        syncTaskReminders({ enabled: remindersEnabledRef.current });
       } catch {
         restoreTask(snapshot);
       }
@@ -267,6 +286,7 @@ export default function Calendar({ onEdit, onCreateAt }: CalendarProps) {
       try {
         await syncTaskUnscheduleToServer(task, dateKey);
         fetchTasks();
+        syncTaskReminders({ enabled: remindersEnabledRef.current });
       } catch {
         restoreTask(snapshot);
       }
@@ -302,17 +322,8 @@ export default function Calendar({ onEdit, onCreateAt }: CalendarProps) {
     [resolveDropISO, scheduleAndSyncTask],
   );
 
-  const handlePressEvent = useCallback(
-    (event: OnEventResponse) => {
-      const now = Date.now();
-      const isDoublePress = lastPress.current.id === event.id && now - lastPress.current.ts < DOUBLE_PRESS_MS;
-      lastPress.current = { id: event.id, ts: now };
-      if (!isDoublePress) return;
-
-      const { task } = event as CalendarTaskEvent;
-      const startISO = event.start?.dateTime;
-      if (!task) return;
-
+  const showTaskActions = useCallback(
+    (task: Task, startISO?: string) => {
       const buttons: any = [];
       if (!task.done) {
         buttons.push({ text: 'Concluir tarefa', onPress: () => markTaskAsDone(task) });
@@ -328,7 +339,34 @@ export default function Calendar({ onEdit, onCreateAt }: CalendarProps) {
 
       Alert.alert(task.name, undefined, buttons);
     },
-    [onEdit, removeFromDayAndSyncTask, markTaskAsDone],
+    [markTaskAsDone, onEdit, removeFromDayAndSyncTask],
+  );
+
+  const handlePressEvent = useCallback(
+    (event: OnEventResponse) => {
+      const { task } = event as CalendarTaskEvent;
+      if (!task) return;
+
+      const now = Date.now();
+      const isDoublePress = lastPress.current.id === event.id && now - lastPress.current.ts < DOUBLE_PRESS_MS;
+
+      if (isDoublePress) {
+        clearSinglePressTimer();
+        lastPress.current = { id: '', ts: 0 };
+        showTaskActions(task, event.start?.dateTime);
+        return;
+      }
+
+      lastPress.current = { id: event.id, ts: now };
+      clearSinglePressTimer();
+
+      singlePressTimer.current = setTimeout(() => {
+        singlePressTimer.current = null;
+        lastPress.current = { id: '', ts: 0 };
+        setSelectedTask(task);
+      }, DOUBLE_PRESS_MS);
+    },
+    [clearSinglePressTimer, showTaskActions],
   );
 
   const handleDragEventEnd = useCallback(
@@ -424,6 +462,8 @@ export default function Calendar({ onEdit, onCreateAt }: CalendarProps) {
           </View>
         </View>
       ) : null}
+
+      <TaskDetailModal visible={!!selectedTask} task={selectedTask} isDark={isDark} onClose={() => setSelectedTask(null)} />
     </View>
   );
 }

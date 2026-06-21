@@ -201,7 +201,7 @@ export default function TaskCard({ highlight, task, selected, isDark, onComplete
                       <View className="flex-1 flex-row items-center">
                         {FreqIcon ? <FreqIcon size={13} color={mutedColor} style={{ marginRight: 5 }} /> : null}
                         <Text className="flex-1 text-xs font-medium" style={{ color: mutedColor }} numberOfLines={1}>
-                          {describeFrequency(task.frequency)}
+                          {describeFrequency(task)}
                         </Text>
                       </View>
                     </View>

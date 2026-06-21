@@ -150,7 +150,10 @@ const formatDayList = (days: number[]): string =>
     .filter(Boolean)
     .join(', ');
 
-export function describeFrequency(config: FrequencyConfig): string {
+export function describeFrequency(task: Task): string {
+  const config = task.frequency;
+
+  // Adicionar na label "Marcado para <data> às <hora>" quando estiver com o schedule marcado para algum dia (se houver mais que um, pegar o mais recente)
   switch (config.kind) {
     case 'once': {
       if (!config.date) return 'Pontual';
@@ -174,6 +177,17 @@ export function describeFrequency(config: FrequencyConfig): string {
       return event?.label ?? 'Gatilho';
     }
     default:
+      if (task.schedule && task.schedule.length > 0) {
+        const latestSchedule = task.schedule.sort((a, b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime())[0];
+
+        if (latestSchedule?.dateTime.split('T')[0] === new Date().toISOString().split('T')[0]) {
+          return `Hoje por ${latestSchedule?.duration} minutos`;
+        }
+        if (latestSchedule?.dateTime.split('T')[0] === new Date(new Date().setDate(new Date().getDate() + 1)).toISOString().split('T')[0]) {
+          return `Amanhã por ${latestSchedule?.duration} minutos`;
+        }
+        return `${latestSchedule?.dateTime.split('T')[0]} por ${latestSchedule?.duration} minutos`;
+      }
       return '';
   }
 }

@@ -5,7 +5,8 @@ import { Stack } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { configureNotifications, setupNotificationHandler, useNotifications } from '@/lib/notifications';
+import { configureNotifications, ensureAndroidChannel, setupNotificationHandler, useNotifications } from '@/lib/notifications';
+import { useTaskReminders } from '@/screens/Config/hooks/useTaskReminders';
 
 setupNotificationHandler();
 configureNotifications({
@@ -14,6 +15,7 @@ configureNotifications({
     reportError: (error) => Sentry.captureException(error),
   },
 });
+ensureAndroidChannel().catch(() => undefined);
 
 Sentry.init({
   dsn: 'https://a2476257c2a1c6711c1f36d720aa3342@o1297145.ingest.us.sentry.io/4511544158715904',
@@ -31,6 +33,7 @@ Sentry.init({
 
 export default Sentry.wrap(function Layout() {
   useNotifications();
+  useTaskReminders();
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

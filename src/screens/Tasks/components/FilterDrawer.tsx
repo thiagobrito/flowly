@@ -1,9 +1,11 @@
 import type { LucideIcon } from 'lucide-react-native';
-import { Check, ListChecks, X } from 'lucide-react-native';
+import { CalendarDays, Check, ListChecks, X } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { Dimensions, Modal, Pressable, ScrollView, Text, View } from 'react-native';
 import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+
+import type { DateFilterId } from '../taskDateFilter';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const PANEL_WIDTH = Math.min(320, SCREEN_WIDTH * 0.82);
@@ -17,17 +19,28 @@ export type FilterArea = {
   count: number;
 };
 
+export type FilterDate = {
+  id: DateFilterId;
+  label: string;
+  Icon: LucideIcon;
+  accent: string;
+  count: number;
+};
+
 type FilterDrawerProps = {
   visible: boolean;
   isDark: boolean;
+  dateFilters: FilterDate[];
+  selectedDateFilter: DateFilterId | null;
+  onToggleDateFilter: (id: DateFilterId) => void;
   areas: FilterArea[];
-  selected: string[];
-  onToggle: (id: string) => void;
+  selectedAreas: string[];
+  onToggleArea: (id: string) => void;
   onClear: () => void;
   onClose: () => void;
 };
 
-type AreaRowProps = {
+type FilterRowProps = {
   label: string;
   Icon: LucideIcon;
   accent: string;
@@ -38,11 +51,10 @@ type AreaRowProps = {
 };
 
 function adjustLabel(label: string): string {
-  // Deixa primeira letra maiuscula e depois tudo minusculo
   return label.charAt(0).toUpperCase() + label.slice(1).toLowerCase();
 }
 
-function AreaRow({ label, Icon, accent, count, selected, isDark, onPress }: AreaRowProps) {
+function FilterRow({ label, Icon, accent, count, selected, isDark, onPress }: FilterRowProps) {
   let backgroundColor = 'transparent';
   if (selected) backgroundColor = `${accent}1f`;
 
@@ -69,7 +81,7 @@ function AreaRow({ label, Icon, accent, count, selected, isDark, onPress }: Area
   );
 }
 
-export default function FilterDrawer({ visible, isDark, areas, selected, onToggle, onClear, onClose }: FilterDrawerProps) {
+export default function FilterDrawer({ visible, isDark, dateFilters, selectedDateFilter, onToggleDateFilter, areas, selectedAreas, onToggleArea, onClear, onClose }: FilterDrawerProps) {
   const [mounted, setMounted] = useState(visible);
   const translateX = useSharedValue(-PANEL_WIDTH);
   const backdropOpacity = useSharedValue(0);
@@ -97,7 +109,7 @@ export default function FilterDrawer({ visible, isDark, areas, selected, onToggl
 
   if (!mounted) return null;
 
-  const hasFilter = selected.length > 0;
+  const hasFilter = selectedAreas.length > 0 || selectedDateFilter !== null;
   let allRowBackgroundColor = 'transparent';
   if (!hasFilter) allRowBackgroundColor = isDark ? 'rgba(59,130,246,0.18)' : 'rgba(59,130,246,0.1)';
 
@@ -115,7 +127,7 @@ export default function FilterDrawer({ visible, isDark, areas, selected, onToggl
                 <View className="flex-row items-center justify-between px-4 pb-3 pt-2">
                   <View className="flex-row items-center">
                     <ListChecks size={24} color="#3b82f6" style={{ marginRight: 10 }} />
-                    <Text className="text-lg font-bold text-zinc-900 dark:text-zinc-50">Filtrar por objetivo</Text>
+                    <Text className="text-lg font-bold text-zinc-900 dark:text-zinc-50">Filtrar</Text>
                   </View>
 
                   <Pressable
@@ -143,8 +155,24 @@ export default function FilterDrawer({ visible, isDark, areas, selected, onToggl
                     ) : null}
                   </Pressable>
 
+                  <View className="mb-2 mt-3 flex-row items-center px-1">
+                    <CalendarDays size={16} color={isDark ? '#a1a1aa' : '#71717a'} style={{ marginRight: 8 }} />
+                    <Text className="text-xs font-semibold uppercase tracking-wide text-zinc-400 dark:text-zinc-500">Filtrar por data</Text>
+                  </View>
+
+                  {dateFilters.map((filter) => (
+                    <FilterRow key={filter.id} label={filter.label} Icon={filter.Icon} accent={filter.accent} count={filter.count} selected={selectedDateFilter === filter.id} isDark={isDark} onPress={() => onToggleDateFilter(filter.id)} />
+                  ))}
+
+                  <View className="mx-1 my-3 h-px" style={{ backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }} />
+
+                  <View className="mb-2 flex-row items-center px-1">
+                    <ListChecks size={16} color={isDark ? '#a1a1aa' : '#71717a'} style={{ marginRight: 8 }} />
+                    <Text className="text-xs font-semibold uppercase tracking-wide text-zinc-400 dark:text-zinc-500">Filtrar por objetivo</Text>
+                  </View>
+
                   {areas.map((area) => (
-                    <AreaRow key={area.id} label={area.label} Icon={area.Icon} accent={area.accent} count={area.count} selected={selected.includes(area.id)} isDark={isDark} onPress={() => onToggle(area.id)} />
+                    <FilterRow key={area.id} label={area.label} Icon={area.Icon} accent={area.accent} count={area.count} selected={selectedAreas.includes(area.id)} isDark={isDark} onPress={() => onToggleArea(area.id)} />
                   ))}
 
                   {areas.length === 0 ? <Text className="mt-6 px-3 text-center text-sm text-zinc-400 dark:text-zinc-500">Nenhuma área de vida nas suas tarefas.</Text> : null}

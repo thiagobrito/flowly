@@ -6,12 +6,13 @@ import { toLocalISOString } from '@/lib/date';
 import { computeEnergyAtMoment, flowlyInputFromMetrics, getHealthProvider } from '@/lib/energy';
 import { api } from '@/lib/network';
 
-import type { Task } from '../NewTask/data';
+import type { ScheduledSlot, Task } from '../NewTask/data';
 import { getLifeArea } from '../NewTask/data';
 import type { FilterArea } from './components/FilterDrawer';
 import FilterDrawer from './components/FilterDrawer';
 import Header from './components/Header';
 import TaskCard from './components/TaskCard';
+import { DATE_FILTERS, type DateFilterId, getWeekDates, taskMatchesDateFilter } from './taskDateFilter';
 
 type TasksProps = {
   onEdit?: (task: Task) => void;
@@ -19,13 +20,75 @@ type TasksProps = {
   onOpenConfig?: () => void;
 };
 
-function OrganizeTasks(tasks: any): any {
+function OrganizeTasks(tasks: any): Task[] {
   return tasks.map((task: any) => ({
     ...task,
     // eslint-disable-next-line no-underscore-dangle -- campo `_id` retornado pela API MongoDB
     id: task.id ?? (task as Task & { _id?: string })._id ?? '',
     randomId: Math.random().toString(36).substring(2, 15),
   }));
+}
+
+function mergeSchedules(first?: ScheduledSlot[], second?: ScheduledSlot[]): ScheduledSlot[] {
+  const map = new Map<string, ScheduledSlot>();
+  for (const slot of [...(first ?? []), ...(second ?? [])]) {
+    if (slot?.dateTime) map.set(slot.dateTime, slot);
+  }
+  return Array.from(map.values());
+}
+
+function mergeTasks(existing: Task, incoming: Task): Task {
+  return {
+    ...existing,
+    ...incoming,
+    schedule: mergeSchedules(existing.schedule, incoming.schedule),
+  };
+}
+
+function mergeTaskLists(lists: Task[][]): Task[] {
+  const map = new Map<string, Task>();
+  for (const list of lists) {
+    for (const task of list) {
+      if (task.id) {
+        const previous = map.get(task.id);
+        map.set(task.id, previous ? mergeTasks(previous, task) : task);
+      }
+    }
+  }
+  return Array.from(map.values());
+}
+
+async function fetchWeekTasks(energyLevel: number): Promise<{ visibleTasks: Task[]; concludedTasks: Task[] }> {
+  const weekDates = getWeekDates();
+  const results = await Promise.allSettled(
+    weekDates.map((date) =>
+      api.get<any>('/tasks', {
+        params: { date: toLocalISOString(date), energyLevel },
+      }),
+    ),
+  );
+
+  const visibleLists: Task[][] = [];
+  const concludedLists: Task[][] = [];
+  let successCount = 0;
+
+  for (const result of results) {
+    if (result.status === 'fulfilled') {
+      successCount += 1;
+      visibleLists.push(OrganizeTasks(result.value.visibleTasks));
+      concludedLists.push(OrganizeTasks(result.value.concludedTasks));
+    }
+  }
+
+  if (successCount === 0) {
+    throw new Error('Nenhuma requisição de tarefas foi bem-sucedida.');
+  }
+
+  const concludedTasks = mergeTaskLists(concludedLists);
+  const concludedIds = new Set(concludedTasks.map((task) => task.id));
+  const visibleTasks = mergeTaskLists(visibleLists).filter((task) => !concludedIds.has(task.id));
+
+  return { visibleTasks, concludedTasks };
 }
 
 export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
@@ -41,10 +104,22 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
 
   const [filterOpen, setFilterOpen] = useState(false);
   const [selectedAreas, setSelectedAreas] = useState<string[]>([]);
+  const [selectedDateFilter, setSelectedDateFilter] = useState<DateFilterId | null>(null);
+
+  const allTasks = useMemo(() => [...visibleTasks, ...concludedTasks], [visibleTasks, concludedTasks]);
+
+  const filterDateOptions = useMemo(
+    () =>
+      DATE_FILTERS.map((filter) => ({
+        ...filter,
+        count: allTasks.filter((task) => taskMatchesDateFilter(task, filter.id)).length,
+      })),
+    [allTasks],
+  );
 
   const filterAreas = useMemo<FilterArea[]>(() => {
     const counts = new Map<string, number>();
-    [...visibleTasks, ...concludedTasks].forEach((task) => {
+    allTasks.forEach((task) => {
       counts.set(task.area, (counts.get(task.area) ?? 0) + 1);
     });
 
@@ -58,14 +133,32 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
         count,
       };
     });
-  }, [visibleTasks, concludedTasks]);
+  }, [allTasks]);
 
-  const filteredVisible = useMemo(() => (selectedAreas.length === 0 ? visibleTasks : visibleTasks.filter((task) => selectedAreas.includes(task.area))), [visibleTasks, selectedAreas]);
+  const applyFilters = useCallback(
+    (tasks: Task[]) =>
+      tasks.filter((task) => {
+        const areaOk = selectedAreas.length === 0 || selectedAreas.includes(task.area);
+        const dateOk = !selectedDateFilter || taskMatchesDateFilter(task, selectedDateFilter);
+        return areaOk && dateOk;
+      }),
+    [selectedAreas, selectedDateFilter],
+  );
 
-  const filteredConcluded = useMemo(() => (selectedAreas.length === 0 ? concludedTasks : concludedTasks.filter((task) => selectedAreas.includes(task.area))), [concludedTasks, selectedAreas]);
+  const filteredVisible = useMemo(() => applyFilters(visibleTasks), [visibleTasks, applyFilters]);
+  const filteredConcluded = useMemo(() => applyFilters(concludedTasks), [concludedTasks, applyFilters]);
 
   const toggleArea = (id: string) => {
     setSelectedAreas((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]));
+  };
+
+  const toggleDateFilter = (id: DateFilterId) => {
+    setSelectedDateFilter((prev) => (prev === id ? null : id));
+  };
+
+  const clearFilters = () => {
+    setSelectedAreas([]);
+    setSelectedDateFilter(null);
   };
 
   const handleDelete = (task: Task) => {
@@ -88,12 +181,16 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
 
   const fetchTasks = useCallback(async () => {
     if (!energyLevel) return;
-    const response = await api.get<any>('/tasks', { params: { date: toLocalISOString(), energyLevel } });
 
-    setConcludedTasks(OrganizeTasks(response.concludedTasks));
-    setVisibleTasks(OrganizeTasks(response.visibleTasks));
-
-    setLoading(false);
+    try {
+      const { visibleTasks: nextVisible, concludedTasks: nextConcluded } = await fetchWeekTasks(energyLevel);
+      setVisibleTasks(nextVisible);
+      setConcludedTasks(nextConcluded);
+    } catch {
+      Alert.alert('Erro', 'Não foi possível carregar as atividades.');
+    } finally {
+      setLoading(false);
+    }
   }, [energyLevel]);
 
   const refreshEnergy = useCallback(() => {
@@ -109,12 +206,9 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
     setRefreshing(true);
     try {
       const result = refreshEnergy();
-      const response = await api.get<any>('/tasks', {
-        params: { date: toLocalISOString(), energyLevel: result.doubleEnergyLevel },
-      });
-
-      setConcludedTasks(OrganizeTasks(response.concludedTasks));
-      setVisibleTasks(OrganizeTasks(response.visibleTasks));
+      const { visibleTasks: nextVisible, concludedTasks: nextConcluded } = await fetchWeekTasks(result.doubleEnergyLevel);
+      setVisibleTasks(nextVisible);
+      setConcludedTasks(nextConcluded);
     } catch {
       Alert.alert('Erro', 'Não foi possível recarregar as atividades.');
     } finally {
@@ -177,7 +271,18 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
         </View>
       </ScrollView>
 
-      <FilterDrawer visible={filterOpen} isDark={isDark} areas={filterAreas} selected={selectedAreas} onToggle={toggleArea} onClear={() => setSelectedAreas([])} onClose={() => setFilterOpen(false)} />
+      <FilterDrawer
+        visible={filterOpen}
+        isDark={isDark}
+        dateFilters={filterDateOptions}
+        selectedDateFilter={selectedDateFilter}
+        onToggleDateFilter={toggleDateFilter}
+        areas={filterAreas}
+        selectedAreas={selectedAreas}
+        onToggleArea={toggleArea}
+        onClear={clearFilters}
+        onClose={() => setFilterOpen(false)}
+      />
     </View>
   );
 }
