@@ -46,6 +46,53 @@ With the plugins installed on your VSCode, ESLint and Prettier can automatically
 
 Pro tips: if you need a project wide type checking with TypeScript, you can run a build with <kbd>Cmd</kbd> + <kbd>Shift</kbd> + <kbd>B</kbd> on Mac.
 
+### Integração com Google Calendar
+
+O app importa eventos do Google Calendar como tarefas do Flowly (pull). A
+autenticação é feita no dispositivo via OAuth (`expo-auth-session`) e a leitura
+usa a Google Calendar API (escopo somente leitura). A infraestrutura fica em
+`src/lib/googleCalendar` (veja o README da lib) e a ativação acontece em
+Configurações → Integrações.
+
+> A sincronização requer um dev/standalone build (não funciona no Expo Go, pois
+> depende do redirect nativo de OAuth).
+
+#### 1. Criar as credenciais no Google Cloud Console
+
+1. Acesse o [Google Cloud Console](https://console.cloud.google.com/) e crie (ou
+   selecione) um projeto.
+2. Em **APIs & Services → Library**, habilite a **Google Calendar API**.
+3. Em **APIs & Services → OAuth consent screen**, configure a tela de consentimento
+   (tipo "External"), adicione o escopo
+   `https://www.googleapis.com/auth/calendar.readonly` e cadastre seu e-mail como
+   usuário de teste enquanto o app estiver em modo de teste.
+4. Em **APIs & Services → Credentials → Create Credentials → OAuth client ID**,
+   crie um client para cada plataforma usada:
+   - **iOS** — Bundle ID: `com.flowly-v2.app`
+   - **Android** — Package name: `com.flowly-v2.app` + a SHA-1 da sua keystore
+     (debug e/ou release)
+   - **Web** — usado no Expo (Expo Go/proxy e web)
+
+#### 2. Preencher o `.env`
+
+Copie os Client IDs gerados para o `.env` na raiz do projeto:
+
+```
+EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID=xxxxx.apps.googleusercontent.com
+EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID=xxxxx.apps.googleusercontent.com
+EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID=xxxxx.apps.googleusercontent.com
+```
+
+Variáveis com prefixo `EXPO_PUBLIC_` são embutidas no bundle pelo Expo. Após
+alterá-las, reinicie o bundler (`npm start`). O scheme de redirect (`myapp`) já
+está definido em `app.json`.
+
+#### 3. Usar
+
+Abra **Configurações → Integrações**, ative "Sincronizar com Google Calendar" e
+conclua o login do Google. Os eventos da janela atual (próximos 30 dias) viram
+tarefas; use "Sincronizar agora" para reimportar novos eventos.
+
 ### Contributions
 
 Everyone is welcome to contribute to this project. Feel free to open an issue if you have question or found a bug. Totally open to any suggestions and improvements.

@@ -1,13 +1,28 @@
+import { RefreshCw } from 'lucide-react-native';
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, Linking, Platform } from 'react-native';
+import { ActivityIndicator, Alert, Linking, Platform } from 'react-native';
 
 import { getHealthProvider } from '@/lib/energy';
+import { hasGoogleClientIds, type SyncResult, useGoogleCalendarSync } from '@/lib/googleCalendar';
 
 import Card from './components/Card';
 import SectionTitle from './components/SectionTitle';
 import SettingsRow from './components/SettingsRow';
 import SettingsToggle from './components/SettingsToggle';
 import { useConfigPreferences } from './hooks/useConfigPreferences';
+
+function syncSummary(result: SyncResult): string {
+  const parts = [`${result.created} tarefa(s) criada(s)`];
+  if (result.skipped > 0) parts.push(`${result.skipped} ignorada(s)`);
+  if (result.failed > 0) parts.push(`${result.failed} com falha`);
+  return `${parts.join(', ')}.`;
+}
+
+function googleStatusDescription(isConnected: boolean, lastSyncAt: string | null): string {
+  if (!isConnected) return 'Importe seus eventos como tarefas';
+  if (lastSyncAt) return `Conectado · última sincronização ${new Date(lastSyncAt).toLocaleString('pt-BR')}`;
+  return 'Conectado';
+}
 
 function healthLabel(): string {
   if (Platform.OS === 'ios') return 'Apple Health';
@@ -25,15 +40,40 @@ export default function IntegrationSection({ isDark }: { isDark: boolean }) {
   const { preferences, setGoogleCalendarSync, setHealthEnabled } = useConfigPreferences();
   const [healthAvailable, setHealthAvailable] = useState(false);
 
+  const googleConfigured = hasGoogleClientIds();
+  const { isConnected, isReady, pending, lastSyncAt, connect, syncNow, disconnect } = useGoogleCalendarSync({
+    onSynced: (result) => Alert.alert('Sincronização concluída', syncSummary(result)),
+    onError: () => Alert.alert('Erro na sincronização', 'Não foi possível importar os eventos do Google Calendar. Tente novamente.'),
+  });
+
+  useEffect(() => {
+    if (preferences.googleCalendarSync === isConnected) return;
+    setGoogleCalendarSync(isConnected);
+  }, [isConnected, preferences.googleCalendarSync, setGoogleCalendarSync]);
+
   const handleGoogleCalendarToggle = useCallback(
-    (enabled: boolean) => {
-      setGoogleCalendarSync(enabled);
-      if (enabled) {
-        Alert.alert('Em desenvolvimento', 'A sincronização com Google Calendar estará disponível em breve.');
+    async (enabled: boolean) => {
+      if (!googleConfigured) {
+        Alert.alert('Configuração necessária', 'Defina as credenciais do Google (EXPO_PUBLIC_GOOGLE_*) no .env. Veja o README do projeto.');
+        return;
       }
+
+      if (enabled) {
+        try {
+          await connect();
+        } catch {
+          Alert.alert('Não foi possível conectar', 'O login com o Google foi cancelado ou falhou.');
+        }
+        return;
+      }
+
+      disconnect();
     },
-    [setGoogleCalendarSync],
+    [googleConfigured, connect, disconnect],
   );
+
+  const googleDescription = googleStatusDescription(isConnected, lastSyncAt);
+
   const handleHealthToggle = useCallback(
     async (enabled: boolean) => {
       if (!healthAvailable) return;
@@ -84,10 +124,19 @@ export default function IntegrationSection({ isDark }: { isDark: boolean }) {
       <Card isDark={isDark}>
         <SettingsRow
           label="Sincronizar com Google Calendar"
-          description="Sincronize tarefas com seu calendário"
+          description={googleDescription}
           isDark={isDark}
-          trailing={<SettingsToggle value={Boolean(preferences.googleCalendarSync)} onValueChange={handleGoogleCalendarToggle} isDark={isDark} />}
+          trailing={pending && !isConnected ? <ActivityIndicator color={isDark ? '#e4e4e7' : '#3b82f6'} /> : <SettingsToggle value={isConnected} onValueChange={handleGoogleCalendarToggle} disabled={!isReady || pending} isDark={isDark} />}
         />
+        {isConnected ? (
+          <SettingsRow
+            label="Sincronizar agora"
+            description="Importar novos eventos do calendário"
+            isDark={isDark}
+            onPress={pending ? undefined : () => syncNow()}
+            trailing={pending ? <ActivityIndicator color={isDark ? '#e4e4e7' : '#3b82f6'} /> : <RefreshCw size={20} color={isDark ? '#a1a1aa' : '#71717a'} />}
+          />
+        ) : null}
         <SettingsRow
           label={`Configurações do ${healthLabel()}`}
           description={healthDescription()}

@@ -56,8 +56,8 @@
       [
         "react-native-health",
         {
-          "healthSharePermission": "Permitir que o Flowly leia seus dados de sa\u00fade para calcular seu Energy Score.",
-          "healthUpdatePermission": "Permitir que o Flowly atualize seus dados de sa\u00fade."
+          "healthSharePermission": "Permitir que o Flowly leia seus dados de saúde para calcular seu Energy Score.",
+          "healthUpdatePermission": "Permitir que o Flowly atualize seus dados de saúde."
         }
       ],
       "react-native-health-connect",
@@ -81,7 +81,8 @@
           "project": "flowly-mobile",
           "organization": "149-digital"
         }
-      ]
+      ],
+      "expo-web-browser"
     ],
     "extra": {
       "router": {

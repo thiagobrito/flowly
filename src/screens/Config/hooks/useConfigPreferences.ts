@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 
-import { type PersistedRecord, usePersistedState } from '@/lib/storage';
+import { getPersistedSnapshot, type PersistedRecord, usePersistedState } from '@/lib/storage';
 
 export type ConfigPreferences = PersistedRecord & {
   googleCalendarSync: boolean;
@@ -23,23 +23,29 @@ export function useConfigPreferences() {
 
   const setGoogleCalendarSync = useCallback(
     (enabled: boolean) => {
-      setPreferences({ ...preferences, googleCalendarSync: enabled });
+      const current = getPersistedSnapshot(DEFAULT_PREFERENCES, CONFIG_KEY);
+      if (current.googleCalendarSync === enabled) return;
+      setPreferences({ ...current, googleCalendarSync: enabled });
     },
-    [preferences, setPreferences],
+    [setPreferences],
   );
 
   const setHealthEnabled = useCallback(
     (enabled: boolean) => {
-      setPreferences({ ...preferences, healthEnabled: enabled });
+      const current = getPersistedSnapshot(DEFAULT_PREFERENCES, CONFIG_KEY);
+      if (current.healthEnabled === enabled) return;
+      setPreferences({ ...current, healthEnabled: enabled });
     },
-    [preferences, setPreferences],
+    [setPreferences],
   );
 
   const setTaskRemindersEnabled = useCallback(
     (enabled: boolean) => {
-      setPreferences({ ...preferences, taskRemindersEnabled: enabled });
+      const current = getPersistedSnapshot(DEFAULT_PREFERENCES, CONFIG_KEY);
+      if (current.taskRemindersEnabled === enabled) return;
+      setPreferences({ ...current, taskRemindersEnabled: enabled });
     },
-    [preferences, setPreferences],
+    [setPreferences],
   );
 
   return {

@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, StyleSheet, Text, useColorScheme, View } from 'react-native';
 
 import { APP_TIME_ZONE, localDateKey, startOfLocalDay, toLocalISOString } from '@/lib/date';
+import { hasGoogleClientIds, useGoogleCalendarSync } from '@/lib/googleCalendar';
 import { api } from '@/lib/network';
 import { syncTaskReminders } from '@/lib/taskReminders';
 
@@ -127,9 +128,24 @@ export default function Calendar({ onEdit, onCreateAt }: CalendarProps) {
     }
   }, [visibleDate]);
 
+  const {
+    isConnected,
+    pending: syncPending,
+    syncNow,
+  } = useGoogleCalendarSync({
+    onSynced: () => fetchTasks(),
+    onError: () => Alert.alert('Erro na sincronização', 'Não foi possível importar os eventos do Google Calendar. Tente novamente.'),
+  });
+
+  const googleSyncEnabled = hasGoogleClientIds() && isConnected;
+
   useEffect(() => {
     fetchTasks();
   }, [fetchTasks]);
+
+  const handleGoogleSync = useCallback(() => {
+    syncNow().catch(() => undefined);
+  }, [syncNow]);
 
   const clearSinglePressTimer = useCallback(() => {
     if (singlePressTimer.current) {
@@ -405,7 +421,16 @@ export default function Calendar({ onEdit, onCreateAt }: CalendarProps) {
 
   return (
     <View ref={screenRootRef} className="flex-1" onLayout={syncCalendarBounds}>
-      <CalendarHeaderBar dateLabel={dateLabel} isDark={isDark} onPrev={() => calendarRef.current?.goToPrevPage()} onNext={() => calendarRef.current?.goToNextPage()} onToday={goToday} />
+      <CalendarHeaderBar
+        dateLabel={dateLabel}
+        isDark={isDark}
+        onPrev={() => calendarRef.current?.goToPrevPage()}
+        onNext={() => calendarRef.current?.goToNextPage()}
+        onToday={goToday}
+        showSyncButton={googleSyncEnabled}
+        syncPending={syncPending}
+        onSync={handleGoogleSync}
+      />
 
       <UnscheduledTray tasks={unscheduled} isDark={isDark} scrollEnabled={!drag} onDragStart={handleDragStart} onDragMove={handleDragMove} onDragEnd={handleDragEnd} />
 
