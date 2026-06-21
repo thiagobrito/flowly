@@ -19,7 +19,7 @@
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       },
-      "buildNumber": "1",
+      "buildNumber": "2",
       "appleTeamId": "WCZL6FK4U7"
     },
     "android": {
@@ -34,9 +34,10 @@
         "android.permission.health.READ_HEART_RATE_VARIABILITY",
         "android.permission.health.READ_RESTING_HEART_RATE",
         "android.permission.health.READ_EXERCISE",
-        "android.permission.health.READ_ACTIVE_CALORIES_BURNED"
+        "android.permission.health.READ_ACTIVE_CALORIES_BURNED",
+        "android.permission.POST_NOTIFICATIONS"
       ],
-      "versionCode": 2026061801
+      "versionCode": 2026061802
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -44,6 +45,14 @@
     },
     "plugins": [
       "expo-router",
+      "./plugins/withXcodeDefaultToolchain.js",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#ffffff"
+        }
+      ],
       [
         "react-native-health",
         {
@@ -59,6 +68,9 @@
             "compileSdkVersion": 35,
             "targetSdkVersion": 35,
             "minSdkVersion": 26
+          },
+          "ios": {
+            "buildReactNativeFromSource": true
           }
         }
       ],
