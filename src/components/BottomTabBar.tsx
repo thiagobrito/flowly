@@ -1,14 +1,14 @@
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import type { LucideIcon } from 'lucide-react-native';
-import { BarChart3, CalendarDays, Home, Plus } from 'lucide-react-native';
+import { BarChart3, CalendarDays, Flag, Home, Plus } from 'lucide-react-native';
 import { useEffect } from 'react';
 import { Pressable, useColorScheme, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 
 const AnimatedLinearGradient = Animated.createAnimatedComponent(LinearGradient);
 
-export type TabKey = 'new' | 'home' | 'calendar' | 'progress';
+export type TabKey = 'new' | 'home' | 'goals' | 'calendar' | 'progress';
 
 type BottomTabBarProps = {
   active: TabKey;
@@ -24,6 +24,7 @@ type SideTab = {
 const NEW_TAB: SideTab = { key: 'new', label: 'Nova atividade', Icon: Plus };
 const CALENDAR_TAB: SideTab = { key: 'calendar', label: 'Calendário', Icon: CalendarDays };
 const HOME_TAB: SideTab = { key: 'home', label: 'Home', Icon: Home };
+const GOALS_TAB: SideTab = { key: 'goals', label: 'Metas', Icon: Flag };
 
 const PROGRESS_TAB: SideTab = {
   key: 'progress',
@@ -89,7 +90,7 @@ export default function BottomTabBar({ active, onChange }: BottomTabBarProps) {
   return (
     <BlurView pointerEvents="box-none" intensity={10} tint={isDark ? 'dark' : 'light'} className="absolute inset-x-0 -bottom-5 px-6">
       <View
-        className="flex-row items-center justify-between rounded-3xl bg-white px-6 dark:bg-zinc-900"
+        className="flex-row items-center justify-between rounded-3xl bg-white px-4 dark:bg-zinc-900"
         style={{
           height: 68,
           shadowColor: '#1e3a8a',
@@ -103,6 +104,7 @@ export default function BottomTabBar({ active, onChange }: BottomTabBarProps) {
         <SideTabButton tab={HOME_TAB} active={active === 'home'} isDark={isDark} onPress={() => onChange('home')} />
 
         <SideTabButton tab={CALENDAR_TAB} active={active === CALENDAR_TAB.key} isDark={isDark} onPress={() => onChange('calendar')} />
+        <SideTabButton tab={GOALS_TAB} active={active === GOALS_TAB.key} isDark={isDark} onPress={() => onChange('goals')} />
         <SideTabButton tab={PROGRESS_TAB} active={active === PROGRESS_TAB.key} isDark={isDark} onPress={() => onChange('progress')} />
       </View>
     </BlurView>

@@ -10,6 +10,7 @@ import { useSession } from '@/lib/auth';
 import Calendar from '@/screens/Calendar';
 import { onceFrequencyFromISO } from '@/screens/Calendar/scheduleSync';
 import Config from '@/screens/Config';
+import Goals from '@/screens/Goals';
 import NewTask from '@/screens/NewTask';
 import type { FrequencyConfig, Task } from '@/screens/NewTask/data';
 import Statistics from '@/screens/Statistics';
@@ -35,6 +36,7 @@ function ActiveScreen({ tab, onLogout, onOpenConfig, editingTask, newTaskDraft, 
   if (tab === 'new') {
     return <NewTask task={editingTask} initialFrequency={newTaskDraft?.initialFrequency} onSuccess={onNewTaskSuccess} />;
   }
+  if (tab === 'goals') return <Goals />;
   if (tab === 'calendar') return <Calendar onEdit={onEdit} onCreateAt={onCreateAt} />;
   if (tab === 'progress') return <Statistics />;
   return <Tasks onLogout={onLogout} onEdit={onEdit} onOpenConfig={onOpenConfig} />;
