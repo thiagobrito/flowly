@@ -1,7 +1,7 @@
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import type { LucideIcon } from 'lucide-react-native';
-import { BarChart3, CalendarDays, Flag, Home, Plus } from 'lucide-react-native';
+import { BarChart3, CalendarDays, Flag, Plus, ScrollText } from 'lucide-react-native';
 import { useEffect } from 'react';
 import { Pressable, useColorScheme, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
@@ -23,7 +23,7 @@ type SideTab = {
 
 const NEW_TAB: SideTab = { key: 'new', label: 'Nova atividade', Icon: Plus };
 const CALENDAR_TAB: SideTab = { key: 'calendar', label: 'Calendário', Icon: CalendarDays };
-const HOME_TAB: SideTab = { key: 'home', label: 'Home', Icon: Home };
+const HOME_TAB: SideTab = { key: 'home', label: 'Home', Icon: ScrollText };
 const GOALS_TAB: SideTab = { key: 'goals', label: 'Metas', Icon: Flag };
 
 const PROGRESS_TAB: SideTab = {
@@ -48,38 +48,36 @@ function SideTabButton({ tab, active, isDark, onPress }: { tab: SideTab; active:
     opacity: progress.value,
   }));
 
-  if (active) {
-    return (
-      <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={tab.label} accessibilityState={{ selected: active }} className="size-16 items-center justify-center">
-        <AnimatedLinearGradient
-          colors={['#3b82f6', '#6366f1']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={[
-            {
-              height: 64,
-              width: 64,
-              borderRadius: 32,
-              alignItems: 'center',
-              justifyContent: 'center',
-              shadowColor: '#3b82f6',
-              shadowOffset: { width: 0, height: 6 },
-              shadowOpacity: 0.5,
-              shadowRadius: 14,
-              elevation: 10,
-            },
-            gradientStyle,
-          ]}
-        >
-          <tab.Icon size={30} color="#ffffff" strokeWidth={2.6} />
-        </AnimatedLinearGradient>
-      </Pressable>
-    );
-  }
-
   return (
-    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={tab.label} accessibilityState={{ selected: active }} className="h-12 w-16 items-center justify-center active:opacity-70">
-      <tab.Icon size={24} color={color} />
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={tab.label}
+      accessibilityState={{ selected: active }}
+      className="size-16 items-center justify-center"
+      style={({ pressed }) => (pressed && !active ? { opacity: 0.7 } : undefined)}
+    >
+      <AnimatedLinearGradient
+        colors={['#3b82f6', '#6366f1']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        pointerEvents="none"
+        style={[
+          {
+            position: 'absolute',
+            height: 64,
+            width: 64,
+            borderRadius: 32,
+            shadowColor: '#3b82f6',
+            shadowOffset: { width: 0, height: 6 },
+            shadowOpacity: 0.5,
+            shadowRadius: 14,
+            elevation: 10,
+          },
+          gradientStyle,
+        ]}
+      />
+      <tab.Icon size={active ? 30 : 24} color={active ? '#ffffff' : color} strokeWidth={active ? 2.6 : 2} />
     </Pressable>
   );
 }
@@ -104,8 +102,8 @@ export default function BottomTabBar({ active, onChange }: BottomTabBarProps) {
         <SideTabButton tab={HOME_TAB} active={active === 'home'} isDark={isDark} onPress={() => onChange('home')} />
 
         <SideTabButton tab={CALENDAR_TAB} active={active === CALENDAR_TAB.key} isDark={isDark} onPress={() => onChange('calendar')} />
-        <SideTabButton tab={GOALS_TAB} active={active === GOALS_TAB.key} isDark={isDark} onPress={() => onChange('goals')} />
         <SideTabButton tab={PROGRESS_TAB} active={active === PROGRESS_TAB.key} isDark={isDark} onPress={() => onChange('progress')} />
+        <SideTabButton tab={GOALS_TAB} active={active === GOALS_TAB.key} isDark={isDark} onPress={() => onChange('goals')} />
       </View>
     </BlurView>
   );
