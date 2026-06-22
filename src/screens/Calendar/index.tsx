@@ -1,4 +1,4 @@
-import type { CalendarKitHandle, DateOrDateTime, OnEventResponse, PackedEvent } from '@howljs/calendar-kit';
+import type { CalendarKitHandle, DateOrDateTime, OnEventResponse, PackedEvent, RenderHourProps } from '@howljs/calendar-kit';
 import { CalendarBody, CalendarContainer } from '@howljs/calendar-kit';
 import { CircleCheckIcon, TrendingUp, Zap } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -14,10 +14,12 @@ import type { ScheduledSlot, Task } from '../NewTask/data';
 import { formatDuration, getLifeArea } from '../NewTask/data';
 import LevelDots from '../Tasks/components/LevelDots';
 import CalendarHeaderBar from './components/CalendarHeaderBar';
+import CalendarHourLabel from './components/CalendarHourLabel';
 import TaskDetailModal from './components/TaskDetailModal';
 import UnscheduledTray from './components/UnscheduledTray';
 import type { CalendarTaskEvent } from './eventMapping';
 import { buildCalendarEvents, getTaskDurationMin } from './eventMapping';
+import { useDayEnergyLevels } from './hooks/useDayEnergyLevels';
 import { getTaskSlot, hasScheduleChanged, syncTaskScheduleToServer, syncTaskUnscheduleToServer } from './scheduleSync';
 import { buildCalendarTheme } from './theme';
 
@@ -29,7 +31,7 @@ type CalendarProps = {
 const DOUBLE_PRESS_MS = 300;
 const DRAG_STEP_MIN = 15;
 /** Largura da coluna de horários (default `HOUR_WIDTH` do calendar-kit). */
-const HOUR_WIDTH = 60;
+const HOUR_WIDTH = 80;
 /** Altura da barra de dias do calendar-kit (default 60) + borda inferior (1px). */
 const DAY_BAR_HEIGHT = 61;
 /** Espaço entre a barra de dias e a primeira linha de hora (`spaceFromTop` do calendar-kit). */
@@ -163,6 +165,9 @@ export default function Calendar({ onEdit, onCreateAt }: CalendarProps) {
 
   const { events, unscheduled } = useMemo(() => buildCalendarEvents(tasks, visibleDateKeys), [tasks, visibleDateKeys]);
   const theme = useMemo(() => buildCalendarTheme(isDark), [isDark]);
+  const { getLevel, hasData } = useDayEnergyLevels(visibleDate);
+
+  const renderHour = useCallback(({ hourStr, minutes, style }: RenderHourProps) => <CalendarHourLabel hourStr={hourStr} style={style} level={hasData ? getLevel(minutes) : undefined} isDark={isDark} />, [getLevel, hasData, isDark]);
 
   const renderCalendarEvent = useCallback(
     (event: PackedEvent) => {
@@ -441,6 +446,7 @@ export default function Calendar({ onEdit, onCreateAt }: CalendarProps) {
           firstDay={7}
           initialDate={toLocalISOString()}
           timeZone={APP_TIME_ZONE}
+          hourWidth={HOUR_WIDTH}
           theme={theme}
           locale="pt"
           initialLocales={{ pt: PT_LOCALE }}
@@ -456,7 +462,7 @@ export default function Calendar({ onEdit, onCreateAt }: CalendarProps) {
           onLongPressBackground={handleLongPressBackground}
           onDateChanged={setVisibleDate}
         >
-          <CalendarBody showNowIndicator renderEvent={renderCalendarEvent} />
+          <CalendarBody showNowIndicator renderEvent={renderCalendarEvent} renderHour={renderHour} />
         </CalendarContainer>
       </View>
 

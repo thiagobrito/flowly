@@ -163,6 +163,7 @@
  * - Tipos: `HealthMetrics`, `EnergyScore`, `SubScore`, `EnergyBand`, etc.
  */
 
+export { anchorInputToDay } from './anchorInputToDay';
 export { AppleHealthProvider, emptyMetrics, getHealthProvider, HealthConnectProvider, type HealthDataProvider, lastDaysRange, type ProviderPlatform } from './collectors';
 export { defaultConfig, type EnergyConfig, type MetricConfig, type NormalizationRanges, WEIGHT_TIERS } from './config';
 export {
