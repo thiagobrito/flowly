@@ -16,11 +16,11 @@ import type { NotificationContent, NotificationTrigger } from './types';
 function toContentInput(content: NotificationContent) {
   return {
     title: content.title,
-    body: content.body,
-    subtitle: content.subtitle,
     data: content.data ?? {},
-    sound: content.sound,
-    badge: content.badge,
+    ...(content.body !== undefined ? { body: content.body } : {}),
+    ...(content.subtitle !== undefined ? { subtitle: content.subtitle } : {}),
+    ...(content.sound !== undefined ? { sound: content.sound } : {}),
+    ...(content.badge !== undefined ? { badge: content.badge } : {}),
   };
 }
 
@@ -60,6 +60,7 @@ export function scheduleNotification(content: NotificationContent, trigger: Noti
 
 /** Atalho: agenda uma notificação única para uma data/hora absoluta. */
 export function scheduleAt(content: NotificationContent, date: Date | number): Promise<string> {
+  console.log('scheduleNotification', content, date);
   return scheduleNotification(content, { type: 'date', date });
 }
 

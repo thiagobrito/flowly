@@ -6,6 +6,8 @@ import { toLocalISOString } from '@/lib/date';
 import { computeEnergyAtMoment, flowlyInputFromMetrics, getHealthProvider } from '@/lib/energy';
 import { api } from '@/lib/network';
 
+import { useNotificationTest } from '../Config/hooks/useNotificationTest';
+import NotificationTestModal from '../Config/NotificationTestModal';
 import type { ScheduledSlot, Task } from '../NewTask/data';
 import { getLifeArea } from '../NewTask/data';
 import type { FilterArea } from './components/FilterDrawer';
@@ -103,8 +105,11 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
   const [visibleTasks, setVisibleTasks] = useState<Task[]>([]);
 
   const [filterOpen, setFilterOpen] = useState(false);
+  const [testModalVisible, setTestModalVisible] = useState(false);
   const [selectedAreas, setSelectedAreas] = useState<string[]>([]);
   const [selectedDateFilter, setSelectedDateFilter] = useState<DateFilterId | null>(null);
+
+  const { showNow, showIn30Seconds } = useNotificationTest();
 
   const allTasks = useMemo(() => [...visibleTasks, ...concludedTasks], [visibleTasks, concludedTasks]);
 
@@ -250,7 +255,7 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
 
   return (
     <View className="flex-1">
-      <Header isDark={isDark} energyScore={energyScore} onLogout={onLogout} onOpenConfig={onOpenConfig} onOpenFilter={() => setFilterOpen(true)} />
+      <Header isDark={isDark} energyScore={energyScore} onLogout={onLogout} onOpenConfig={onOpenConfig} onOpenFilter={() => setFilterOpen(true)} onOpenNotificationTest={/* () => setTestModalVisible(true) */ undefined} />
 
       <ScrollView
         className="mt-2 flex-1"
@@ -283,6 +288,8 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
         onClear={clearFilters}
         onClose={() => setFilterOpen(false)}
       />
+
+      <NotificationTestModal visible={testModalVisible} isDark={isDark} onClose={() => setTestModalVisible(false)} onShowNow={showNow} onShowIn30Seconds={showIn30Seconds} />
     </View>
   );
 }

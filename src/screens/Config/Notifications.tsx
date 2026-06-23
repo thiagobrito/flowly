@@ -17,7 +17,7 @@ export default function NotificationsSection({ isDark }: { isDark: boolean }) {
       <Card isDark={isDark}>
         <SettingsRow
           label="Lembretes de tarefas"
-          description={enabled ? 'Ativados: avisos 5 min antes e no horário' : 'Desativados'}
+          description={enabled ? 'Ativados: avisos 10 min antes e no horário' : 'Desativados'}
           isDark={isDark}
           showDivider={false}
           onPress={() => setModalVisible(true)}

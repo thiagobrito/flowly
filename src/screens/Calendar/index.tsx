@@ -20,7 +20,7 @@ import UnscheduledTray from './components/UnscheduledTray';
 import type { CalendarTaskEvent } from './eventMapping';
 import { buildCalendarEvents, getTaskDurationMin } from './eventMapping';
 import { useDayEnergyLevels } from './hooks/useDayEnergyLevels';
-import { getTaskSlot, hasScheduleChanged, syncTaskScheduleToServer, syncTaskUnscheduleToServer } from './scheduleSync';
+import { getTaskSlot, hasScheduleChanged, onceFrequencyFromISO, syncTaskScheduleToServer, syncTaskUnscheduleToServer } from './scheduleSync';
 import { buildCalendarTheme } from './theme';
 
 type CalendarProps = {
@@ -288,10 +288,12 @@ export default function Calendar({ onEdit, onCreateAt }: CalendarProps) {
       const snapshot = task;
       applyScheduleLocally(task.id, { dateTime: startISO, duration: durationMin });
 
+      const taskHint: Task = task.frequency.kind === 'once' ? { ...task, frequency: onceFrequencyFromISO(startISO) } : { ...task, schedule: [{ dateTime: startISO, duration: durationMin }] };
+
       try {
         await syncTaskScheduleToServer(task, startISO, durationMin);
         fetchTasks();
-        syncTaskReminders({ enabled: remindersEnabledRef.current });
+        await syncTaskReminders({ enabled: remindersEnabledRef.current, tasksHint: [taskHint] });
       } catch {
         restoreTask(snapshot);
       }
@@ -307,7 +309,7 @@ export default function Calendar({ onEdit, onCreateAt }: CalendarProps) {
       try {
         await syncTaskUnscheduleToServer(task, dateKey);
         fetchTasks();
-        syncTaskReminders({ enabled: remindersEnabledRef.current });
+        await syncTaskReminders({ enabled: remindersEnabledRef.current });
       } catch {
         restoreTask(snapshot);
       }

@@ -3,8 +3,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, useColorScheme, View } from 'react-native';
 
 import { api } from '@/lib/network';
+import { syncTaskReminders } from '@/lib/taskReminders';
 
 import { LIFE_AREAS } from '../common';
+import { useConfigPreferences } from '../Config/hooks/useConfigPreferences';
 import { EstimatedTimePicker, LevelScale, OptionChip, SectionHeader, SubtaskEditor } from './components';
 import type { FrequencyConfig, NewTaskPayload, Subtask, Task } from './data';
 import { isFrequencyConfigValid } from './data';
@@ -20,6 +22,7 @@ type NewTaskProps = {
 export default function NewTask({ task, initialFrequency, onCreate, onSuccess }: NewTaskProps) {
   const isDark = useColorScheme() === 'dark';
   const isEditing = !!task;
+  const { preferences } = useConfigPreferences();
 
   const [name, setName] = useState(task?.name ?? '');
   const [energy, setEnergy] = useState(task?.energy ?? 3);
@@ -62,6 +65,7 @@ export default function NewTask({ task, initialFrequency, onCreate, onSuccess }:
     await api.put(`/tasks`, payload);
 
     onCreate?.(payload);
+    await syncTaskReminders({ enabled: preferences.taskRemindersEnabled ?? true, tasksHint: [payload] });
     onSuccess?.();
   };
 
