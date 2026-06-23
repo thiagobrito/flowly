@@ -21,8 +21,27 @@ export const LIFE_AREAS: LifeArea[] = [
   { id: 'goal', label: 'Metas', Icon: GoalIcon, accent: '#22c55e' },
 ];
 
-export function GetLifeArea(id: string): LifeArea | undefined {
-  const result = LIFE_AREAS.find((area) => area.id === id);
-  if (!result) return { id, label: id, Icon: GoalIcon, accent: '#22c55e' };
-  return result;
+export function resolveLifeAreaId(value?: string | null): string {
+  const trimmed = value?.trim() ?? '';
+  if (!trimmed) return 'goal';
+
+  const exact = LIFE_AREAS.find((area) => area.id === trimmed);
+  if (exact) return exact.id;
+
+  const lower = trimmed.toLowerCase();
+  const byId = LIFE_AREAS.find((area) => area.id === lower);
+  if (byId) return byId.id;
+
+  const byLabel = LIFE_AREAS.find((area) => area.label.toLowerCase() === lower);
+  if (byLabel) return byLabel.id;
+
+  return trimmed;
+}
+
+export function GetLifeArea(id: string): LifeArea {
+  const resolvedId = resolveLifeAreaId(id);
+  const result = LIFE_AREAS.find((area) => area.id === resolvedId);
+  if (result) return result;
+
+  return { id: resolvedId, label: id, Icon: GoalIcon, accent: '#22c55e' };
 }

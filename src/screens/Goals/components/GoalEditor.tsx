@@ -6,7 +6,7 @@ import { api } from '@/lib/network';
 import { LIFE_AREAS } from '@/screens/common';
 
 import type { Goal, GoalHealth, GoalMetric } from '../data';
-import { createEmptyHealth, createEmptyMetric, HEALTH_DOT_COLOR, HEALTH_LEVEL_CYCLE } from '../data';
+import { createEmptyHealth, createEmptyMetric, HEALTH_DOT_COLOR, HEALTH_LEVEL_CYCLE, nextMetricDirection } from '../data';
 
 type GoalEditorProps = {
   goal: Goal;
@@ -76,7 +76,15 @@ export default function GoalEditor({ goal, isNew, isDark, onCancel, onSave, onDe
   const update = <K extends keyof Goal>(key: K, value: Goal[K]) => setDraft((prev) => ({ ...prev, [key]: value }));
   const updateRpm = (key: keyof Goal['rpm'], value: string) => setDraft((prev) => ({ ...prev, rpm: { ...prev.rpm, [key]: value } }));
 
-  const updateMetric = (id: string, patch: Partial<GoalMetric>) => setDraft((prev) => ({ ...prev, metrics: prev.metrics.map((metric) => (metric.id === id ? { ...metric, ...patch } : metric)) }));
+  const updateMetric = (id: string, patch: Partial<GoalMetric>) =>
+    setDraft((prev) => ({
+      ...prev,
+      metrics: prev.metrics.map((metric) => {
+        if (metric.id !== id) return metric;
+        const next = { ...metric, ...patch };
+        return { ...next, direction: nextMetricDirection(metric, patch) };
+      }),
+    }));
   const addMetric = () => setDraft((prev) => ({ ...prev, metrics: [...prev.metrics, createEmptyMetric()] }));
   const removeMetric = (id: string) => setDraft((prev) => ({ ...prev, metrics: prev.metrics.filter((metric) => metric.id !== id) }));
 

@@ -1,7 +1,10 @@
+import { resolveLifeAreaId } from '@/screens/common';
+
 export type GoalStatus = 'active' | 'completed' | 'paused' | 'archived';
 export type GoalTypeKind = 'primary' | 'secondary';
 export type ExecutionTrend = 'improving' | 'stable' | 'declining';
 export type HealthLevel = 'green' | 'yellow' | 'red';
+export type MetricDirection = 'increase' | 'decrease';
 
 export type GoalMetric = {
   id: string;
@@ -9,7 +12,46 @@ export type GoalMetric = {
   current: number;
   target: number;
   unit: string;
+  direction?: MetricDirection;
 };
+
+export function inferMetricDirection(current: number, target: number): MetricDirection {
+  return target < current ? 'decrease' : 'increase';
+}
+
+export function nextMetricDirection(prev: Pick<GoalMetric, 'current' | 'target' | 'direction'>, patch: Partial<Pick<GoalMetric, 'current' | 'target'>>): MetricDirection {
+  const current = patch.current ?? prev.current;
+  const target = patch.target ?? prev.target;
+  if ('target' in patch || !prev.direction) {
+    return inferMetricDirection(current, target);
+  }
+  return prev.direction;
+}
+
+export function resolveMetricDirection(metric: Pick<GoalMetric, 'current' | 'target' | 'direction'>): MetricDirection {
+  if (metric.direction === 'increase' || metric.direction === 'decrease') return metric.direction;
+  return inferMetricDirection(metric.current, metric.target);
+}
+
+export function formatMetricValue(value: number, unit: string) {
+  if (!unit) return `${value}`;
+  if (unit === 'R$') return `${unit} ${value.toLocaleString('pt-BR')}`;
+  if (unit === '%') return `${value}%`;
+  return `${value} ${unit}`;
+}
+
+function normalizeMetric(raw: Partial<GoalMetric> & Pick<GoalMetric, 'id' | 'label' | 'current' | 'target'>): GoalMetric {
+  const current = raw.current ?? 0;
+  const target = raw.target ?? 0;
+  return {
+    id: raw.id,
+    label: raw.label,
+    current,
+    target,
+    unit: raw.unit ?? '',
+    direction: raw.direction ?? inferMetricDirection(current, target),
+  };
+}
 
 export type GoalHealth = {
   id: string;
@@ -113,23 +155,24 @@ export function createEmptyGoal(): Goal {
 }
 
 /** Preenche campos calculados ausentes quando a API devolve só o payload da anamnese. */
-export function normalizeGoal(raw: Partial<Goal>): Goal {
+export function normalizeGoal(raw: Partial<Goal> & { area?: string; label?: string }): Goal {
   const defaults = createEmptyGoal();
   const trend = raw.trend && raw.trend in TREND_LABELS ? raw.trend : defaults.trend;
   const status = raw.status && raw.status in STATUS_LABELS ? raw.status : defaults.status;
   const type = raw.type && raw.type in TYPE_LABELS ? raw.type : defaults.type;
+  const areaId = resolveLifeAreaId(raw.areaId ?? raw.area ?? raw.label);
 
   return {
     ...defaults,
     ...raw,
     id: raw.id ?? defaults.id,
     name: raw.name ?? defaults.name,
-    areaId: raw.areaId ?? defaults.areaId,
+    areaId,
     type,
     status,
     trend,
     rpm: { ...defaults.rpm, ...raw.rpm },
-    metrics: Array.isArray(raw.metrics) ? raw.metrics : defaults.metrics,
+    metrics: Array.isArray(raw.metrics) ? raw.metrics.map((metric) => normalizeMetric(metric)) : defaults.metrics,
     health: Array.isArray(raw.health) ? raw.health : defaults.health,
     progress: raw.progress ?? defaults.progress,
     daysRemaining: raw.daysRemaining ?? defaults.daysRemaining,
@@ -142,7 +185,7 @@ export function normalizeGoal(raw: Partial<Goal>): Goal {
 }
 
 export function createEmptyMetric(): GoalMetric {
-  return { id: createGoalId(), label: '', current: 0, target: 0, unit: '' };
+  return { id: createGoalId(), label: '', current: 0, target: 0, unit: '', direction: 'increase' };
 }
 
 export function createEmptyHealth(): GoalHealth {
@@ -159,6 +202,7 @@ export type GoalSetupMetric = {
   label: string;
   current: number;
   target: number;
+  direction?: MetricDirection;
 };
 
 export type SecondaryGoalSetup = {
@@ -237,9 +281,9 @@ export const MOCK_GOALS: Goal[] = [
     weeksCompleted: 7,
     totalWeeks: 12,
     metrics: [
-      { id: 'bodyfat', label: 'Gordura corporal', current: 17, target: 15, unit: '%' },
-      { id: 'weight', label: 'Peso', current: 82, target: 78, unit: 'kg' },
-      { id: 'training', label: 'Volume de treino', current: 4, target: 5, unit: 'x/sem' },
+      { id: 'bodyfat', label: 'Gordura corporal', current: 17, target: 15, unit: '%', direction: 'decrease' },
+      { id: 'weight', label: 'Peso', current: 82, target: 78, unit: 'kg', direction: 'decrease' },
+      { id: 'training', label: 'Volume de treino', current: 4, target: 5, unit: 'x/sem', direction: 'increase' },
     ],
     consistencyScore: 87,
     weeklyStreak: 5,
@@ -320,7 +364,7 @@ export function goalSetupToGoals(setup: GoalSetup): Goal[] {
     ...createEmptyGoal(),
     id: createGoalId(),
     name: setup.mainGoal.name,
-    areaId: setup.mainGoal.label,
+    areaId: resolveLifeAreaId(setup.mainGoal.label),
     type: 'primary',
     status: 'active',
     rpm: { ...setup.mainGoal.rpm },
@@ -332,6 +376,7 @@ export function goalSetupToGoals(setup: GoalSetup): Goal[] {
       current: metric.current,
       target: metric.target,
       unit: '',
+      direction: metric.direction ?? inferMetricDirection(metric.current, metric.target),
     })),
   };
 
@@ -339,7 +384,7 @@ export function goalSetupToGoals(setup: GoalSetup): Goal[] {
     ...createEmptyGoal(),
     id: createGoalId(),
     name: goal.name,
-    areaId: goal.label,
+    areaId: resolveLifeAreaId(goal.label),
     type: 'secondary',
     status: 'active',
     rpm: { ...goal.rpm },
@@ -351,8 +396,32 @@ export function goalSetupToGoals(setup: GoalSetup): Goal[] {
       current: metric.current,
       target: metric.target,
       unit: '',
+      direction: metric.direction ?? inferMetricDirection(metric.current, metric.target),
     })),
   }));
 
   return [main, ...secondaries];
+}
+
+/** Converte uma meta secundária da anamnese em `Goal`, herdando ciclo da meta principal. */
+export function secondarySetupToGoal(secondary: SecondaryGoalSetup, context: Pick<Goal, 'totalWeeks' | 'daysRemaining'>): Goal {
+  return {
+    ...createEmptyGoal(),
+    id: createGoalId(),
+    name: secondary.name,
+    areaId: resolveLifeAreaId(secondary.label),
+    type: 'secondary',
+    status: 'active',
+    rpm: { ...secondary.rpm },
+    totalWeeks: context.totalWeeks,
+    daysRemaining: context.daysRemaining,
+    metrics: secondary.metrics.map((metric) => ({
+      id: metric.id,
+      label: metric.label,
+      current: metric.current,
+      target: metric.target,
+      unit: '',
+      direction: metric.direction ?? inferMetricDirection(metric.current, metric.target),
+    })),
+  };
 }

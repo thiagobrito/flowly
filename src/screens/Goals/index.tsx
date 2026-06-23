@@ -9,7 +9,7 @@ import EmptyState from './components/EmptyState';
 import GoalCard from './components/GoalCard';
 import GoalEditor from './components/GoalEditor';
 import type { Goal, GoalSetup } from './data';
-import { createEmptyGoal, goalSetupToGoals, normalizeGoal } from './data';
+import { goalSetupToGoals, normalizeGoal, secondarySetupToGoal } from './data';
 
 type EditorState = { goal: Goal; isNew: boolean } | null;
 
@@ -18,9 +18,10 @@ export default function Goals() {
   const [goals, setGoals] = useState<Goal[]>([]);
   const [editor, setEditor] = useState<EditorState>(null);
   const [setupMode, setSetupMode] = useState(false);
+  const [addSecondaryMode, setAddSecondaryMode] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const handleCreate = useCallback(() => setEditor({ goal: createEmptyGoal(), isNew: true }), []);
+  const handleAddSecondary = useCallback(() => setAddSecondaryMode(true), []);
   const handleEdit = useCallback((goal: Goal) => setEditor({ goal, isNew: false }), []);
   const handleCancel = useCallback(() => setEditor(null), []);
 
@@ -30,6 +31,21 @@ export default function Goals() {
     setSetupMode(false);
     setLoading(false);
   }, []);
+
+  const handleAddSecondaryComplete = useCallback(
+    (setup: GoalSetup) => {
+      const primary = goals.find((goal) => goal.type === 'primary');
+      const secondary = setup.secondaryGoals[0];
+      if (!primary || !secondary) {
+        setAddSecondaryMode(false);
+        return;
+      }
+
+      setGoals((prev) => [...prev, secondarySetupToGoal(secondary, primary)]);
+      setAddSecondaryMode(false);
+    },
+    [goals],
+  );
 
   useEffect(() => {
     async function fetchGoals() {
@@ -64,6 +80,10 @@ export default function Goals() {
     return <NewGoals isDark={isDark} onComplete={handleSetupComplete} onClose={() => setSetupMode(false)} />;
   }
 
+  if (addSecondaryMode) {
+    return <NewGoals mode="addSecondary" existingGoals={goals} isDark={isDark} onComplete={handleAddSecondaryComplete} onClose={() => setAddSecondaryMode(false)} />;
+  }
+
   if (editor) {
     return <GoalEditor goal={editor.goal} isNew={editor.isNew} isDark={isDark} onCancel={handleCancel} onSave={handleSave} onDelete={editor.isNew ? undefined : () => handleDelete(editor.goal.id)} />;
   }
@@ -84,9 +104,9 @@ export default function Goals() {
           <Text className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">Seu centro de comando: transforme visão em progresso visível.</Text>
         </View>
         <Pressable
-          onPress={handleCreate}
+          onPress={handleAddSecondary}
           accessibilityRole="button"
-          accessibilityLabel="Nova meta"
+          accessibilityLabel="Adicionar meta secundária"
           className="size-11 items-center justify-center rounded-full active:opacity-80"
           style={{ backgroundColor: isDark ? 'rgba(59,130,246,0.2)' : 'rgba(59,130,246,0.12)' }}
         >

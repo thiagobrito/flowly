@@ -11,12 +11,15 @@ type LifeAreaStepProps = {
   value: string;
   isDark: boolean;
   onChange: (areaId: string) => void;
+  excludeAreaIds?: string[];
 };
 
-export default function LifeAreaStep({ value, isDark, onChange }: LifeAreaStepProps) {
+export default function LifeAreaStep({ value, isDark, onChange, excludeAreaIds = [] }: LifeAreaStepProps) {
+  const areas = SELECTABLE_AREAS.filter((area) => !excludeAreaIds.includes(area.id));
+
   return (
     <View className="-mx-1 flex-row flex-wrap">
-      {SELECTABLE_AREAS.map((area) => {
+      {areas.map((area) => {
         const selected = area.id === value;
         const AreaIcon = area.Icon;
         const borderColor = areaBorderColor(selected, area.accent, isDark);

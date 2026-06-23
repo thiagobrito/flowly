@@ -13,7 +13,7 @@ import type { GoalSetup, SecondaryGoalSetup } from '@/screens/Goals/data';
  */
 
 /** Tipo de controle renderizado em cada passo. */
-export type AnamnesisStepKind = 'intro' | 'lifeArea' | 'text' | 'longtext' | 'metrics' | 'lifeAreaMulti' | 'dateRange' | 'review';
+export type AnamnesisStepKind = 'intro' | 'lifeArea' | 'secondaryArea' | 'text' | 'longtext' | 'metrics' | 'lifeAreaMulti' | 'dateRange' | 'review';
 
 /** Caminho do campo de texto editado por passos `text`/`longtext`. */
 export type AnamnesisTextField = 'mainGoal.name' | 'mainGoal.rpm.result' | 'mainGoal.rpm.purpose' | 'mainGoal.rpm.impact' | 'mainGoal.label';
@@ -210,8 +210,35 @@ export function setSecondaryTextValue(setup: GoalSetup, index: number, field: Se
   return { ...setup, secondaryGoals };
 }
 
+/** Roteiro enxuto para adicionar uma meta secundária a um ciclo existente. */
+export const ADD_SECONDARY_STEPS: AnamnesisStep[] = [
+  {
+    id: 'intro-secondary',
+    kind: 'intro',
+    title: 'Adicionar meta secundária',
+    subtitle: 'Algumas perguntas para equilibrar seu ciclo com uma nova área de foco.',
+    icon: 'Layers',
+  },
+  {
+    id: 'secondary-area',
+    kind: 'secondaryArea',
+    secondaryIndex: 0,
+    title: 'Qual área da vida você quer incluir?',
+    subtitle: 'Você pode escolher a mesma área de outra meta — o que importa é o foco específico desta submeta.',
+    icon: 'Target',
+    required: true,
+  },
+  {
+    id: 'review-secondary',
+    kind: 'review',
+    title: 'Tudo pronto para adicionar',
+    subtitle: 'Revise sua nova meta secundária antes de confirmar.',
+    icon: 'CircleCheck',
+  },
+];
+
 /** Cria as 5 telas de RPM completo de uma meta secundária. */
-function buildSecondaryGroup(goal: SecondaryGoalSetup, index: number): AnamnesisStep[] {
+export function buildSecondaryGroup(goal: SecondaryGoalSetup, index: number): AnamnesisStep[] {
   const areaName = GetLifeArea(goal.label)?.label ?? goal.name ?? goal.label;
   const prefix = `secondary-${index}`;
 
@@ -221,7 +248,7 @@ function buildSecondaryGroup(goal: SecondaryGoalSetup, index: number): Anamnesis
       kind: 'text',
       secondaryIndex: index,
       secondaryField: 'name',
-      title: `Dê um nome para sua meta de ${areaName}`,
+      title: `Dê um nome para sua meta de ${areaName.toLowerCase()}`,
       subtitle: 'Algo curto e inspirador que represente essa área.',
       placeholder: `Ex.: Evoluir em ${areaName}`,
       icon: 'Flag',
@@ -232,7 +259,7 @@ function buildSecondaryGroup(goal: SecondaryGoalSetup, index: number): Anamnesis
       kind: 'longtext',
       secondaryIndex: index,
       secondaryField: 'rpm.result',
-      title: `Qual resultado você quer em ${areaName}?`,
+      title: `Qual resultado você quer em ${goal.label.toLowerCase()}?`,
       subtitle: 'Resultado (R do RPM): o que estará concluído ao fim do ciclo.',
       placeholder: 'Ex.: Treinar 4x por semana',
       icon: 'Trophy',
@@ -243,7 +270,7 @@ function buildSecondaryGroup(goal: SecondaryGoalSetup, index: number): Anamnesis
       kind: 'longtext',
       secondaryIndex: index,
       secondaryField: 'rpm.purpose',
-      title: `Por que ${areaName} é importante para você?`,
+      title: `Por que "${goal.name.toLowerCase()}" é importante para você?`,
       subtitle: 'Propósito (P do RPM): a razão que vai te manter motivado.',
       placeholder: 'Ex.: Ter mais energia e disposição',
       icon: 'Heart',
@@ -254,7 +281,7 @@ function buildSecondaryGroup(goal: SecondaryGoalSetup, index: number): Anamnesis
       kind: 'longtext',
       secondaryIndex: index,
       secondaryField: 'rpm.impact',
-      title: `O que muda na sua vida com ${areaName}?`,
+      title: `O que muda na sua vida com "${goal.name.toLowerCase()}"?`,
       subtitle: 'Impacto (M de massive action): a transformação que isso gera.',
       placeholder: 'Ex.: Mais qualidade de vida no dia a dia',
       icon: 'Sparkles',
@@ -264,7 +291,7 @@ function buildSecondaryGroup(goal: SecondaryGoalSetup, index: number): Anamnesis
       id: `${prefix}-metrics`,
       kind: 'metrics',
       secondaryIndex: index,
-      title: `Como vai medir o progresso em ${areaName}?`,
+      title: `Como vai medir o progresso em "${goal.label.toLowerCase()}"?`,
       subtitle: 'Defina pelo menos uma métrica com valor atual e alvo.',
       icon: 'Gauge',
       required: true,
@@ -283,6 +310,19 @@ export function buildAnamnesisSteps(baseSteps: AnamnesisStep[], secondaryGoals: 
 
   const groups = secondaryGoals.flatMap((goal, index) => buildSecondaryGroup(goal, index));
   return [...baseSteps.slice(0, multiIndex + 1), ...groups, ...baseSteps.slice(multiIndex + 1)];
+}
+
+/**
+ * Expande o roteiro de adição de meta secundária inserindo o grupo de RPM completo
+ * após a escolha da área, quando `secondaryGoals[0]` já está definido.
+ */
+export function buildAddSecondarySteps(secondaryGoals: SecondaryGoalSetup[]): AnamnesisStep[] {
+  const areaIndex = ADD_SECONDARY_STEPS.findIndex((step) => step.kind === 'secondaryArea');
+  const goal = secondaryGoals[0];
+  if (areaIndex === -1 || !goal?.label.trim()) return ADD_SECONDARY_STEPS;
+
+  const group = buildSecondaryGroup(goal, 0);
+  return [...ADD_SECONDARY_STEPS.slice(0, areaIndex + 1), ...group, ...ADD_SECONDARY_STEPS.slice(areaIndex + 1)];
 }
 
 /** Indica se um passo já pode ser concluído (respeitando `required`). */
@@ -304,6 +344,8 @@ export function isStepComplete(step: AnamnesisStep, setup: GoalSetup): boolean {
     case 'review':
     case 'lifeAreaMulti':
       return true;
+    case 'secondaryArea':
+      return (setup.secondaryGoals[0]?.label ?? '').trim().length > 0;
     case 'dateRange':
       return Boolean(setup.cycle.startDate && setup.cycle.endDate && setup.cycle.endDate > setup.cycle.startDate);
     case 'lifeArea':

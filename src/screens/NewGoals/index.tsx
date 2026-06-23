@@ -2,8 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
 
 import { api } from '@/lib/network';
-import type { GoalSetup } from '@/screens/Goals/data';
-import { createEmptyGoalSetup } from '@/screens/Goals/data';
+import type { Goal, GoalSetup } from '@/screens/Goals/data';
+import { createEmptyGoalSetup, secondarySetupToGoal } from '@/screens/Goals/data';
 
 import DateRangeStep from './components/DateRangeStep';
 import IntroStep from './components/IntroStep';
@@ -16,26 +16,34 @@ import ReviewStep from './components/ReviewStep';
 import StepShell from './components/StepShell';
 import TextStep from './components/TextStep';
 import type { AnamnesisStep } from './data';
-import { ANAMNESIS_STEPS, buildAnamnesisSteps, createEmptyMetric, getSecondaryTextValue, getTextValue, isStepComplete, setSecondaryTextValue, setTextValue } from './data';
+import { ANAMNESIS_STEPS, buildAddSecondarySteps, buildAnamnesisSteps, createEmptyMetric, getSecondaryTextValue, getTextValue, isStepComplete, setSecondaryTextValue, setTextValue } from './data';
 
 type NewGoalsProps = {
   isDark: boolean;
+  mode?: 'full' | 'addSecondary';
+  existingGoals?: Goal[];
   onComplete?: (setup: GoalSetup) => void;
   onClose?: () => void;
 };
 
-function initialSetup(): GoalSetup {
+function initialSetup(mode: 'full' | 'addSecondary'): GoalSetup {
   const setup = createEmptyGoalSetup();
+  if (mode === 'addSecondary') {
+    return { ...setup, secondaryGoals: [] };
+  }
   return { ...setup, mainGoal: { ...setup.mainGoal, metrics: [createEmptyMetric()] } };
 }
 
-export default function NewGoals({ isDark, onComplete, onClose }: NewGoalsProps) {
+export default function NewGoals({ isDark, mode = 'full', existingGoals = [], onComplete, onClose }: NewGoalsProps) {
+  const isAddSecondary = mode === 'addSecondary';
   const [baseSteps, setBaseSteps] = useState<AnamnesisStep[]>(ANAMNESIS_STEPS);
   const [index, setIndex] = useState(0);
-  const [setup, setSetup] = useState<GoalSetup>(initialSetup);
+  const [setup, setSetup] = useState<GoalSetup>(() => initialSetup(mode));
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
+    if (isAddSecondary) return undefined;
+
     let active = true;
     async function fetchSteps() {
       try {
@@ -49,9 +57,12 @@ export default function NewGoals({ isDark, onComplete, onClose }: NewGoalsProps)
     return () => {
       active = false;
     };
-  }, []);
+  }, [isAddSecondary]);
 
-  const steps = useMemo(() => buildAnamnesisSteps(baseSteps, setup.secondaryGoals), [baseSteps, setup.secondaryGoals]);
+  const steps = useMemo(() => {
+    if (isAddSecondary) return buildAddSecondarySteps(setup.secondaryGoals);
+    return buildAnamnesisSteps(baseSteps, setup.secondaryGoals);
+  }, [isAddSecondary, baseSteps, setup.secondaryGoals]);
 
   const step = steps[Math.min(index, steps.length - 1)];
   const isLast = index >= steps.length - 1;
@@ -62,14 +73,23 @@ export default function NewGoals({ isDark, onComplete, onClose }: NewGoalsProps)
   const submit = useCallback(async () => {
     setSubmitting(true);
     try {
-      await api.post('/goals/anamnesis', setup);
+      if (isAddSecondary) {
+        const secondary = setup.secondaryGoals[0];
+        const primary = existingGoals.find((goal) => goal.type === 'primary');
+        if (secondary && primary) {
+          const payload = secondarySetupToGoal(secondary, primary);
+          await api.put('/goals', payload);
+        }
+      } else {
+        await api.post('/goals/anamnesis', setup);
+      }
     } catch {
       // segue o fluxo localmente mesmo sem backend disponível
     } finally {
       setSubmitting(false);
       onComplete?.(setup);
     }
-  }, [setup, onComplete]);
+  }, [isAddSecondary, setup, existingGoals, onComplete]);
 
   const goNext = useCallback(() => {
     if (isLast) {
@@ -79,12 +99,19 @@ export default function NewGoals({ isDark, onComplete, onClose }: NewGoalsProps)
     setIndex((prev) => Math.min(steps.length - 1, prev + 1));
   }, [isLast, steps.length, submit]);
 
+  const handleSecondaryAreaChange = useCallback((areaId: string) => {
+    setSetup((prev) => ({
+      ...prev,
+      secondaryGoals: [{ label: areaId, name: '', rpm: { result: '', purpose: '', impact: '' }, metrics: [createEmptyMetric()] }],
+    }));
+  }, []);
+
   if (!step) return null;
 
   let footerLabel = 'Continuar';
-  if (isLast) footerLabel = 'Criar meu ciclo';
+  if (isLast) footerLabel = isAddSecondary ? 'Adicionar meta' : 'Criar meu ciclo';
   else if (step.kind === 'intro') footerLabel = 'Começar';
-  const showSkip = step.kind === 'lifeAreaMulti';
+  const showSkip = !isAddSecondary && step.kind === 'lifeAreaMulti';
 
   const renderStep = () => {
     const { secondaryIndex } = step;
@@ -96,6 +123,8 @@ export default function NewGoals({ isDark, onComplete, onClose }: NewGoalsProps)
         return <DateRangeStep startDate={setup.cycle.startDate} endDate={setup.cycle.endDate} isDark={isDark} onChange={(cycle) => setSetup((prev) => ({ ...prev, cycle }))} />;
       case 'lifeArea':
         return <LifeAreaStep value={setup.mainGoal.label} isDark={isDark} onChange={(label) => setSetup((prev) => ({ ...prev, mainGoal: { ...prev.mainGoal, label } }))} />;
+      case 'secondaryArea':
+        return <LifeAreaStep value={setup.secondaryGoals[0]?.label ?? ''} isDark={isDark} onChange={handleSecondaryAreaChange} />;
       case 'text':
       case 'longtext':
         if (secondaryIndex !== undefined && step.secondaryField) {
@@ -124,7 +153,7 @@ export default function NewGoals({ isDark, onComplete, onClose }: NewGoalsProps)
       case 'lifeAreaMulti':
         return <LifeAreaMultiStep value={setup.secondaryGoals} excludeAreaId={setup.mainGoal.label} isDark={isDark} onChange={(secondaryGoals) => setSetup((prev) => ({ ...prev, secondaryGoals }))} />;
       case 'review':
-        return <ReviewStep setup={setup} isDark={isDark} />;
+        return <ReviewStep setup={setup} isDark={isDark} scope={isAddSecondary ? 'secondaryOnly' : 'full'} />;
       default:
         return null;
     }

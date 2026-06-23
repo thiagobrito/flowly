@@ -2,6 +2,7 @@ import { Plus, Trash2 } from 'lucide-react-native';
 import { Pressable, Text, TextInput, View } from 'react-native';
 
 import type { GoalSetupMetric } from '@/screens/Goals/data';
+import { nextMetricDirection } from '@/screens/Goals/data';
 
 import { createEmptyMetric } from '../data';
 
@@ -40,7 +41,14 @@ function NumberField({ label, value, isDark, onChange }: { label: string; value:
 export default function MetricsStep({ value, isDark, onChange }: MetricsStepProps) {
   const placeholderColor = isDark ? '#71717a' : '#a1a1aa';
 
-  const update = (id: string, patch: Partial<GoalSetupMetric>) => onChange(value.map((metric) => (metric.id === id ? { ...metric, ...patch } : metric)));
+  const update = (id: string, patch: Partial<GoalSetupMetric>) =>
+    onChange(
+      value.map((metric) => {
+        if (metric.id !== id) return metric;
+        const next = { ...metric, ...patch };
+        return { ...next, direction: nextMetricDirection(metric, patch) };
+      }),
+    );
   const add = () => onChange([...value, createEmptyMetric()]);
   const remove = (id: string) => onChange(value.filter((metric) => metric.id !== id));
 
