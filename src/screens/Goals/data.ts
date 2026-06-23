@@ -70,6 +70,7 @@ export type Goal = {
     purpose: string;
     impact: string;
   };
+  points: number;
   progress: number;
   daysRemaining: number;
   weeksCompleted: number;
@@ -141,6 +142,7 @@ export function createEmptyGoal(): Goal {
     type: 'primary',
     status: 'active',
     rpm: { result: '', purpose: '', impact: '' },
+    points: 0,
     progress: 0,
     daysRemaining: 84,
     weeksCompleted: 0,
@@ -175,6 +177,7 @@ export function normalizeGoal(raw: Partial<Goal> & { area?: string; label?: stri
     metrics: Array.isArray(raw.metrics) ? raw.metrics.map((metric) => normalizeMetric(metric)) : defaults.metrics,
     health: Array.isArray(raw.health) ? raw.health : defaults.health,
     progress: raw.progress ?? defaults.progress,
+    points: raw.points ?? defaults.points,
     daysRemaining: raw.daysRemaining ?? defaults.daysRemaining,
     weeksCompleted: raw.weeksCompleted ?? defaults.weeksCompleted,
     totalWeeks: raw.totalWeeks ?? defaults.totalWeeks,
@@ -277,6 +280,7 @@ export const MOCK_GOALS: Goal[] = [
       impact: 'Tornar-me mais saudável, forte e disciplinado.',
     },
     progress: 68,
+    points: 250,
     daysRemaining: 45,
     weeksCompleted: 7,
     totalWeeks: 12,
@@ -307,6 +311,7 @@ export const MOCK_GOALS: Goal[] = [
       impact: 'Tornar-me o empreendedor descrito na minha visão.',
     },
     progress: 45,
+    points: 200,
     daysRemaining: 52,
     weeksCompleted: 5,
     totalWeeks: 12,

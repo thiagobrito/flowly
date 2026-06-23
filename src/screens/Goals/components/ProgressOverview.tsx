@@ -8,6 +8,7 @@ type ProgressOverviewProps = {
   totalWeeks: number;
   isDark: boolean;
   accent: string;
+  points: number;
 };
 
 function ProgressRing({ progress, isDark, accent, size = 96 }: { progress: number; isDark: boolean; accent: string; size?: number }) {
@@ -41,13 +42,17 @@ function Stat({ value, label }: { value: string; label: string }) {
   );
 }
 
-export default function ProgressOverview({ progress, daysRemaining, weeksCompleted, totalWeeks, isDark, accent }: ProgressOverviewProps) {
+export default function ProgressOverview({ progress, daysRemaining, weeksCompleted, totalWeeks, isDark, accent, points }: ProgressOverviewProps) {
   return (
     <View className="flex-row items-center gap-4">
       <ProgressRing progress={progress} isDark={isDark} accent={accent} />
       <View className="flex-1 gap-3">
         <Stat value={`${daysRemaining}`} label="Dias restantes" />
         <Stat value={`${weeksCompleted} de ${totalWeeks}`} label="Semanas concluídas" />
+      </View>
+
+      <View className="flex-1 items-center justify-center rounded-full bg-green-400/20 bg-zinc-100 p-2 text-center">
+        <Text className="text-lg font-bold text-zinc-900 dark:text-zinc-50">{points} pontos</Text>
       </View>
     </View>
   );

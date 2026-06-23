@@ -87,7 +87,7 @@ export default function GoalCard({ goal, isDark, onEdit }: GoalCardProps) {
 
       {/* Progresso */}
       <SectionLabel>Progresso</SectionLabel>
-      <ProgressOverview progress={goal.progress} daysRemaining={goal.daysRemaining} weeksCompleted={goal.weeksCompleted} totalWeeks={goal.totalWeeks} isDark={isDark} accent={accent} />
+      <ProgressOverview progress={goal.progress} daysRemaining={goal.daysRemaining} weeksCompleted={goal.weeksCompleted} totalWeeks={goal.totalWeeks} isDark={isDark} accent={accent} points={goal.points} />
 
       <Divider isDark={isDark} />
 
