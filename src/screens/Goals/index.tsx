@@ -9,13 +9,13 @@ import EmptyState from './components/EmptyState';
 import GoalCard from './components/GoalCard';
 import GoalEditor from './components/GoalEditor';
 import type { Goal, GoalSetup } from './data';
-import { createEmptyGoal, goalSetupToGoals, MOCK_GOALS, normalizeGoal } from './data';
+import { createEmptyGoal, goalSetupToGoals, normalizeGoal } from './data';
 
 type EditorState = { goal: Goal; isNew: boolean } | null;
 
 export default function Goals() {
   const isDark = useColorScheme() === 'dark';
-  const [goals, setGoals] = useState<Goal[]>(MOCK_GOALS);
+  const [goals, setGoals] = useState<Goal[]>([]);
   const [editor, setEditor] = useState<EditorState>(null);
   const [setupMode, setSetupMode] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -28,13 +28,14 @@ export default function Goals() {
   const handleSetupComplete = useCallback((setup: GoalSetup) => {
     setGoals(goalSetupToGoals(setup));
     setSetupMode(false);
+    setLoading(false);
   }, []);
 
   useEffect(() => {
     async function fetchGoals() {
       const response = await api.get<Partial<Goal>[]>('/goals');
       if (Array.isArray(response)) setGoals(response.map(normalizeGoal));
-      setLoading(true);
+      setLoading(false);
     }
     fetchGoals();
   }, []);
@@ -52,7 +53,7 @@ export default function Goals() {
     setEditor(null);
   }, []);
 
-  if (!loading) {
+  if (loading) {
     return (
       <View className="flex-1 items-center justify-center">
         <ActivityIndicator color={isDark ? '#e4e4e7' : '#3b82f6'} />
