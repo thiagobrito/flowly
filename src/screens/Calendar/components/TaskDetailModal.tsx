@@ -136,7 +136,7 @@ export default function TaskDetailModal({ visible, task, isDark, onClose }: Task
                 </View>
                 <View className="rounded-full px-3 py-1" style={{ backgroundColor: `${accent}22` }}>
                   <Text className="text-sm font-semibold" style={{ color: accent }}>
-                    {area?.label || task.area}
+                    {area?.label || task?.area}
                   </Text>
                 </View>
               </View>

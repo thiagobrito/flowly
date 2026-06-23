@@ -68,11 +68,8 @@ export default function EditGoals({ data, onBack, onSave }: EditGoalsProps) {
       secondaryGoals: secondaryGoals.map((goal) => ({ ...goal, name: goal.name.trim() })),
     };
 
-    onSave(payload);
-
     await api.put(`/goals`, payload);
-
-    // TODO: enviar para a API quando o backend estiver disponível
+    onSave(payload);
   }, [canSave, vision, data.cycle, startDate, endDate, mainGoal, secondaryGoals, onSave]);
 
   return (

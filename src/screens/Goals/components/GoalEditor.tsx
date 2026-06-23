@@ -117,7 +117,6 @@ export default function GoalEditor({ goal, isNew, isDark, onCancel, onSave, onDe
       health: draft.health.filter((item) => item.label.trim().length > 0).map((item) => ({ ...item, label: item.label.trim() })),
     };
     await api.put('/goals', payload);
-
     onSave(payload);
   };
 
