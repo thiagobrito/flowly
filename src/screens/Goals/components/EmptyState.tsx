@@ -1,5 +1,5 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { Plus, Target } from 'lucide-react-native';
+import { FlagIcon, Plus } from 'lucide-react-native';
 import { Pressable, Text, View } from 'react-native';
 
 type EmptyStateProps = {
@@ -11,7 +11,7 @@ export default function EmptyState({ isDark, onCreate }: EmptyStateProps) {
   return (
     <View className="flex-1 items-center justify-center px-6 py-16">
       <View className="size-20 items-center justify-center rounded-full" style={{ backgroundColor: isDark ? 'rgba(59,130,246,0.15)' : 'rgba(59,130,246,0.12)' }}>
-        <Target size={36} color="#3b82f6" />
+        <FlagIcon size={36} color="#3b82f6" />
       </View>
 
       <Text className="mt-6 text-center text-xl font-bold text-zinc-900 dark:text-zinc-50">Defina sua primeira meta</Text>

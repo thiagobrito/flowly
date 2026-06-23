@@ -2,10 +2,11 @@ import { ChevronLeft, Plus, Trash2 } from 'lucide-react-native';
 import { useState } from 'react';
 import { Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
+import { api } from '@/lib/network';
 import { LIFE_AREAS } from '@/screens/common';
 
-import type { ExecutionTrend, Goal, GoalHealth, GoalMetric, GoalStatus, GoalTypeKind } from '../data';
-import { createEmptyHealth, createEmptyMetric, HEALTH_DOT_COLOR, HEALTH_LEVEL_CYCLE, STATUS_OPTIONS, TREND_OPTIONS, TYPE_OPTIONS } from '../data';
+import type { Goal, GoalHealth, GoalMetric } from '../data';
+import { createEmptyHealth, createEmptyMetric, HEALTH_DOT_COLOR, HEALTH_LEVEL_CYCLE } from '../data';
 
 type GoalEditorProps = {
   goal: Goal;
@@ -46,33 +47,6 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
   return <Text className="mb-1.5 text-sm font-medium text-zinc-700 dark:text-zinc-200">{children}</Text>;
-}
-
-function Segmented<T extends string>({ options, value, onChange, isDark }: { options: { value: T; label: string }[]; value: T; onChange: (value: T) => void; isDark: boolean }) {
-  return (
-    <View className="flex-row flex-wrap gap-2">
-      {options.map((option) => {
-        const selected = option.value === value;
-        return (
-          <Pressable
-            key={option.value}
-            onPress={() => onChange(option.value)}
-            accessibilityRole="button"
-            accessibilityState={{ selected }}
-            className="rounded-full border px-3.5 py-2 active:opacity-80"
-            style={{
-              borderColor: optionBorder(selected, ACCENT, isDark),
-              backgroundColor: selected ? `${ACCENT}22` : 'transparent',
-            }}
-          >
-            <Text className="text-sm font-medium" style={{ color: optionText(selected, ACCENT, isDark) }}>
-              {option.label}
-            </Text>
-          </Pressable>
-        );
-      })}
-    </View>
-  );
 }
 
 function NumberField({ label, value, onChange, isDark, suffix }: { label: string; value: number; onChange: (value: number) => void; isDark: boolean; suffix?: string }) {
@@ -121,24 +95,37 @@ export default function GoalEditor({ goal, isNew, isDark, onCancel, onSave, onDe
 
   const canSave = draft.name.trim().length > 0;
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!canSave) {
       Alert.alert('Nome obrigatório', 'Dê um nome para a meta antes de salvar.');
       return;
     }
-    onSave({
+
+    const payload = {
       ...draft,
+      id: draft.id,
       name: draft.name.trim(),
       metrics: draft.metrics.filter((metric) => metric.label.trim().length > 0).map((metric) => ({ ...metric, label: metric.label.trim() })),
       health: draft.health.filter((item) => item.label.trim().length > 0).map((item) => ({ ...item, label: item.label.trim() })),
-    });
+    };
+    await api.put('/goals', payload);
+
+    onSave(payload);
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!onDelete) return;
+
     Alert.alert('Excluir meta', 'Tem certeza que deseja excluir esta meta? Essa ação não pode ser desfeita.', [
       { text: 'Cancelar', style: 'cancel' },
-      { text: 'Excluir', style: 'destructive', onPress: onDelete },
+      {
+        text: 'Excluir',
+        style: 'destructive',
+        onPress: async () => {
+          await api.delete('/goals', { params: { id: draft.id } });
+          onDelete();
+        },
+      },
     ]);
   };
 
@@ -183,13 +170,6 @@ export default function GoalEditor({ goal, isNew, isDark, onCancel, onSave, onDe
           })}
         </View>
 
-        {/* Tipo e Status */}
-        <SectionLabel>Tipo</SectionLabel>
-        <Segmented options={TYPE_OPTIONS} value={draft.type} onChange={(value: GoalTypeKind) => update('type', value)} isDark={isDark} />
-
-        <SectionLabel>Status</SectionLabel>
-        <Segmented options={STATUS_OPTIONS} value={draft.status} onChange={(value: GoalStatus) => update('status', value)} isDark={isDark} />
-
         {/* RPM */}
         <SectionLabel>RPM</SectionLabel>
         <FieldLabel>Resultado</FieldLabel>
@@ -225,17 +205,6 @@ export default function GoalEditor({ goal, isNew, isDark, onCancel, onSave, onDe
             className={`min-h-[60px] ${textInputClass}`}
             style={[inputStyle(isDark), { textAlignVertical: 'top' }]}
           />
-        </View>
-
-        {/* Progresso e ciclo */}
-        <SectionLabel>Progresso e ciclo</SectionLabel>
-        <View className="flex-row gap-3">
-          <NumberField label="Progresso" value={draft.progress} onChange={(value) => update('progress', Math.min(100, value))} isDark={isDark} suffix="%" />
-          <NumberField label="Dias restantes" value={draft.daysRemaining} onChange={(value) => update('daysRemaining', value)} isDark={isDark} />
-        </View>
-        <View className="mt-3 flex-row gap-3">
-          <NumberField label="Semanas feitas" value={draft.weeksCompleted} onChange={(value) => update('weeksCompleted', value)} isDark={isDark} />
-          <NumberField label="Total de semanas" value={draft.totalWeeks} onChange={(value) => update('totalWeeks', value)} isDark={isDark} />
         </View>
 
         {/* Métricas */}
@@ -275,40 +244,6 @@ export default function GoalEditor({ goal, isNew, isDark, onCancel, onSave, onDe
           <Plus size={16} color={isDark ? '#e4e4e7' : '#3f3f46'} />
           <Text className="ml-2 text-sm font-semibold text-zinc-800 dark:text-zinc-100">Adicionar métrica</Text>
         </Pressable>
-
-        {/* Momentum */}
-        <SectionLabel>Momentum</SectionLabel>
-        <View className="flex-row gap-3">
-          <NumberField label="Consistência" value={draft.consistencyScore} onChange={(value) => update('consistencyScore', Math.min(100, value))} isDark={isDark} suffix="%" />
-          <NumberField label="Sequência (sem.)" value={draft.weeklyStreak} onChange={(value) => update('weeklyStreak', value)} isDark={isDark} />
-        </View>
-        <View className="mt-3">
-          <FieldLabel>Tendência de execução</FieldLabel>
-          <Segmented options={TREND_OPTIONS} value={draft.trend} onChange={(value: ExecutionTrend) => update('trend', value)} isDark={isDark} />
-        </View>
-
-        {/* Confiança */}
-        <SectionLabel>Confiança (1–10)</SectionLabel>
-        <View className="flex-row flex-wrap gap-2">
-          {Array.from({ length: 10 }, (_, index) => {
-            const value = index + 1;
-            const selected = draft.confidence === value;
-            return (
-              <Pressable
-                key={value}
-                onPress={() => update('confidence', value)}
-                accessibilityRole="button"
-                accessibilityState={{ selected }}
-                className="size-10 items-center justify-center rounded-xl border active:opacity-80"
-                style={{ borderColor: optionBorder(selected, ACCENT, isDark), backgroundColor: selected ? `${ACCENT}22` : 'transparent' }}
-              >
-                <Text className="text-sm font-semibold" style={{ color: optionText(selected, ACCENT, isDark) }}>
-                  {value}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
 
         {/* Saúde da meta */}
         <SectionLabel>Saúde da meta</SectionLabel>

@@ -1,12 +1,15 @@
 import { Plus } from 'lucide-react-native';
-import { useCallback, useState } from 'react';
-import { Pressable, ScrollView, Text, useColorScheme, View } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, Text, useColorScheme, View } from 'react-native';
+
+import { api } from '@/lib/network';
+import NewGoals from '@/screens/NewGoals';
 
 import EmptyState from './components/EmptyState';
 import GoalCard from './components/GoalCard';
 import GoalEditor from './components/GoalEditor';
-import type { Goal } from './data';
-import { createEmptyGoal, MOCK_GOALS } from './data';
+import type { Goal, GoalSetup } from './data';
+import { createEmptyGoal, goalSetupToGoals, MOCK_GOALS, normalizeGoal } from './data';
 
 type EditorState = { goal: Goal; isNew: boolean } | null;
 
@@ -14,10 +17,27 @@ export default function Goals() {
   const isDark = useColorScheme() === 'dark';
   const [goals, setGoals] = useState<Goal[]>(MOCK_GOALS);
   const [editor, setEditor] = useState<EditorState>(null);
+  const [setupMode, setSetupMode] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const handleCreate = useCallback(() => setEditor({ goal: createEmptyGoal(), isNew: true }), []);
   const handleEdit = useCallback((goal: Goal) => setEditor({ goal, isNew: false }), []);
   const handleCancel = useCallback(() => setEditor(null), []);
+
+  const handleStartSetup = useCallback(() => setSetupMode(true), []);
+  const handleSetupComplete = useCallback((setup: GoalSetup) => {
+    setGoals(goalSetupToGoals(setup));
+    setSetupMode(false);
+  }, []);
+
+  useEffect(() => {
+    async function fetchGoals() {
+      const response = await api.get<Partial<Goal>[]>('/goals');
+      if (Array.isArray(response)) setGoals(response.map(normalizeGoal));
+      setLoading(true);
+    }
+    fetchGoals();
+  }, []);
 
   const handleSave = useCallback((updated: Goal) => {
     setGoals((prev) => {
@@ -32,6 +52,17 @@ export default function Goals() {
     setEditor(null);
   }, []);
 
+  if (!loading) {
+    return (
+      <View className="flex-1 items-center justify-center">
+        <ActivityIndicator color={isDark ? '#e4e4e7' : '#3b82f6'} />
+      </View>
+    );
+  }
+  if (setupMode) {
+    return <NewGoals isDark={isDark} onComplete={handleSetupComplete} onClose={() => setSetupMode(false)} />;
+  }
+
   if (editor) {
     return <GoalEditor goal={editor.goal} isNew={editor.isNew} isDark={isDark} onCancel={handleCancel} onSave={handleSave} onDelete={editor.isNew ? undefined : () => handleDelete(editor.goal.id)} />;
   }
@@ -39,10 +70,7 @@ export default function Goals() {
   if (goals.length === 0) {
     return (
       <View className="flex-1">
-        <View className="pt-2">
-          <Text className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">Metas</Text>
-        </View>
-        <EmptyState isDark={isDark} onCreate={handleCreate} />
+        <EmptyState isDark={isDark} onCreate={handleStartSetup} />
       </View>
     );
   }

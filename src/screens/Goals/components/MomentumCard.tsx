@@ -10,19 +10,21 @@ type MomentumCardProps = {
   trend: ExecutionTrend;
 };
 
+const TREND_CONFIG = {
+  improving: { Icon: TrendingUp, color: '#22c55e' },
+  stable: { Icon: Minus, color: '#eab308' },
+  declining: { Icon: TrendingDown, color: '#ef4444' },
+} as const;
+
 function TrendBadge({ trend }: { trend: ExecutionTrend }) {
-  const config = {
-    improving: { Icon: TrendingUp, color: '#22c55e' },
-    stable: { Icon: Minus, color: '#eab308' },
-    declining: { Icon: TrendingDown, color: '#ef4444' },
-  }[trend];
-  const { Icon, color } = config;
+  const safeTrend = trend in TREND_CONFIG ? trend : 'stable';
+  const { Icon, color } = TREND_CONFIG[safeTrend];
 
   return (
     <View className="flex-row items-center gap-1.5 self-start rounded-full px-2.5 py-1" style={{ backgroundColor: `${color}22` }}>
       <Icon size={13} color={color} />
       <Text className="text-xs font-semibold" style={{ color }}>
-        {TREND_LABELS[trend]}
+        {TREND_LABELS[safeTrend]}
       </Text>
     </View>
   );

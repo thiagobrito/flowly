@@ -194,7 +194,7 @@ export default function TaskCard({ highlight, task, selected, isDark, onComplete
                     <View className="mt-1.5 flex-row items-center">
                       <View className="rounded-full px-2 py-0.5" style={{ backgroundColor: `${accent}22`, marginRight: 8 }}>
                         <Text className="text-xs font-semibold" style={{ color: accent }}>
-                          {area?.label || task.area}
+                          {area?.label.toUpperCase() || task.area.toUpperCase()}
                         </Text>
                       </View>
 

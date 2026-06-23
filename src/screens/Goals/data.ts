@@ -112,6 +112,35 @@ export function createEmptyGoal(): Goal {
   };
 }
 
+/** Preenche campos calculados ausentes quando a API devolve só o payload da anamnese. */
+export function normalizeGoal(raw: Partial<Goal>): Goal {
+  const defaults = createEmptyGoal();
+  const trend = raw.trend && raw.trend in TREND_LABELS ? raw.trend : defaults.trend;
+  const status = raw.status && raw.status in STATUS_LABELS ? raw.status : defaults.status;
+  const type = raw.type && raw.type in TYPE_LABELS ? raw.type : defaults.type;
+
+  return {
+    ...defaults,
+    ...raw,
+    id: raw.id ?? defaults.id,
+    name: raw.name ?? defaults.name,
+    areaId: raw.areaId ?? defaults.areaId,
+    type,
+    status,
+    trend,
+    rpm: { ...defaults.rpm, ...raw.rpm },
+    metrics: Array.isArray(raw.metrics) ? raw.metrics : defaults.metrics,
+    health: Array.isArray(raw.health) ? raw.health : defaults.health,
+    progress: raw.progress ?? defaults.progress,
+    daysRemaining: raw.daysRemaining ?? defaults.daysRemaining,
+    weeksCompleted: raw.weeksCompleted ?? defaults.weeksCompleted,
+    totalWeeks: raw.totalWeeks ?? defaults.totalWeeks,
+    consistencyScore: raw.consistencyScore ?? defaults.consistencyScore,
+    weeklyStreak: raw.weeklyStreak ?? defaults.weeklyStreak,
+    confidence: raw.confidence ?? defaults.confidence,
+  };
+}
+
 export function createEmptyMetric(): GoalMetric {
   return { id: createGoalId(), label: '', current: 0, target: 0, unit: '' };
 }
@@ -119,6 +148,77 @@ export function createEmptyMetric(): GoalMetric {
 export function createEmptyHealth(): GoalHealth {
   return { id: createGoalId(), level: 'green', label: '' };
 }
+
+/**
+ * Estrutura preenchida pela anamnese (tela `NewGoals`). Representa apenas o que o
+ * usuário responde — os demais campos do `Goal` (progresso, semanas, consistência,
+ * tendência, saúde etc.) são calculados automaticamente no backend.
+ */
+export type GoalSetupMetric = {
+  id: string;
+  label: string;
+  current: number;
+  target: number;
+};
+
+export type SecondaryGoalSetup = {
+  label: string;
+  name: string;
+  rpm: {
+    result: string;
+    purpose: string;
+    impact: string;
+  };
+  metrics: GoalSetupMetric[];
+};
+
+export type GoalSetup = {
+  cycle: {
+    startDate: string;
+    endDate: string;
+  };
+  mainGoal: {
+    label: string;
+    name: string;
+    rpm: {
+      result: string;
+      purpose: string;
+      impact: string;
+    };
+    metrics: GoalSetupMetric[];
+  };
+  secondaryGoals: SecondaryGoalSetup[];
+};
+
+/** Resultado de uma anamnese concluída — o backend completa os campos restantes. */
+export const MOCK_GOAL_SETUP: GoalSetup = {
+  cycle: {
+    startDate: '2026-06-22',
+    endDate: '2026-09-14',
+  },
+  mainGoal: {
+    label: 'work',
+    name: 'Crescer na carreira',
+    rpm: {
+      result: 'Conseguir promoção até setembro',
+      purpose: 'Ter mais impacto e reconhecimento',
+      impact: 'Melhorar qualidade de vida da família',
+    },
+    metrics: [{ id: 'projects', label: 'Projetos entregues', current: 0, target: 5 }],
+  },
+  secondaryGoals: [
+    {
+      label: 'health',
+      name: 'Saúde',
+      rpm: {
+        result: 'Treinar 4x por semana e dormir 8 horas por noite',
+        purpose: 'Ter mais energia e disposição para a família e o trabalho',
+        impact: 'Viver com mais saúde e bem-estar no longo prazo',
+      },
+      metrics: [{ id: 'workouts', label: 'Treinos por semana', current: 2, target: 4 }],
+    },
+  ],
+};
 
 export const MOCK_GOALS: Goal[] = [
   {
@@ -182,3 +282,77 @@ export const MOCK_GOALS: Goal[] = [
     ],
   },
 ];
+
+const MS_PER_WEEK = 7 * 24 * 60 * 60 * 1000;
+
+/** Número de semanas entre duas datas ISO (mínimo de 1). */
+export function cycleWeeks(startDate: string, endDate: string): number {
+  const start = new Date(startDate).getTime();
+  const end = new Date(endDate).getTime();
+  if (Number.isNaN(start) || Number.isNaN(end) || end <= start) return 12;
+  return Math.max(1, Math.round((end - start) / MS_PER_WEEK));
+}
+
+/** Cria uma anamnese vazia para iniciar o fluxo da tela `NewGoals`. */
+export function createEmptyGoalSetup(): GoalSetup {
+  const start = new Date();
+  const end = new Date();
+  end.setDate(end.getDate() + 12 * 7);
+  const toIso = (date: Date) => date.toISOString().slice(0, 10);
+
+  return {
+    cycle: { startDate: toIso(start), endDate: toIso(end) },
+    mainGoal: { label: '', name: '', rpm: { result: '', purpose: '', impact: '' }, metrics: [] },
+    secondaryGoals: [],
+  };
+}
+
+/**
+ * Converte o resultado da anamnese em `Goal[]` para exibição local enquanto o
+ * backend não devolve os campos calculados. Mantém apenas o que o usuário
+ * informou e usa defaults seguros para o restante.
+ */
+export function goalSetupToGoals(setup: GoalSetup): Goal[] {
+  const totalWeeks = cycleWeeks(setup.cycle.startDate, setup.cycle.endDate);
+  const daysRemaining = totalWeeks * 7;
+
+  const main: Goal = {
+    ...createEmptyGoal(),
+    id: createGoalId(),
+    name: setup.mainGoal.name,
+    areaId: setup.mainGoal.label,
+    type: 'primary',
+    status: 'active',
+    rpm: { ...setup.mainGoal.rpm },
+    totalWeeks,
+    daysRemaining,
+    metrics: setup.mainGoal.metrics.map((metric) => ({
+      id: metric.id,
+      label: metric.label,
+      current: metric.current,
+      target: metric.target,
+      unit: '',
+    })),
+  };
+
+  const secondaries: Goal[] = setup.secondaryGoals.map((goal) => ({
+    ...createEmptyGoal(),
+    id: createGoalId(),
+    name: goal.name,
+    areaId: goal.label,
+    type: 'secondary',
+    status: 'active',
+    rpm: { ...goal.rpm },
+    totalWeeks,
+    daysRemaining,
+    metrics: goal.metrics.map((metric) => ({
+      id: metric.id,
+      label: metric.label,
+      current: metric.current,
+      target: metric.target,
+      unit: '',
+    })),
+  }));
+
+  return [main, ...secondaries];
+}
