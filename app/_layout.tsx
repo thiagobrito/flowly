@@ -2,12 +2,10 @@ import '../global.css';
 
 import * as Sentry from '@sentry/react-native';
 import { Stack } from 'expo-router';
-import { useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { configureNotifications, ensureAndroidChannel, setupNotificationHandler, useNotifications } from '@/lib/notifications';
-import { initPurchases } from '@/lib/subscription';
 import { useTaskReminders } from '@/screens/Config/hooks/useTaskReminders';
 
 setupNotificationHandler();
@@ -36,10 +34,6 @@ Sentry.init({
 export default Sentry.wrap(function Layout() {
   useNotifications();
   useTaskReminders();
-
-  useEffect(() => {
-    initPurchases();
-  }, []);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

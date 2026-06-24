@@ -6,7 +6,7 @@
  * módulo nativo não está disponível) as operações viram no-ops seguros.
  */
 
-import { Platform } from 'react-native';
+import { NativeModules, Platform } from 'react-native';
 import Purchases, { type CustomerInfo, LOG_LEVEL, type PurchasesOffering, type PurchasesPackage } from 'react-native-purchases';
 
 import { ENTITLEMENT_ID, isUsableApiKey, RC_API_KEY } from './config';
@@ -18,6 +18,16 @@ export function isPurchasesSupported(): boolean {
   return Platform.OS === 'ios' || Platform.OS === 'android';
 }
 
+/** `true` quando o binário nativo inclui o módulo RNPurchases (dev build / release). */
+export function isNativePurchasesAvailable(): boolean {
+  return Boolean(NativeModules.RNPurchases);
+}
+
+/** `true` quando o binário inclui os módulos do RevenueCat UI (RNPaywalls / Customer Center). */
+export function isNativePurchasesUiAvailable(): boolean {
+  return Boolean(NativeModules.RNPaywalls);
+}
+
 /** Configura o SDK uma única vez. Idempotente — seguro chamar no boot. */
 export function initPurchases(): void {
   if (configured || !isPurchasesSupported()) return;
@@ -25,11 +35,19 @@ export function initPurchases(): void {
     console.warn('[subscription] RevenueCat API key inválida para esta plataforma/build — configure pulado.');
     return;
   }
-  configured = true;
-  if (__DEV__) {
-    Purchases.setLogLevel(LOG_LEVEL.DEBUG);
+  if (!isNativePurchasesAvailable()) {
+    console.warn('[subscription] Módulo nativo RNPurchases indisponível — faça prebuild e recompile o app (ex.: npm run ios).');
+    return;
   }
-  Purchases.configure({ apiKey: RC_API_KEY });
+  try {
+    if (__DEV__) {
+      Purchases.setLogLevel(LOG_LEVEL.DEBUG);
+    }
+    Purchases.configure({ apiKey: RC_API_KEY });
+    configured = true;
+  } catch (error) {
+    console.warn('[subscription] Falha ao configurar RevenueCat.', error);
+  }
 }
 
 /** Associa as compras a um usuário estável (ex.: e-mail/ID do backend). */

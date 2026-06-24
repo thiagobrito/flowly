@@ -7,14 +7,16 @@ import { computeEnergyAtMoment, flowlyInputFromMetrics, getHealthProvider } from
 import { api } from '@/lib/network';
 
 import { useNotificationTest } from '../Config/hooks/useNotificationTest';
+import { usePurchaseTest } from '../Config/hooks/usePurchaseTest';
 import NotificationTestModal from '../Config/NotificationTestModal';
-import type { ScheduledSlot, Task } from '../NewTask/data';
+import PurchaseTestModal from '../Config/PurchaseTestModal';
+import type { Task } from '../NewTask/data';
 import { getLifeArea } from '../NewTask/data';
 import type { FilterArea } from './components/FilterDrawer';
 import FilterDrawer from './components/FilterDrawer';
 import Header from './components/Header';
 import TaskCard from './components/TaskCard';
-import { DATE_FILTERS, type DateFilterId, getWeekDates, taskMatchesDateFilter } from './taskDateFilter';
+import { DATE_FILTERS, type DateFilterId, taskMatchesDateFilter } from './taskDateFilter';
 
 type TasksProps = {
   onEdit?: (task: Task) => void;
@@ -31,64 +33,14 @@ function OrganizeTasks(tasks: any): Task[] {
   }));
 }
 
-function mergeSchedules(first?: ScheduledSlot[], second?: ScheduledSlot[]): ScheduledSlot[] {
-  const map = new Map<string, ScheduledSlot>();
-  for (const slot of [...(first ?? []), ...(second ?? [])]) {
-    if (slot?.dateTime) map.set(slot.dateTime, slot);
-  }
-  return Array.from(map.values());
-}
+async function fetchTodayTasks(energyLevel: number): Promise<{ visibleTasks: Task[]; concludedTasks: Task[] }> {
+  const today = toLocalISOString();
+  const results = await api.get<any>('/tasks', {
+    params: { date: today, energyLevel },
+  });
 
-function mergeTasks(existing: Task, incoming: Task): Task {
-  return {
-    ...existing,
-    ...incoming,
-    schedule: mergeSchedules(existing.schedule, incoming.schedule),
-  };
-}
-
-function mergeTaskLists(lists: Task[][]): Task[] {
-  const map = new Map<string, Task>();
-  for (const list of lists) {
-    for (const task of list) {
-      if (task.id) {
-        const previous = map.get(task.id);
-        map.set(task.id, previous ? mergeTasks(previous, task) : task);
-      }
-    }
-  }
-  return Array.from(map.values());
-}
-
-async function fetchWeekTasks(energyLevel: number): Promise<{ visibleTasks: Task[]; concludedTasks: Task[] }> {
-  const weekDates = getWeekDates();
-  const results = await Promise.allSettled(
-    weekDates.map((date) =>
-      api.get<any>('/tasks', {
-        params: { date: toLocalISOString(date), energyLevel },
-      }),
-    ),
-  );
-
-  const visibleLists: Task[][] = [];
-  const concludedLists: Task[][] = [];
-  let successCount = 0;
-
-  for (const result of results) {
-    if (result.status === 'fulfilled') {
-      successCount += 1;
-      visibleLists.push(OrganizeTasks(result.value.visibleTasks));
-      concludedLists.push(OrganizeTasks(result.value.concludedTasks));
-    }
-  }
-
-  if (successCount === 0) {
-    throw new Error('Nenhuma requisição de tarefas foi bem-sucedida.');
-  }
-
-  const concludedTasks = mergeTaskLists(concludedLists);
-  const concludedIds = new Set(concludedTasks.map((task) => task.id));
-  const visibleTasks = mergeTaskLists(visibleLists).filter((task) => !concludedIds.has(task.id));
+  const visibleTasks = OrganizeTasks(results.visibleTasks);
+  const concludedTasks = OrganizeTasks(results.concludedTasks);
 
   return { visibleTasks, concludedTasks };
 }
@@ -106,10 +58,12 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
 
   const [filterOpen, setFilterOpen] = useState(false);
   const [testModalVisible, setTestModalVisible] = useState(false);
+  const [purchaseTestModalVisible, setPurchaseTestModalVisible] = useState(false);
   const [selectedAreas, setSelectedAreas] = useState<string[]>([]);
   const [selectedDateFilter, setSelectedDateFilter] = useState<DateFilterId | null>(null);
 
   const { showNow, showIn30Seconds } = useNotificationTest();
+  const { busy: purchaseTestBusy, showPaywall, purchaseMonthly, purchaseYearly, restore } = usePurchaseTest();
 
   const allTasks = useMemo(() => [...visibleTasks, ...concludedTasks], [visibleTasks, concludedTasks]);
 
@@ -188,7 +142,7 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
     if (!energyLevel) return;
 
     try {
-      const { visibleTasks: nextVisible, concludedTasks: nextConcluded } = await fetchWeekTasks(energyLevel);
+      const { visibleTasks: nextVisible, concludedTasks: nextConcluded } = await fetchTodayTasks(energyLevel);
       setVisibleTasks(nextVisible);
       setConcludedTasks(nextConcluded);
     } catch {
@@ -211,7 +165,7 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
     setRefreshing(true);
     try {
       const result = refreshEnergy();
-      const { visibleTasks: nextVisible, concludedTasks: nextConcluded } = await fetchWeekTasks(result.doubleEnergyLevel);
+      const { visibleTasks: nextVisible, concludedTasks: nextConcluded } = await fetchTodayTasks(result.doubleEnergyLevel);
       setVisibleTasks(nextVisible);
       setConcludedTasks(nextConcluded);
     } catch {
@@ -255,7 +209,15 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
 
   return (
     <View className="flex-1">
-      <Header isDark={isDark} energyScore={energyScore} onLogout={onLogout} onOpenConfig={onOpenConfig} onOpenFilter={() => setFilterOpen(true)} onOpenNotificationTest={/* () => setTestModalVisible(true) */ undefined} />
+      <Header
+        isDark={isDark}
+        energyScore={energyScore}
+        onLogout={onLogout}
+        onOpenConfig={onOpenConfig}
+        onOpenFilter={() => setFilterOpen(true)}
+        onOpenNotificationTest={/* () => setTestModalVisible(true) */ undefined}
+        onOpenPurchaseTest={() => setPurchaseTestModalVisible(true)}
+      />
 
       <ScrollView
         className="mt-2 flex-1"
@@ -290,6 +252,17 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
       />
 
       <NotificationTestModal visible={testModalVisible} isDark={isDark} onClose={() => setTestModalVisible(false)} onShowNow={showNow} onShowIn30Seconds={showIn30Seconds} />
+
+      <PurchaseTestModal
+        visible={purchaseTestModalVisible}
+        busy={purchaseTestBusy}
+        isDark={isDark}
+        onClose={() => setPurchaseTestModalVisible(false)}
+        onShowPaywall={showPaywall}
+        onPurchaseMonthly={purchaseMonthly}
+        onPurchaseYearly={purchaseYearly}
+        onRestore={restore}
+      />
     </View>
   );
 }

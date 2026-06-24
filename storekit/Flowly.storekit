@@ -1,0 +1,88 @@
+{
+  "identifier" : "Flowly",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+
+  ],
+  "settings" : {
+    "_failTransactionsEnabled" : false,
+    "_locale" : "pt_BR",
+    "_storefront" : "BRA",
+    "_storeKitErrors" : [
+
+    ]
+  },
+  "subscriptionGroups" : [
+    {
+      "id" : "flowly_pro",
+      "localizations" : [
+
+      ],
+      "name" : "Flowly Pro",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "19.90",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "flowly_montly",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Assinatura mensal do Flowly Pro",
+              "displayName" : "Flowly Mensal",
+              "locale" : "pt_BR"
+            }
+          ],
+          "productID" : "flowly_montly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "flowly_montly",
+          "subscriptionGroupID" : "flowly_pro",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "197.00",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "flowly_yearly",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Assinatura anual do Flowly Pro",
+              "displayName" : "Flowly Anual",
+              "locale" : "pt_BR"
+            }
+          ],
+          "productID" : "flowly_yearly",
+          "recurringSubscriptionPeriod" : "P1Y",
+          "referenceName" : "flowly_yearly",
+          "subscriptionGroupID" : "flowly_pro",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        }
+      ]
+    }
+  ],
+  "version" : {
+    "major" : 4,
+    "minor" : 0
+  }
+}

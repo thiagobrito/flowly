@@ -167,7 +167,6 @@ export async function cancelTaskReminders(): Promise<void> {
  * Passe `tasksHint` com tarefas recém-agendadas para evitar corrida com a API.
  */
 export async function syncTaskReminders({ enabled, tasksHint }: { enabled: boolean; tasksHint?: Task[] }): Promise<void> {
-  console.log('syncTaskReminders', enabled);
   if (!enabled) {
     await cancelTaskReminders();
     return;
@@ -175,7 +174,6 @@ export async function syncTaskReminders({ enabled, tasksHint }: { enabled: boole
 
   const permission = await getPermissionStatus();
   if (permission !== 'granted') {
-    console.log('Permission not granted');
     return;
   }
 

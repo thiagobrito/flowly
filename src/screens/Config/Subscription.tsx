@@ -2,7 +2,7 @@ import * as Sentry from '@sentry/react-native';
 import { ChevronRight, Crown } from 'lucide-react-native';
 import RevenueCatUI, { PAYWALL_RESULT } from 'react-native-purchases-ui';
 
-import { getCustomerInfo, isPurchasesSupported, SUBSCRIPTION_PLANS, useSubscription } from '@/lib/subscription';
+import { getCustomerInfo, isNativePurchasesUiAvailable, isPurchasesSupported, SUBSCRIPTION_PLANS, useSubscription } from '@/lib/subscription';
 
 import Card from './components/Card';
 import SectionTitle from './components/SectionTitle';
@@ -23,7 +23,7 @@ export default function SubscriptionSection({ isDark }: { isDark: boolean }) {
   const { isPremium, isTrialing, trialDaysLeft, status, confirmPurchase, refresh } = useSubscription();
 
   const handlePress = async () => {
-    if (!isPurchasesSupported()) return;
+    if (!isPurchasesSupported() || !isNativePurchasesUiAvailable()) return;
     try {
       if (isPremium && !isTrialing) {
         await RevenueCatUI.presentCustomerCenter();

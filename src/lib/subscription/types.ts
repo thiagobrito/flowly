@@ -4,21 +4,12 @@
 
 import type { PersistedRecord } from '@/lib/storage';
 
-/** Planos comercializados. */
-export type SubscriptionPlanId = 'monthly' | 'yearly' | 'lifetime';
+import type { SubscriptionPlanId } from './plans';
+
+export type { SubscriptionPlan, SubscriptionPlanId } from './plans';
 
 /** Estado da assinatura conforme o backend (`GET /subscription`). */
 export type SubscriptionStatusValue = 'trial' | 'active' | 'expired' | 'none';
-
-/** Metadados de um plano (parametrizáveis em `config.ts`). */
-export type SubscriptionPlan = {
-  id: SubscriptionPlanId;
-  productId: string;
-  priceLabel: string;
-  amount: number;
-  period: 'month' | 'year' | 'lifetime';
-  title: string;
-};
 
 /** Resposta de `GET /subscription` / `POST /subscription/payment`. */
 export type SubscriptionStatus = {

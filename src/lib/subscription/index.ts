@@ -46,7 +46,20 @@
  */
 
 export { buildPaymentPayload, fetchSubscription, notifyPayment } from './api';
-export { addCustomerInfoListener, getCurrentOffering, getCustomerInfo, hasProEntitlement, initPurchases, isPurchasesSupported, loginUser, logoutUser, purchasePackage, restorePurchases } from './client';
+export {
+  addCustomerInfoListener,
+  getCurrentOffering,
+  getCustomerInfo,
+  hasProEntitlement,
+  initPurchases,
+  isNativePurchasesAvailable,
+  isNativePurchasesUiAvailable,
+  isPurchasesSupported,
+  loginUser,
+  logoutUser,
+  purchasePackage,
+  restorePurchases,
+} from './client';
 export { ENTITLEMENT_ID, RC_API_KEY, resolvePlanId, SUBSCRIPTION_PLANS } from './config';
 export type { PaymentPayload, SubscriptionCache, SubscriptionPlan, SubscriptionPlanId, SubscriptionStatus, SubscriptionStatusValue } from './types';
 export { useSubscription } from './useSubscription';

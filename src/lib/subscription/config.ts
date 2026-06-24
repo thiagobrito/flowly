@@ -9,10 +9,10 @@
 
 import { Platform } from 'react-native';
 
-import type { SubscriptionPlan, SubscriptionPlanId } from './types';
+import type { SubscriptionPlan, SubscriptionPlanId } from './plans';
 
-/** Chave pública do RevenueCat. Resolve por plataforma, com fallback único. */
-export const RC_API_KEY: string = (Platform.OS === 'ios' ? process.env.EXPO_PUBLIC_RC_IOS_KEY : process.env.EXPO_PUBLIC_RC_ANDROID_KEY) || process.env.EXPO_PUBLIC_RC_KEY || 'test_kcisdqYhDSBffswsHFlMilbISbc';
+/** Chave pública do RevenueCat. Prioriza chave da plataforma (appl_/goog_); fallback genérico. */
+export const RC_API_KEY: string = (Platform.OS === 'ios' ? process.env.EXPO_PUBLIC_RC_IOS_KEY : process.env.EXPO_PUBLIC_RC_ANDROID_KEY) || process.env.EXPO_PUBLIC_RC_KEY || '';
 
 /**
  * Valida se a chave de API pode ser usada nesta plataforma/build.
@@ -35,17 +35,15 @@ export const ENTITLEMENT_ID = 'Flowly Pro';
  * nas lojas / RevenueCat. Os `priceLabel`/`amount` são parametrizáveis.
  */
 export const SUBSCRIPTION_PLANS: Record<SubscriptionPlanId, SubscriptionPlan> = {
-  monthly: { id: 'monthly', productId: 'monthly', priceLabel: 'R$ 19,90', amount: 19.9, period: 'month', title: 'Mensal' },
-  yearly: { id: 'yearly', productId: 'yearly', priceLabel: 'R$ 197,00', amount: 197, period: 'year', title: 'Anual' },
-  lifetime: { id: 'lifetime', productId: 'lifetime', priceLabel: 'Pagamento único', amount: 0, period: 'lifetime', title: 'Vitalício' },
+  flowly_montly: { id: 'flowly_montly', productId: 'flowly_montly', priceLabel: 'R$ 19,90', amount: 19.9, period: 'month', title: 'Mensal' },
+  flowly_yearly: { id: 'flowly_yearly', productId: 'flowly_yearly', priceLabel: 'R$ 197,00', amount: 197, period: 'year', title: 'Anual' },
 };
 
 /** Tenta inferir o plano a partir do identificador de produto da loja. */
 export function resolvePlanId(productId: string | null | undefined): SubscriptionPlanId | null {
   if (!productId) return null;
   const id = productId.toLowerCase();
-  if (id.includes('life')) return 'lifetime';
-  if (id.includes('year') || id.includes('annual') || id.includes('anual')) return 'yearly';
-  if (id.includes('month') || id.includes('mensal')) return 'monthly';
+  if (id.includes('year') || id.includes('annual') || id.includes('anual')) return 'flowly_yearly';
+  if (id.includes('mont') || id.includes('month') || id.includes('mensal')) return 'flowly_montly';
   return null;
 }

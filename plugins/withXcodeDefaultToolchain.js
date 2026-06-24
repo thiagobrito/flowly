@@ -63,11 +63,11 @@ function ensurePodfileWorkarounds(platformRoot) {
   const contents = fs.readFileSync(podfilePath, 'utf8');
   if (contents.includes('Xcode 26 workaround')) return;
 
-  const marker = 'react_native_post_install(';
-  const index = contents.indexOf(marker);
-  if (index === -1) return;
+  const anchor = ':ccache_enabled => ccache_enabled?(podfile_properties),';
+  const anchorIndex = contents.indexOf(anchor);
+  if (anchorIndex === -1) return;
 
-  const closeIndex = contents.indexOf(')', index);
+  const closeIndex = contents.indexOf(')', anchorIndex + anchor.length);
   if (closeIndex === -1) return;
 
   const updated = `${contents.slice(0, closeIndex + 1)}${PODFILE_SNIPPET}${contents.slice(closeIndex + 1)}`;
