@@ -10,7 +10,9 @@ from pathlib import Path
 from .utils import BUILD_DIR, ROOT, capture, log
 
 ENV_FILE = BUILD_DIR / ".env"
+ROOT_ENV = ROOT / ".env"
 ROOT_ENV_LOCAL = ROOT / ".env.local"
+PRODUCTION_API_URL = "https://flowly-web-coral.vercel.app/api/v1"
 
 
 def _load_env_file(path: Path, *, prefix: str | None = None) -> None:
@@ -85,10 +87,20 @@ class Config:
         return bool(self.asc_key_id and self.asc_issuer_id and self.asc_key_path)
 
 
-def load_config() -> Config:
+def apply_build_environment() -> None:
+    """Carrega variáveis de ambiente para o build Expo, incluindo o `.env` raiz.
+
+    Mantém `EXPO_PUBLIC_API_URL` apontando para produção (não usa o localhost do .env local).
+    """
     _load_env_file(ENV_FILE)
     # Sentry CLI roda dentro do xcodebuild e precisa do token no ambiente do processo pai.
     _load_env_file(ROOT_ENV_LOCAL, prefix="SENTRY_")
+    _load_env_file(ROOT_ENV)
+    os.environ["EXPO_PUBLIC_API_URL"] = PRODUCTION_API_URL
+
+
+def load_config() -> Config:
+    apply_build_environment()
     app = _read_app_json()
     ios_cfg = app.get("expo", {}).get("ios", {})
     bundle_id = os.environ.get("BUNDLE_ID") or ios_cfg.get("bundleIdentifier", "")

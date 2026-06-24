@@ -25,6 +25,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { api, HttpError, isNetworkError, setAuthToken, setAuthTokenProvider } from '@/lib/network';
 import { getPersistedSnapshot, usePersistedState } from '@/lib/storage';
+import { loginUser, logoutUser } from '@/lib/subscription';
 
 import type { AuthResponse, AuthResult, Credentials, Session } from './types';
 
@@ -73,7 +74,10 @@ export function useSession() {
       try {
         const data = await api.post<AuthResponse>(path, credentials);
         applyAuthHeader(data.token);
-        setSession({ token: data.token, email: data.user?.email ?? credentials.email });
+        const email = data.user?.email ?? credentials.email;
+        setSession({ token: data.token, email });
+        // Vincula as compras ao usuário no RevenueCat (não bloqueia o login).
+        loginUser(email).catch(() => undefined);
         return { ok: true };
       } catch (error) {
         return { ok: false, error: toFriendlyMessage(error) };
@@ -90,6 +94,7 @@ export function useSession() {
 
   const signOut = useCallback(() => {
     applyAuthHeader(null);
+    logoutUser().catch(() => undefined);
     setSession({ ...EMPTY_SESSION });
   }, [setSession]);
 

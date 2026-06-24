@@ -1,0 +1,90 @@
+/**
+ * Wrapper fino sobre o SDK `react-native-purchases`.
+ *
+ * Encapsula toda a interação com o RevenueCat (configure/login/compra/restore)
+ * para que telas e hooks não importem o SDK diretamente. Em web (ou onde o
+ * módulo nativo não está disponível) as operações viram no-ops seguros.
+ */
+
+import { Platform } from 'react-native';
+import Purchases, { type CustomerInfo, LOG_LEVEL, type PurchasesOffering, type PurchasesPackage } from 'react-native-purchases';
+
+import { ENTITLEMENT_ID, isUsableApiKey, RC_API_KEY } from './config';
+
+let configured = false;
+
+/** RevenueCat só roda em iOS/Android. */
+export function isPurchasesSupported(): boolean {
+  return Platform.OS === 'ios' || Platform.OS === 'android';
+}
+
+/** Configura o SDK uma única vez. Idempotente — seguro chamar no boot. */
+export function initPurchases(): void {
+  if (configured || !isPurchasesSupported()) return;
+  if (!isUsableApiKey(RC_API_KEY)) {
+    console.warn('[subscription] RevenueCat API key inválida para esta plataforma/build — configure pulado.');
+    return;
+  }
+  configured = true;
+  if (__DEV__) {
+    Purchases.setLogLevel(LOG_LEVEL.DEBUG);
+  }
+  Purchases.configure({ apiKey: RC_API_KEY });
+}
+
+/** Associa as compras a um usuário estável (ex.: e-mail/ID do backend). */
+export async function loginUser(appUserId: string): Promise<CustomerInfo | null> {
+  if (!configured || !isPurchasesSupported() || !appUserId) return null;
+  const { customerInfo } = await Purchases.logIn(appUserId);
+  return customerInfo;
+}
+
+/** Volta ao usuário anônimo (logout do app). */
+export async function logoutUser(): Promise<void> {
+  if (!configured || !isPurchasesSupported()) return;
+  try {
+    await Purchases.logOut();
+  } catch {
+    // Já estava anônimo — sem ação.
+  }
+}
+
+/** Lê as informações atuais do cliente (entitlements, compras, etc.). */
+export async function getCustomerInfo(): Promise<CustomerInfo | null> {
+  if (!configured || !isPurchasesSupported()) return null;
+  return Purchases.getCustomerInfo();
+}
+
+/** `true` se o entitlement "Flowly Pro" está ativo. */
+export function hasProEntitlement(info: CustomerInfo | null | undefined): boolean {
+  return Boolean(info?.entitlements.active[ENTITLEMENT_ID]);
+}
+
+/** Offering atual configurado no dashboard (packages para o paywall). */
+export async function getCurrentOffering(): Promise<PurchasesOffering | null> {
+  if (!configured || !isPurchasesSupported()) return null;
+  const offerings = await Purchases.getOfferings();
+  return offerings.current ?? null;
+}
+
+/** Efetua a compra de um package. Lança em caso de erro/cancelamento. */
+export async function purchasePackage(pkg: PurchasesPackage): Promise<CustomerInfo> {
+  const { customerInfo } = await Purchases.purchasePackage(pkg);
+  return customerInfo;
+}
+
+/** Restaura compras anteriores do usuário. */
+export async function restorePurchases(): Promise<CustomerInfo | null> {
+  if (!configured || !isPurchasesSupported()) return null;
+  return Purchases.restorePurchases();
+}
+
+/**
+ * Escuta atualizações de `CustomerInfo` (renovações, expiração, restore).
+ * Retorna uma função de cleanup.
+ */
+export function addCustomerInfoListener(listener: (info: CustomerInfo) => void): () => void {
+  if (!configured || !isPurchasesSupported()) return () => undefined;
+  Purchases.addCustomerInfoUpdateListener(listener);
+  return () => Purchases.removeCustomerInfoUpdateListener(listener);
+}

@@ -19,23 +19,16 @@ Configuração de credenciais: copie build/.env.example para build/.env.
 from __future__ import annotations
 
 import argparse
-import os
 import sys
 
 from build.checks import run_checks
-from build.config import load_config, print_summary
+from build.config import apply_build_environment, load_config, print_summary
 from build.ios_build import archive_and_export, prebuild
 from build.upload import upload as upload_step
 from build.utils import CommandError, log, section
 from build.version import apply_to_app_json, commit_version, next_version
 
-PRODUCTION_API_URL = "https://flowly-web-coral.vercel.app/api/v1"
 _BUILD_COMMANDS = frozenset({"all", "build", "upload", "config"})
-
-
-def _apply_production_api_url() -> None:
-    """Garante a URL de produção no bundle (sobrescreve o .env local de dev)."""
-    os.environ["EXPO_PUBLIC_API_URL"] = PRODUCTION_API_URL
 
 
 def _cmd_version(args: argparse.Namespace) -> int:
@@ -150,7 +143,7 @@ def main(argv: list[str] | None = None) -> int:
         args.no_upload = False
 
     if args.command in _BUILD_COMMANDS:
-        _apply_production_api_url()
+        apply_build_environment()
 
     try:
         return args.func(args)

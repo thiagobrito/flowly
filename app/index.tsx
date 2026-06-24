@@ -7,12 +7,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import type { TabKey } from '@/components/BottomTabBar';
 import BottomTabBar from '@/components/BottomTabBar';
 import { useSession } from '@/lib/auth';
+import { useSubscription } from '@/lib/subscription';
 import Calendar from '@/screens/Calendar';
 import { onceFrequencyFromISO } from '@/screens/Calendar/scheduleSync';
 import Config from '@/screens/Config';
 import Goals from '@/screens/Goals';
 import NewTask from '@/screens/NewTask';
 import type { FrequencyConfig, Task } from '@/screens/NewTask/data';
+import Paywall from '@/screens/Paywall';
 import Statistics from '@/screens/Statistics';
 import Tasks from '@/screens/Tasks/index';
 
@@ -53,6 +55,7 @@ function Home() {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [newTaskDraft, setNewTaskDraft] = useState<NewTaskDraft | null>(null);
   const { isHydrated, isAuthenticated, signOut } = useSession();
+  const { isReady: subscriptionReady, isPremium, refresh: refreshSubscription } = useSubscription();
 
   const handleTabChange = (next: TabKey) => {
     if (next === 'new') {
@@ -92,6 +95,24 @@ function Home() {
 
   if (!isAuthenticated) {
     return <Redirect href="/login" />;
+  }
+
+  if (!subscriptionReady) {
+    return (
+      <View className="flex-1 items-center justify-center bg-white dark:bg-black">
+        <Background isDark={isDark} />
+        <ActivityIndicator color={isDark ? '#e4e4e7' : '#6366f1'} />
+      </View>
+    );
+  }
+
+  if (!isPremium) {
+    return (
+      <View className="flex-1 bg-white dark:bg-black">
+        <Background isDark={isDark} />
+        <Paywall onClose={refreshSubscription} />
+      </View>
+    );
   }
 
   const handleLogout = () => {
