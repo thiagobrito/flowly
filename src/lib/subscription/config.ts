@@ -43,6 +43,7 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionPlanId, SubscriptionPlan> = 
 export function resolvePlanId(productId: string | null | undefined): SubscriptionPlanId | null {
   if (!productId) return null;
   const id = productId.toLowerCase();
+  if (id.includes('life') || id.includes('rc_lifetime')) return null;
   if (id.includes('year') || id.includes('annual') || id.includes('anual')) return 'flowly_yearly';
   if (id.includes('mont') || id.includes('month') || id.includes('mensal')) return 'flowly_montly';
   return null;

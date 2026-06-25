@@ -1,17 +1,16 @@
 import { GoalIcon } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, AppState, Platform, RefreshControl, ScrollView, Text, useColorScheme, View } from 'react-native';
+import { ActivityIndicator, Alert, AppState, Modal, Platform, RefreshControl, ScrollView, Text, useColorScheme, View } from 'react-native';
 
 import { toLocalISOString } from '@/lib/date';
 import { computeEnergyAtMoment, flowlyInputFromMetrics, getHealthProvider } from '@/lib/energy';
 import { api } from '@/lib/network';
 
 import { useNotificationTest } from '../Config/hooks/useNotificationTest';
-import { usePurchaseTest } from '../Config/hooks/usePurchaseTest';
 import NotificationTestModal from '../Config/NotificationTestModal';
-import PurchaseTestModal from '../Config/PurchaseTestModal';
 import type { Task } from '../NewTask/data';
 import { getLifeArea } from '../NewTask/data';
+import Subscription from '../Subscription';
 import type { FilterArea } from './components/FilterDrawer';
 import FilterDrawer from './components/FilterDrawer';
 import Header from './components/Header';
@@ -58,12 +57,11 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
 
   const [filterOpen, setFilterOpen] = useState(false);
   const [testModalVisible, setTestModalVisible] = useState(false);
-  const [purchaseTestModalVisible, setPurchaseTestModalVisible] = useState(false);
+  const [subscriptionVisible, setSubscriptionVisible] = useState(false);
   const [selectedAreas, setSelectedAreas] = useState<string[]>([]);
   const [selectedDateFilter, setSelectedDateFilter] = useState<DateFilterId | null>(null);
 
   const { showNow, showIn30Seconds } = useNotificationTest();
-  const { busy: purchaseTestBusy, showPaywall, purchaseMonthly, purchaseYearly, restore } = usePurchaseTest();
 
   const allTasks = useMemo(() => [...visibleTasks, ...concludedTasks], [visibleTasks, concludedTasks]);
 
@@ -216,7 +214,7 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
         onOpenConfig={onOpenConfig}
         onOpenFilter={() => setFilterOpen(true)}
         onOpenNotificationTest={/* () => setTestModalVisible(true) */ undefined}
-        onOpenPurchaseTest={() => setPurchaseTestModalVisible(true)}
+        onOpenPurchaseTest={() => setSubscriptionVisible(true)}
       />
 
       <ScrollView
@@ -253,16 +251,9 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
 
       <NotificationTestModal visible={testModalVisible} isDark={isDark} onClose={() => setTestModalVisible(false)} onShowNow={showNow} onShowIn30Seconds={showIn30Seconds} />
 
-      <PurchaseTestModal
-        visible={purchaseTestModalVisible}
-        busy={purchaseTestBusy}
-        isDark={isDark}
-        onClose={() => setPurchaseTestModalVisible(false)}
-        onShowPaywall={showPaywall}
-        onPurchaseMonthly={purchaseMonthly}
-        onPurchaseYearly={purchaseYearly}
-        onRestore={restore}
-      />
+      <Modal visible={subscriptionVisible} animationType="slide" presentationStyle="fullScreen" onRequestClose={() => setSubscriptionVisible(false)}>
+        <Subscription onClose={() => setSubscriptionVisible(false)} />
+      </Modal>
     </View>
   );
 }

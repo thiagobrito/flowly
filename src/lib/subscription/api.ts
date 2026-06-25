@@ -30,8 +30,11 @@ export function buildPaymentPayload(info: CustomerInfo, transactionId?: string |
   const entitlement = info.entitlements.active[ENTITLEMENT_ID];
   if (!entitlement) return null;
 
+  const plan = resolvePlanId(entitlement.productIdentifier);
+  if (!plan) return null;
+
   return {
-    plan: resolvePlanId(entitlement.productIdentifier) ?? 'flowly_montly',
+    plan,
     productId: entitlement.productIdentifier,
     store: String(entitlement.store),
     transactionId: transactionId ?? null,
