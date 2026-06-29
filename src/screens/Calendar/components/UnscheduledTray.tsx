@@ -58,7 +58,7 @@ function TaskChip({
       <View accessibilityRole="button" className="mr-2 rounded-2xl border px-3 py-2" style={{ backgroundColor: background, borderColor, maxWidth: 200 }}>
         <View className="mb-2 flex-row items-center">
           <View className="mr-2 size-2.5 rounded-full" style={{ backgroundColor: accent }} />
-          <Text numberOfLines={1} className="max-w-[165px] text-sm" style={{ color: titleColor }}>
+          <Text numberOfLines={3} className="max-w-[165px] text-xs" style={{ color: titleColor }}>
             {task.name}
           </Text>
         </View>
