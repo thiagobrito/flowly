@@ -6,6 +6,7 @@ import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 
 
 import { toLocalISOString } from '@/lib/date';
 import { api } from '@/lib/network';
+import { cancelTaskRemindersFor } from '@/lib/taskReminders';
 
 import type { Subtask, Task } from '../../NewTask/data';
 import { describeFrequency, formatDuration, getFrequencyMeta, getLifeArea } from '../../NewTask/data';
@@ -93,6 +94,7 @@ export default function TaskCard({ highlight, task, selected, isDark, onComplete
         await api.post('/tasks/undo', { taskId: task.id, date: toLocalISOString() });
       } else {
         await api.post('/tasks/complete', { taskId: task.id, date: toLocalISOString() });
+        await cancelTaskRemindersFor(task.id);
       }
     } catch {
       setIsSelected((prev) => !prev);

@@ -160,6 +160,28 @@ export async function cancelTaskReminders(): Promise<void> {
 }
 
 /**
+ * Cancela as notificações deste módulo de uma tarefa específica. Útil ao
+ * concluir uma tarefa, para não avisar sobre algo já finalizado. Seguro para
+ * chamar sempre — apenas remove o que já estiver agendado.
+ */
+export async function cancelTaskRemindersFor(taskId: string): Promise<void> {
+  if (!taskId) return;
+  try {
+    const scheduled = await getScheduledNotifications();
+    await Promise.all(
+      scheduled
+        .filter((item) => {
+          const data = item.content?.data as { type?: string; taskId?: string } | undefined;
+          return data?.type === TASK_REMINDER_DATA_TYPE && data?.taskId === taskId;
+        })
+        .map((item) => notifications.cancel(item.identifier)),
+    );
+  } catch {
+    // Notificações indisponíveis (ex.: Expo Go) — silenciosamente ignora.
+  }
+}
+
+/**
  * Sincroniza os lembretes de início de tarefa. Sempre cancela os lembretes
  * antigos deste módulo antes de reagendar. Quando `enabled` é `false`, apenas
  * cancela.

@@ -7,7 +7,7 @@ import { ActivityIndicator, Alert, StyleSheet, Text, useColorScheme, View } from
 import { APP_TIME_ZONE, localDateKey, startOfLocalDay, toLocalISOString } from '@/lib/date';
 import { hasGoogleClientIds, useGoogleCalendarSync } from '@/lib/googleCalendar';
 import { api } from '@/lib/network';
-import { syncTaskReminders } from '@/lib/taskReminders';
+import { cancelTaskRemindersFor, syncTaskReminders } from '@/lib/taskReminders';
 
 import { useConfigPreferences } from '../Config/hooks/useConfigPreferences';
 import type { ScheduledSlot, Task } from '../NewTask/data';
@@ -324,6 +324,7 @@ export default function Calendar({ onEdit, onCreateAt }: CalendarProps) {
 
       try {
         await api.post('/tasks/complete', { taskId: task.id, date: toLocalISOString() });
+        await cancelTaskRemindersFor(task.id);
         fetchTasks();
       } catch {
         restoreTask(snapshot);
