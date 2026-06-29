@@ -8,6 +8,7 @@ import AccountSection from './Account';
 import ConfigHeader from './components/ConfigHeader';
 import Goals from './Goals';
 import IntegrationSection from './Integration';
+import LegalSection from './Legal';
 import NotificationsSection from './Notifications';
 import SubscriptionSection from './Subscription';
 
@@ -47,6 +48,7 @@ export default function Config({ onBack }: ConfigProps) {
         <SubscriptionSection isDark={isDark} />
         <NotificationsSection isDark={isDark} />
         <IntegrationSection isDark={isDark} />
+        <LegalSection isDark={isDark} />
 
         <Pressable
           onPress={handleDeleteAccount}

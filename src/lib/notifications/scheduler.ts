@@ -60,7 +60,6 @@ export function scheduleNotification(content: NotificationContent, trigger: Noti
 
 /** Atalho: agenda uma notificação única para uma data/hora absoluta. */
 export function scheduleAt(content: NotificationContent, date: Date | number): Promise<string> {
-  console.log('scheduleNotification', content, date);
   return scheduleNotification(content, { type: 'date', date });
 }
 

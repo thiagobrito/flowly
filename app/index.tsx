@@ -95,26 +95,6 @@ function Home() {
     return <Redirect href="/login" />;
   }
 
-  /*
-  if (!subscriptionReady) {
-    return (
-      <View className="flex-1 items-center justify-center bg-white dark:bg-black">
-        <Background isDark={isDark} />
-        <ActivityIndicator color={isDark ? '#e4e4e7' : '#6366f1'} />
-      </View>
-    );
-  }
-
-  if (!isPremium && !(__DEV__ && devBypassPaywall)) {
-    return (
-      <View className="flex-1 bg-white dark:bg-black">
-        <Background isDark={isDark} />
-        <Paywall onClose={refreshSubscription} onDevBypass={__DEV__ ? () => setDevBypassPaywall(true) : undefined} />
-      </View>
-    );
-  }
-  */
-
   const handleLogout = () => {
     Alert.alert('Sair', 'Deseja encerrar a sessão?', [
       { text: 'Cancelar', style: 'cancel' },
