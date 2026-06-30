@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import type { TabKey } from '@/components/BottomTabBar';
 import BottomTabBar from '@/components/BottomTabBar';
 import { useSession } from '@/lib/auth';
+import { useOnboarding } from '@/lib/onboarding';
 import Calendar from '@/screens/Calendar';
 import { onceFrequencyFromISO } from '@/screens/Calendar/scheduleSync';
 import Config from '@/screens/Config';
@@ -53,6 +54,7 @@ function Home() {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [newTaskDraft, setNewTaskDraft] = useState<NewTaskDraft | null>(null);
   const { isHydrated, isAuthenticated, signOut } = useSession();
+  const { isHydrated: onboardingHydrated, completed: onboardingCompleted } = useOnboarding();
   // const { isReady: subscriptionReady, isPremium, refresh: refreshSubscription } = useSubscription();
 
   const handleTabChange = (next: TabKey) => {
@@ -82,7 +84,7 @@ function Home() {
     setTab(target);
   };
 
-  if (!isHydrated) {
+  if (!isHydrated || !onboardingHydrated) {
     return (
       <View className="flex-1 items-center justify-center bg-white dark:bg-black">
         <Background isDark={isDark} />
@@ -93,6 +95,10 @@ function Home() {
 
   if (!isAuthenticated) {
     return <Redirect href="/login" />;
+  }
+
+  if (!onboardingCompleted) {
+    return <Redirect href="/onboarding" />;
   }
 
   const handleLogout = () => {

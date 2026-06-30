@@ -1,0 +1,168 @@
+import { ChevronLeft } from 'lucide-react-native';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+import { api } from '@/lib/network';
+import { useOnboarding } from '@/lib/onboarding';
+import type { GoalSetup } from '@/screens/Goals/data';
+import NewGoals from '@/screens/NewGoals';
+import NewTask from '@/screens/NewTask';
+import type { NewTaskPayload } from '@/screens/NewTask/data';
+import Subscription from '@/screens/Subscription';
+
+import ActivitiesStep, { type OnboardingActivity } from './components/ActivitiesStep';
+import Background from './components/Background';
+import CompletedStep from './components/CompletedStep';
+import GoalsStep from './components/GoalsStep';
+import IntroStep from './components/IntroStep';
+import LanguageStep from './components/LanguageStep';
+import NotificationsStep from './components/NotificationsStep';
+import PaymentStep from './components/PaymentStep';
+import ProgressHeader from './components/ProgressHeader';
+import QuoteStep from './components/QuoteStep';
+import type { OnboardingConfig } from './data';
+import { DEFAULT_ONBOARDING } from './data';
+
+type OnboardingProps = {
+  isDark: boolean;
+  /** Chamado ao concluir o onboarding (persiste a flag e navega para a Home). */
+  onComplete: () => void;
+};
+
+export default function Onboarding({ isDark, onComplete }: OnboardingProps) {
+  const { language, setLanguage } = useOnboarding();
+  const [config, setConfig] = useState<OnboardingConfig>(DEFAULT_ONBOARDING);
+  const [index, setIndex] = useState(0);
+  const [showPaywall, setShowPaywall] = useState(false);
+  const [showGoals, setShowGoals] = useState(false);
+  const [showActivities, setShowActivities] = useState(false);
+  const [goalSetup, setGoalSetup] = useState<GoalSetup | null>(null);
+  const [activities, setActivities] = useState<OnboardingActivity[]>([]);
+
+  const goalName = goalSetup?.mainGoal.name?.trim() ? goalSetup.mainGoal.name.trim() : null;
+
+  useEffect(() => {
+    let active = true;
+    async function fetchConfig() {
+      try {
+        const remote = await api.get<OnboardingConfig>('/onboarding');
+        if (active && remote && Array.isArray(remote.steps) && remote.steps.length > 0) setConfig(remote);
+      } catch {
+        // mantém o roteiro padrão (mock) quando o backend não responde
+      }
+    }
+    fetchConfig();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const { steps } = config;
+  const step = steps[Math.min(index, steps.length - 1)];
+  const isLast = index >= steps.length - 1;
+
+  const goBack = useCallback(() => setIndex((prev) => Math.max(0, prev - 1)), []);
+
+  const goNext = useCallback(() => {
+    if (isLast) {
+      onComplete();
+      return;
+    }
+    setIndex((prev) => Math.min(steps.length - 1, prev + 1));
+  }, [isLast, steps.length, onComplete]);
+
+  const handlePaywallClose = useCallback(() => {
+    setShowPaywall(false);
+    goNext();
+  }, [goNext]);
+
+  const handleGoalsComplete = useCallback(
+    (setup: GoalSetup) => {
+      setGoalSetup(setup);
+      setShowGoals(false);
+      goNext();
+    },
+    [goNext],
+  );
+
+  const handleActivityCreated = useCallback((payload: NewTaskPayload) => {
+    setActivities((prev) => [...prev, { id: `${Date.now()}-${prev.length}`, name: payload.name }]);
+  }, []);
+
+  // Sempre retorna ao onboarding após criar uma atividade (não navega para fora).
+  const handleActivitySuccess = useCallback(() => {
+    setShowActivities(false);
+  }, []);
+
+  const content = useMemo(() => {
+    if (!step) return null;
+    switch (step.kind) {
+      case 'language':
+        return <LanguageStep step={step} isDark={isDark} language={language} onSelect={setLanguage} onNext={goNext} />;
+      case 'intro':
+        return <IntroStep step={step} isDark={isDark} onNext={goNext} />;
+      case 'quote':
+        return <QuoteStep step={step} isDark={isDark} onNext={goNext} />;
+      case 'goals':
+        return <GoalsStep step={step} isDark={isDark} onOpenGoals={() => setShowGoals(true)} onSkip={goNext} />;
+      case 'activities':
+        return <ActivitiesStep step={step} isDark={isDark} goalName={goalName} activities={activities} onAddActivity={() => setShowActivities(true)} onNext={goNext} />;
+      case 'notifications':
+        return <NotificationsStep step={step} isDark={isDark} onNext={goNext} />;
+      case 'payment':
+        return <PaymentStep step={step} isDark={isDark} onOpenPaywall={() => setShowPaywall(true)} onSkip={goNext} />;
+      case 'completed':
+        return <CompletedStep step={step} isDark={isDark} onFinish={goNext} />;
+      default:
+        return null;
+    }
+  }, [step, isDark, language, setLanguage, goNext, goalName, activities]);
+
+  if (!step) return null;
+
+  return (
+    <View className="flex-1">
+      <ProgressHeader current={index} total={steps.length} isDark={isDark} canGoBack={index > 0} onBack={goBack} />
+
+      <ScrollView className="mt-4 flex-1" showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 24, flexGrow: 1 }}>
+        <View key={step.id} className="flex-1">
+          {content}
+        </View>
+      </ScrollView>
+
+      <Modal visible={showPaywall} animationType="slide" presentationStyle="fullScreen" onRequestClose={handlePaywallClose}>
+        <Background isDark={isDark} />
+        <Subscription onClose={handlePaywallClose} />
+      </Modal>
+
+      <Modal visible={showGoals} animationType="slide" presentationStyle="fullScreen" onRequestClose={() => setShowGoals(false)}>
+        <View className="flex-1 bg-white dark:bg-black">
+          <Background isDark={isDark} />
+          <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
+            <View className="flex-1 px-4 pt-2">
+              <NewGoals isDark={isDark} onComplete={handleGoalsComplete} onClose={() => setShowGoals(false)} />
+            </View>
+          </SafeAreaView>
+        </View>
+      </Modal>
+
+      <Modal visible={showActivities} animationType="slide" presentationStyle="fullScreen" onRequestClose={() => setShowActivities(false)}>
+        <View className="flex-1 bg-white dark:bg-black">
+          <Background isDark={isDark} />
+          <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
+            <View className="flex-1 px-4 pt-2">
+              <View className="h-10 flex-row items-center">
+                <Pressable onPress={() => setShowActivities(false)} accessibilityRole="button" accessibilityLabel="Voltar ao onboarding" className="-ml-1 flex-row items-center active:opacity-70">
+                  <ChevronLeft size={24} color={isDark ? '#e4e4e7' : '#27272a'} />
+                  <Text className="text-base font-medium text-zinc-700 dark:text-zinc-200">Voltar</Text>
+                </Pressable>
+              </View>
+              <NewTask initialArea={goalName} onCreate={handleActivityCreated} onSuccess={handleActivitySuccess} />
+            </View>
+          </SafeAreaView>
+        </View>
+      </Modal>
+    </View>
+  );
+}

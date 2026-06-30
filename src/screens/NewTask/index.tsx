@@ -15,11 +15,13 @@ import { FrequencyPicker } from './FrequencyPicker';
 type NewTaskProps = {
   task?: Task | null;
   initialFrequency?: FrequencyConfig | null;
+  /** Objetivo/área pré-selecionado (ex.: durante o onboarding, para vincular a atividade a uma meta específica). */
+  initialArea?: string | null;
   onCreate?: (payload: NewTaskPayload) => void;
   onSuccess?: () => void;
 };
 
-export default function NewTask({ task, initialFrequency, onCreate, onSuccess }: NewTaskProps) {
+export default function NewTask({ task, initialFrequency, initialArea, onCreate, onSuccess }: NewTaskProps) {
   const isDark = useColorScheme() === 'dark';
   const isEditing = !!task;
   const { preferences } = useConfigPreferences();
@@ -28,12 +30,13 @@ export default function NewTask({ task, initialFrequency, onCreate, onSuccess }:
   const [energy, setEnergy] = useState(task?.energy ?? 3);
   const [impact, setImpact] = useState(task?.impact ?? 3);
   const [frequency, setFrequency] = useState<FrequencyConfig | null>(task?.frequency ?? initialFrequency ?? null);
-  const [area, setArea] = useState<string | null>(task?.area ?? null);
+  const [area, setArea] = useState<string | null>(task?.area ?? initialArea ?? null);
   const [subtasks, setSubtasks] = useState<Subtask[]>(task?.subtasks ?? []);
   const [estimatedMinutes, setEstimatedMinutes] = useState<number | null>(task?.estimatedMinutes ?? null);
   const [labels, setLabels] = useState<string[]>(['SAÚDE', 'FLOWLY']);
 
   const canSubmit = useMemo(() => name.trim().length > 0 && isFrequencyConfigValid(frequency) && area !== null, [name, frequency, area]);
+  const areaLabels = useMemo(() => (initialArea && !labels.includes(initialArea) ? [initialArea, ...labels] : labels), [labels, initialArea]);
   let buttonBackground = isDark ? 'rgba(255,255,255,0.12)' : 'rgba(10, 21, 241, 0.08)';
   let buttonTextColor = isDark ? '#71717a' : '#a1a1aa';
 
@@ -124,7 +127,7 @@ export default function NewTask({ task, initialFrequency, onCreate, onSuccess }:
         <View className="mt-6">
           <SectionHeader label="Área da vida ou metas" Icon={HeartPulse} accent="#8b5cf6" />
           <View className="-mx-1 flex-row flex-wrap">
-            {labels.map((item) => (
+            {areaLabels.map((item) => (
               <View key={item} className="w-1/2 p-1">
                 <OptionChip label={item} isGoal Icon={GoalIcon} selected={area === item} accent="#22c55e" isDark={isDark} onPress={() => setArea(item)} className="w-full" />
               </View>

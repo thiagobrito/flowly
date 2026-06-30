@@ -90,7 +90,20 @@ export function useSession() {
 
   const signIn = useCallback((credentials: Credentials) => authenticate('/auth/login', credentials), [authenticate]);
 
-  const signUp = useCallback((credentials: Credentials) => authenticate('/auth/register', credentials), [authenticate]);
+  const signUp = useCallback(
+    async (credentials: Credentials): Promise<AuthResult> => {
+      const registered = await authenticate('/auth/register', credentials);
+      if (!registered.ok) return registered;
+
+      // Se o cadastro não autenticou (endpoint não retornou token), faz login
+      // automático para que o usuário recém-criado já entre no app/onboarding
+      // sem precisar logar manualmente.
+      const { token } = getPersistedSnapshot(EMPTY_SESSION, SESSION_KEY);
+      if (token) return registered;
+      return authenticate('/auth/login', credentials);
+    },
+    [authenticate],
+  );
 
   const signOut = useCallback(() => {
     applyAuthHeader(null);
