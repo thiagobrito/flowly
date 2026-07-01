@@ -5,6 +5,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { api } from '@/lib/network';
 import { useOnboarding } from '@/lib/onboarding';
+import type { PersistedRecord } from '@/lib/storage';
+import { usePersistedState } from '@/lib/storage';
 import type { GoalSetup } from '@/screens/Goals/data';
 import NewGoals from '@/screens/NewGoals';
 import NewTask from '@/screens/NewTask';
@@ -30,15 +32,32 @@ type OnboardingProps = {
   onComplete: () => void;
 };
 
+/**
+ * Progresso do onboarding persistido em storage: se o app for fechado ou morto
+ * no meio do fluxo, o usuário retoma do passo em que parou, sem perder as
+ * metas e atividades já criadas. Limpo ao concluir o onboarding.
+ */
+type OnboardingProgress = PersistedRecord & {
+  index: number;
+  goalSetup: GoalSetup | null;
+  activities: OnboardingActivity[];
+  loaded?: boolean;
+  lastUpdate?: string;
+};
+
+const PROGRESS_KEY = 'onboarding_progress_v1';
+
+const EMPTY_PROGRESS: OnboardingProgress = { index: 0, goalSetup: null, activities: [] };
+
 export default function Onboarding({ isDark, onComplete }: OnboardingProps) {
   const { language, setLanguage } = useOnboarding();
   const [config, setConfig] = useState<OnboardingConfig>(DEFAULT_ONBOARDING);
-  const [index, setIndex] = useState(0);
+  const [progress, setProgress] = usePersistedState<OnboardingProgress>(EMPTY_PROGRESS, PROGRESS_KEY);
   const [showPaywall, setShowPaywall] = useState(false);
   const [showGoals, setShowGoals] = useState(false);
   const [showActivities, setShowActivities] = useState(false);
-  const [goalSetup, setGoalSetup] = useState<GoalSetup | null>(null);
-  const [activities, setActivities] = useState<OnboardingActivity[]>([]);
+
+  const { index, goalSetup, activities } = progress;
 
   const goalName = goalSetup?.mainGoal.name?.trim() ? goalSetup.mainGoal.name.trim() : null;
 
@@ -62,15 +81,19 @@ export default function Onboarding({ isDark, onComplete }: OnboardingProps) {
   const step = steps[Math.min(index, steps.length - 1)];
   const isLast = index >= steps.length - 1;
 
-  const goBack = useCallback(() => setIndex((prev) => Math.max(0, prev - 1)), []);
+  const goBack = useCallback(() => {
+    setProgress({ ...progress, index: Math.max(0, index - 1) });
+  }, [setProgress, progress, index]);
 
   const goNext = useCallback(() => {
     if (isLast) {
+      // Fluxo concluído: descarta o progresso salvo para um eventual novo cadastro.
+      setProgress({ ...EMPTY_PROGRESS });
       onComplete();
       return;
     }
-    setIndex((prev) => Math.min(steps.length - 1, prev + 1));
-  }, [isLast, steps.length, onComplete]);
+    setProgress({ ...progress, index: Math.min(steps.length - 1, index + 1) });
+  }, [isLast, steps.length, onComplete, setProgress, progress, index]);
 
   const handlePaywallClose = useCallback(() => {
     setShowPaywall(false);
@@ -79,16 +102,18 @@ export default function Onboarding({ isDark, onComplete }: OnboardingProps) {
 
   const handleGoalsComplete = useCallback(
     (setup: GoalSetup) => {
-      setGoalSetup(setup);
       setShowGoals(false);
-      goNext();
+      setProgress({ ...progress, goalSetup: setup, index: Math.min(steps.length - 1, index + 1) });
     },
-    [goNext],
+    [setProgress, progress, steps.length, index],
   );
 
-  const handleActivityCreated = useCallback((payload: NewTaskPayload) => {
-    setActivities((prev) => [...prev, { id: `${Date.now()}-${prev.length}`, name: payload.name }]);
-  }, []);
+  const handleActivityCreated = useCallback(
+    (payload: NewTaskPayload) => {
+      setProgress({ ...progress, activities: [...activities, { id: `${Date.now()}-${activities.length}`, name: payload.name }] });
+    },
+    [setProgress, progress, activities],
+  );
 
   // Sempre retorna ao onboarding após criar uma atividade (não navega para fora).
   const handleActivitySuccess = useCallback(() => {
@@ -119,7 +144,9 @@ export default function Onboarding({ isDark, onComplete }: OnboardingProps) {
     }
   }, [step, isDark, language, setLanguage, goNext, goalName, activities]);
 
-  if (!step) return null;
+  // Aguarda a hidratação do progresso salvo para não piscar o passo inicial
+  // antes de restaurar o ponto em que o usuário parou.
+  if (!step || !progress.loaded) return null;
 
   return (
     <View className="flex-1">

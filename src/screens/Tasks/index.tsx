@@ -24,12 +24,16 @@ type TasksProps = {
 };
 
 function OrganizeTasks(tasks: any): Task[] {
-  return tasks.map((task: any) => ({
-    ...task,
+  return tasks.map((task: any, index: number) => {
     // eslint-disable-next-line no-underscore-dangle -- campo `_id` retornado pela API MongoDB
-    id: task.id ?? (task as Task & { _id?: string })._id ?? '',
-    randomId: Math.random().toString(36).substring(2, 15),
-  }));
+    const id = task.id ?? (task as Task & { _id?: string })._id ?? '';
+    return {
+      ...task,
+      id,
+      // Chave estável entre refetches (id + posição) para o React reconciliar as listas.
+      randomId: `${id || 'task'}-${index}`,
+    };
+  });
 }
 
 async function fetchTodayTasks(energyLevel: number): Promise<{ visibleTasks: Task[]; concludedTasks: Task[] }> {

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
 
 import { api } from '@/lib/network';
 import type { Goal, GoalSetup } from '@/screens/Goals/data';
@@ -84,11 +84,17 @@ export default function NewGoals({ isDark, mode = 'full', existingGoals = [], on
         await api.post('/goals/anamnesis', setup);
       }
     } catch {
-      // segue o fluxo localmente mesmo sem backend disponível
-    } finally {
+      // Não descarta silenciosamente o trabalho do usuário: oferece retry
+      // explícito antes de seguir sem salvar no backend.
       setSubmitting(false);
-      onComplete?.(setup);
+      Alert.alert('Não foi possível salvar', 'Verifique sua conexão e tente novamente.', [
+        { text: 'Tentar novamente', onPress: () => submit() },
+        { text: 'Continuar mesmo assim', style: 'destructive', onPress: () => onComplete?.(setup) },
+      ]);
+      return;
     }
+    setSubmitting(false);
+    onComplete?.(setup);
   }, [isAddSecondary, setup, existingGoals, onComplete]);
 
   const goNext = useCallback(() => {

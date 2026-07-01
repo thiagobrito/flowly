@@ -15,16 +15,18 @@ However, the app is **not currently in a shippable-for-success state**. There ar
 
 | # | Severity | Issue | Impact |
 |---|----------|-------|--------|
-| 1 | 🟠 High (was 🔴) | `EXPO_PUBLIC_API_URL` in `.env` points at `http://localhost:3000`, but the iOS **production build overrides it** to a live HTTPS API | iOS release is fine; **risk is Android/EAS builds** that don't apply the override and would ship localhost. See §2.1. |
-| 2 | 🔴 Critical | Energy is read synchronously (un-`await`ed Promise) on the main Tasks screen | The headline "energy-aware" feature silently computes from empty data; can also block tasks from loading. |
-| 3 | 🔴 Critical | Paywall/premium is **not enforced** anywhere (gating is commented out) | No revenue: every "premium" feature is free; the trial/subscription has no teeth. |
-| 4 | 🟠 High | Onboarding goals/activities are lost **if** the backend call fails (no offline/retry) | On a network error the user's first goals vanish silently — bad first session. Not the default path now that the backend is live. |
-| 5 | 🟠 High | `.env` (with API keys) is committed to git | Secret hygiene. (Production uses HTTPS, so cleartext is not a release-build issue on iOS.) |
-| 6 | 🟠 High | Product ID typo `flowly_montly` | Monthly purchases may fail to resolve against the store. |
+| 1 | ✅ Fixed | `EXPO_PUBLIC_API_URL` in `.env` points at `http://localhost:3000`, but the iOS **production build overrides it** to a live HTTPS API | **Fixed 2026-07-01:** `resolveBaseURL()` (`src/lib/network/config.ts`) now falls back to the production HTTPS URL in any non-dev build when the env value is missing or local — Android/EAS can no longer ship localhost. |
+| 2 | ✅ Fixed | Energy is read synchronously (un-`await`ed Promise) on the main Tasks screen | **Fixed 2026-07-01:** `refreshEnergy` now `await`s `collect()`; an `energyReady` flag lets tasks load even at energy level 0 or on collection failure. |
+| 3 | 🔴 Critical | Paywall/premium is **not enforced** anywhere (gating is commented out) | No revenue: every "premium" feature is free; the trial/subscription has no teeth. *(Deliberately deferred — needs a free-tier product decision.)* |
+| 4 | ✅ Fixed | Onboarding goals/activities are lost **if** the backend call fails (no offline/retry) | **Fixed 2026-07-01:** onboarding progress (step, goals, activities) is persisted to storage and restored on relaunch; `NewGoals` failures now show a retry alert instead of silently discarding work. |
+| 5 | ✅ Fixed | `.env` (with API keys) is committed to git | **Fixed 2026-07-01:** `.env` untracked (`git rm --cached`), added to `.gitignore`, and a placeholder `.env.example` committed. Keys ever committed should still be rotated. |
+| 6 | 🟠 High | Product ID typo `flowly_montly` | Monthly purchases may fail to resolve against the store. *(Not changed — must match the store SKU, which can't be verified from the repo.)* |
 
-> **Re-check note (2026-07-01):** After verifying the build pipeline, the original "backend unreachable / localhost" finding was **downgraded**. The production API is live and working (§2.1) — the remaining risk is that the override is iOS-only. Items **2 and 3 remain the true launch blockers**, plus making onboarding durable (item 4).
+> **Re-check note (2026-07-01):** After verifying the build pipeline, the original "backend unreachable / localhost" finding was **downgraded**. The production API is live and working (§2.1).
+>
+> **Fix round (2026-07-01):** Items 1, 2, 4 and 5 were fixed in code (see table). Also fixed in the same round: `NewTask` error handling + permanent-spinner hang (§4.1-D), sign-up validation with email/password rules and a Privacy/Terms consent checkbox (§7 P1-5), and stable list keys replacing `Math.random()` (§6). **The one remaining launch blocker is item 3 (paywall enforcement)**, pending a free-tier decision; item 6 needs the store SKU confirmed.
 
-Fixing items 2–3 (and hardening 1 & 4) is the difference between a demo and a launchable product. The rest of this report details each area with file references and a prioritized plan.
+The rest of this report details each area with file references and a prioritized plan.
 
 ---
 
@@ -204,25 +206,25 @@ If `/goals/labels` returns `[]` (or the call is unhandled and rejects), the scre
 - **`any` leakage** in data boundaries (`OrganizeTasks(tasks: any)`, `payload as any` in `NewTask`) hides shape mismatches like the `_id`/`id` normalization.
 - **Type-check/lint not runnable as-is** (`tsc: command not found` — dependencies not installed in this environment; ensure CI runs `npm ci && npm run check-types && npm run lint && npm test`).
 - **Inconsistent error UX:** some calls Alert on failure (Tasks fetch/delete), others swallow silently (NewGoals), others don't handle at all (NewTask create). Standardize.
-- **`Math.random()` React keys** (`randomId` in `OrganizeTasks`) regenerate every fetch, defeating reconciliation and animations.
+- ✅ **`Math.random()` React keys** (`randomId` in `OrganizeTasks`) regenerate every fetch, defeating reconciliation and animations. *(Fixed 2026-07-01: `randomId` is now derived from the stable task `id` + list position in Tasks and Calendar.)*
 
 ---
 
 ## 7. Prioritized Improvement Roadmap
 
 ### P0 — Blockers for a real launch (do first)
-1. **Unify the API URL across all build paths.** The backend is live and iOS points at it (§2.1), but the override is `build.py`-only — move `EXPO_PUBLIC_API_URL` into `app.config.ts`/EAS env vars so **Android and EAS builds can't ship the localhost value**. Add a startup connectivity check.
-2. **Fix energy collection on Tasks.** Replace the sync `collect()` with the async `useEnergyScore` hook (already used by Statistics/Calendar), or `await` and set state. Remove the `if (!energyLevel) return` hard gate or give it a sane default.
-3. **Enforce monetization.** Re-enable `useSubscription` in the app shell and gate premium features on `isPremium || isTrialing`. Decide the free-tier boundary and lock the rest. Fix the `flowly_montly` product ID to match the store.
-4. **Make onboarding durable.** Persist goals/activities locally (optimistic) and retry-sync to the backend; never let a failed request silently discard the user's onboarding work. Show an error + retry if save truly fails.
+1. ✅ **Unify the API URL across all build paths.** *(Fixed 2026-07-01)* `resolveBaseURL()` in `src/lib/network/config.ts` now falls back to the production HTTPS URL in non-dev builds when the env value is missing or points at localhost — no build path can ship the dev URL. (Startup connectivity check still open.)
+2. ✅ **Fix energy collection on Tasks.** *(Fixed 2026-07-01)* `refreshEnergy` awaits `collect()`; `energyReady` flag replaces the `if (!energyLevel)` hard gate so tasks load even at level 0 or on collection failure.
+3. **Enforce monetization.** Re-enable `useSubscription` in the app shell and gate premium features on `isPremium || isTrialing`. Decide the free-tier boundary and lock the rest. Fix the `flowly_montly` product ID to match the store. *(Deferred — awaits free-tier decision + store SKU confirmation.)*
+4. ✅ **Make onboarding durable.** *(Fixed 2026-07-01)* Onboarding progress (step index, goal setup, activities) persists via `usePersistedState` (`onboarding_progress_v1`) and is restored on relaunch; `NewGoals.submit()` failures show a "Tentar novamente / Continuar mesmo assim" alert instead of silently discarding work.
 
 ### P1 — Activation, retention, trust (next)
-5. **Sign-up hardening:** email format + password strength validation, ToS/Privacy consent checkbox, and a "forgot password" path (currently commented out).
-6. **Secret hygiene:** untrack `.env`, add `.env.example`, verify no real secrets in history; review `sendDefaultPii`.
+5. ✅ (partial) **Sign-up hardening:** *(Fixed 2026-07-01)* email format + minimum password length (8) with inline errors, and a required Privacy Policy/Terms consent checkbox (links via `src/lib/legal.ts`). "Forgot password" path still open.
+6. ✅ **Secret hygiene:** *(Fixed 2026-07-01)* `.env` untracked and ignored; `.env.example` added. Still open: rotate previously committed keys; review `sendDefaultPii`.
 7. **Notification UX:** handle denial (explain, allow re-ask, deep-link to settings); confirm scheduled reminders actually fire end-to-end.
-8. **Resumable onboarding:** persist the current step index so backgrounding doesn't reset progress.
+8. ✅ **Resumable onboarding:** *(Fixed 2026-07-01, together with item 4)* the current step index is persisted, so backgrounding/killing the app resumes where the user left off.
 9. **Align copy with behavior:** either enforce the "3 goals / 3 activities" promise or adjust the messaging.
-10. **Standardize network error handling** into one helper (toast/alert + Sentry + retry) and remove silent `catch {}`.
+10. **Standardize network error handling** into one helper (toast/alert + Sentry + retry) and remove silent `catch {}`. *(Partially improved 2026-07-01: `NewTask` create/labels now handle errors and no longer hang on a spinner.)*
 
 ### P2 — Scale & differentiation (soon after)
 11. **Internationalization (i18n).** The en-US path is a dead end; extract strings and enable English to unlock non-Brazilian markets.

@@ -1,6 +1,6 @@
 import { AlignLeft, Clock, GoalIcon, HeartPulse, ListChecks, Timer, TrendingUp, Zap } from 'lucide-react-native';
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, useColorScheme, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, ScrollView, Text, TextInput, useColorScheme, View } from 'react-native';
 
 import { api } from '@/lib/network';
 import { syncTaskReminders } from '@/lib/taskReminders';
@@ -35,6 +35,7 @@ export default function NewTask({ task, initialFrequency, initialArea, onCreate,
   const [subtasks, setSubtasks] = useState<Subtask[]>(task?.subtasks ?? []);
   const [estimatedMinutes, setEstimatedMinutes] = useState<number | null>(task?.estimatedMinutes ?? null);
   const [labels, setLabels] = useState<string[]>(['SAÚDE', 'FLOWLY']);
+  const [submitting, setSubmitting] = useState(false);
 
   const canSubmit = useMemo(() => name.trim().length > 0 && isFrequencyConfigValid(frequency) && area !== null, [name, frequency, area]);
   const areaLabels = useMemo(() => {
@@ -50,7 +51,7 @@ export default function NewTask({ task, initialFrequency, initialArea, onCreate,
   }
 
   const handleCreate = async () => {
-    if (!isFrequencyConfigValid(frequency) || area === null || name.trim().length === 0) {
+    if (submitting || !isFrequencyConfigValid(frequency) || area === null || name.trim().length === 0) {
       return;
     }
     const payload = {
@@ -69,24 +70,34 @@ export default function NewTask({ task, initialFrequency, initialArea, onCreate,
       payload.isEditing = true;
     }
 
-    await api.put(`/tasks`, payload);
+    setSubmitting(true);
+    try {
+      await api.put(`/tasks`, payload);
+    } catch {
+      // Mantém o formulário preenchido para o usuário tentar de novo.
+      Alert.alert('Erro', isEditing ? 'Não foi possível salvar as alterações. Tente novamente.' : 'Não foi possível criar a atividade. Tente novamente.');
+      return;
+    } finally {
+      setSubmitting(false);
+    }
 
     onCreate?.(payload);
-    await syncTaskReminders({ enabled: preferences.taskRemindersEnabled ?? true, tasksHint: [payload] });
+    // A atividade já foi salva; falha no agendamento de lembretes não deve travar o fluxo.
+    await syncTaskReminders({ enabled: preferences.taskRemindersEnabled ?? true, tasksHint: [payload] }).catch(() => undefined);
     onSuccess?.();
   };
 
   useEffect(() => {
     const fetchLabels = async () => {
-      const goalLabels = await api.get<string[]>(`/goals/labels`);
-      setLabels(goalLabels);
+      try {
+        const goalLabels = await api.get<string[]>(`/goals/labels`);
+        if (Array.isArray(goalLabels) && goalLabels.length > 0) setLabels(goalLabels);
+      } catch {
+        // mantém os labels padrão quando o backend não responde
+      }
     };
     fetchLabels();
   }, []);
-
-  if (labels.length === 0) {
-    return <ActivityIndicator />;
-  }
 
   return (
     <View className="flex-1">
@@ -169,11 +180,15 @@ export default function NewTask({ task, initialFrequency, initialArea, onCreate,
           </View>
         </View>
 
-        <Pressable onPress={handleCreate} disabled={!canSubmit} accessibilityRole="button" accessibilityState={{ disabled: !canSubmit }} className="mb-2 mt-8 active:opacity-80">
+        <Pressable onPress={handleCreate} disabled={!canSubmit || submitting} accessibilityRole="button" accessibilityState={{ disabled: !canSubmit || submitting }} className="mb-2 mt-8 active:opacity-80">
           <View className="items-center rounded-2xl py-3.5" style={{ backgroundColor: buttonBackground }}>
-            <Text className="text-base font-semibold" style={{ color: buttonTextColor }}>
-              {isEditing ? 'Salvar alterações' : 'Criar atividade'}
-            </Text>
+            {submitting ? (
+              <ActivityIndicator color={buttonTextColor} />
+            ) : (
+              <Text className="text-base font-semibold" style={{ color: buttonTextColor }}>
+                {isEditing ? 'Salvar alterações' : 'Criar atividade'}
+              </Text>
+            )}
           </View>
         </Pressable>
       </ScrollView>
