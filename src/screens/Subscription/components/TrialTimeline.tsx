@@ -2,45 +2,51 @@ import type { LucideIcon } from 'lucide-react-native';
 import { Bell, LockOpen, Star } from 'lucide-react-native';
 import { Text, View } from 'react-native';
 
-import { TRIAL_CHARGE_NOTICE_DAY, TRIAL_DAYS } from '../constants';
-
 type TrialStep = {
   Icon: LucideIcon;
   title: string;
   description: string;
 };
 
-const STEPS: TrialStep[] = [
-  {
-    Icon: LockOpen,
-    title: 'Hoje',
-    description: 'Desbloqueie metas, calendário, estatísticas e todos os recursos premium do Flowly.',
-  },
-  {
-    Icon: Bell,
-    title: `Em ${TRIAL_CHARGE_NOTICE_DAY} dias`,
-    description: 'Você será cobrado; cancele a qualquer momento antes.',
-  },
-  {
-    Icon: Star,
-    title: `Em ${TRIAL_DAYS} dias`,
-    description: 'Enviaremos um lembrete de que seu período de teste encerrará em breve.',
-  },
-];
+function buildSteps(trialDays: number): TrialStep[] {
+  // Aviso de cobrança 2 dias antes do fim do trial (mínimo dia 1).
+  const chargeNoticeDay = Math.max(1, trialDays - 2);
+
+  return [
+    {
+      Icon: LockOpen,
+      title: 'Hoje',
+      description: 'Desbloqueie metas, calendário, estatísticas e todos os recursos premium do Flowly.',
+    },
+    {
+      Icon: Bell,
+      title: `Em ${chargeNoticeDay} dias`,
+      description: 'Você será cobrado; cancele a qualquer momento antes.',
+    },
+    {
+      Icon: Star,
+      title: `Em ${trialDays} dias`,
+      description: 'Enviaremos um lembrete de que seu período de teste encerrará em breve.',
+    },
+  ];
+}
 
 type TrialTimelineProps = {
   isDark: boolean;
+  /** Duração do trial vigente (feature flag: 7, 14 ou 21 dias). */
+  trialDays: number;
 };
 
-export default function TrialTimeline({ isDark }: TrialTimelineProps) {
+export default function TrialTimeline({ isDark, trialDays }: TrialTimelineProps) {
   const lineColor = isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)';
   const titleColor = isDark ? '#fafafa' : '#18181b';
   const descriptionColor = isDark ? '#a1a1aa' : '#71717a';
+  const steps = buildSteps(trialDays);
 
   return (
     <View className="mt-8 px-6">
-      {STEPS.map((step, index) => {
-        const isLast = index === STEPS.length - 1;
+      {steps.map((step, index) => {
+        const isLast = index === steps.length - 1;
 
         return (
           <View key={step.title} className="flex-row">

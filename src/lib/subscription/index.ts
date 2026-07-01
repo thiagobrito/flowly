@@ -61,5 +61,6 @@ export {
   restorePurchases,
 } from './client';
 export { ENTITLEMENT_ID, RC_API_KEY, resolvePlanId, SUBSCRIPTION_PLANS } from './config';
+export { useLocalTrial } from './trial';
 export type { PaymentPayload, SubscriptionCache, SubscriptionPlan, SubscriptionPlanId, SubscriptionStatus, SubscriptionStatusValue } from './types';
 export { useSubscription } from './useSubscription';

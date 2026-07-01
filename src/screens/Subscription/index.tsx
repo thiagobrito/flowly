@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, Text, useColorScheme, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { useFeatureFlags } from '@/lib/featureFlags';
 import type { SubscriptionPlanId } from '@/lib/subscription';
 import { getCurrentOffering, initPurchases, isNativePurchasesAvailable, isPurchasesSupported, purchasePackage, restorePurchases, SUBSCRIPTION_PLANS, useSubscription } from '@/lib/subscription';
 
@@ -12,7 +13,6 @@ import IllustrationHeader from './components/IllustrationHeader';
 import LegalLinks from './components/LegalLinks';
 import PlanToggle from './components/PlanToggle';
 import TrialTimeline from './components/TrialTimeline';
-import { TRIAL_DAYS } from './constants';
 
 type SubscriptionProps = {
   onClose: () => void;
@@ -30,6 +30,7 @@ function Background({ isDark }: { isDark: boolean }) {
 export default function Subscription({ onClose, onDevBypass }: SubscriptionProps) {
   const isDark = useColorScheme() === 'dark';
   const { confirmPurchase } = useSubscription();
+  const { trialDays } = useFeatureFlags();
   const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlanId>('flowly_yearly');
   const [busy, setBusy] = useState(false);
 
@@ -42,10 +43,10 @@ export default function Subscription({ onClose, onDevBypass }: SubscriptionProps
 
   const pricingSubtitle = useMemo(() => {
     if (selectedPlan === 'flowly_yearly') {
-      return `Primeiros ${TRIAL_DAYS} dias grátis, depois ${yearly.priceLabel} (R$ ${formatMonthlyEquivalent(yearly.amount)}/mês)`;
+      return `Primeiros ${trialDays} dias grátis, depois ${yearly.priceLabel} (R$ ${formatMonthlyEquivalent(yearly.amount)}/mês)`;
     }
-    return `Primeiros ${TRIAL_DAYS} dias grátis, depois ${monthly.priceLabel}/mês`;
-  }, [monthly.priceLabel, selectedPlan, yearly.amount, yearly.priceLabel]);
+    return `Primeiros ${trialDays} dias grátis, depois ${monthly.priceLabel}/mês`;
+  }, [monthly.priceLabel, selectedPlan, trialDays, yearly.amount, yearly.priceLabel]);
 
   const planDetails = useMemo(() => {
     if (selectedPlan === 'flowly_yearly') {
@@ -149,7 +150,7 @@ export default function Subscription({ onClose, onDevBypass }: SubscriptionProps
             </Text>
           </View>
 
-          <TrialTimeline isDark={isDark} />
+          <TrialTimeline isDark={isDark} trialDays={trialDays} />
         </ScrollView>
 
         <View className="px-6 pb-2 pt-3">

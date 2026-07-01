@@ -1,10 +1,12 @@
-import { GoalIcon } from 'lucide-react-native';
+import { Crown, GoalIcon } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, AppState, Modal, Platform, RefreshControl, ScrollView, Text, useColorScheme, View } from 'react-native';
+import { ActivityIndicator, Alert, AppState, Modal, Platform, Pressable, RefreshControl, ScrollView, Text, useColorScheme, View } from 'react-native';
 
 import { toLocalISOString } from '@/lib/date';
 import { computeEnergyAtMoment, flowlyInputFromMetrics, getHealthProvider } from '@/lib/energy';
+import { useFeatureFlags } from '@/lib/featureFlags';
 import { api } from '@/lib/network';
+import { useLocalTrial, useSubscription } from '@/lib/subscription';
 
 import { useNotificationTest } from '../Config/hooks/useNotificationTest';
 import NotificationTestModal from '../Config/NotificationTestModal';
@@ -67,6 +69,12 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
   const [selectedDateFilter, setSelectedDateFilter] = useState<DateFilterId | null>(null);
 
   const { showNow, showIn30Seconds } = useNotificationTest();
+
+  // Trial/assinatura: permite assinar a qualquer momento (dia 0 inclusive).
+  const { trialDays } = useFeatureFlags();
+  const { isPremium } = useSubscription();
+  const { isActive: trialActive, daysLeft: trialDaysLeft } = useLocalTrial(trialDays);
+  const showTrialBanner = !isPremium && trialActive;
 
   const allTasks = useMemo(() => [...visibleTasks, ...concludedTasks], [visibleTasks, concludedTasks]);
 
@@ -221,6 +229,24 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
   return (
     <View className="flex-1">
       <Header isDark={isDark} energyScore={energyScore} onLogout={onLogout} onOpenConfig={onOpenConfig} onOpenFilter={() => setFilterOpen(true)} />
+
+      {showTrialBanner ? (
+        <Pressable
+          onPress={() => setSubscriptionVisible(true)}
+          accessibilityRole="button"
+          accessibilityLabel="Assinar o Flowly Premium"
+          className="mt-3 flex-row items-center rounded-2xl border px-4 py-3 active:opacity-80"
+          style={{ borderColor: isDark ? 'rgba(99,102,241,0.35)' : 'rgba(99,102,241,0.25)', backgroundColor: isDark ? 'rgba(99,102,241,0.12)' : 'rgba(99,102,241,0.08)' }}
+        >
+          <Crown size={16} color="#6366f1" />
+          <Text className="ml-2 flex-1 text-sm text-zinc-700 dark:text-zinc-200">
+            Teste grátis: {trialDaysLeft} {trialDaysLeft === 1 ? 'dia restante' : 'dias restantes'}
+          </Text>
+          <Text className="text-sm font-semibold" style={{ color: '#6366f1' }}>
+            Assinar
+          </Text>
+        </Pressable>
+      ) : null}
 
       <ScrollView
         className="mt-2 flex-1"

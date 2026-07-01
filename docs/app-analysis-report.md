@@ -17,14 +17,16 @@ However, the app is **not currently in a shippable-for-success state**. There ar
 |---|----------|-------|--------|
 | 1 | ✅ Fixed | `EXPO_PUBLIC_API_URL` in `.env` points at `http://localhost:3000`, but the iOS **production build overrides it** to a live HTTPS API | **Fixed 2026-07-01:** `resolveBaseURL()` (`src/lib/network/config.ts`) now falls back to the production HTTPS URL in any non-dev build when the env value is missing or local — Android/EAS can no longer ship localhost. |
 | 2 | ✅ Fixed | Energy is read synchronously (un-`await`ed Promise) on the main Tasks screen | **Fixed 2026-07-01:** `refreshEnergy` now `await`s `collect()`; an `energyReady` flag lets tasks load even at energy level 0 or on collection failure. |
-| 3 | 🔴 Critical | Paywall/premium is **not enforced** anywhere (gating is commented out) | No revenue: every "premium" feature is free; the trial/subscription has no teeth. *(Deliberately deferred — needs a free-tier product decision.)* |
+| 3 | ✅ Fixed | Paywall/premium is **not enforced** anywhere (gating is commented out) | **Fixed 2026-07-01:** the app now enforces a feature-flagged local trial (7/14/21 days via `useFeatureFlags`); when it expires without a subscription, the app locks on the paywall (`app/index.tsx` gate + `TrialEnded` screen). Users can buy from day 0 via the onboarding paywall step and a trial banner on the Tasks screen. |
 | 4 | ✅ Fixed | Onboarding goals/activities are lost **if** the backend call fails (no offline/retry) | **Fixed 2026-07-01:** onboarding progress (step, goals, activities) is persisted to storage and restored on relaunch; `NewGoals` failures now show a retry alert instead of silently discarding work. |
 | 5 | ✅ Fixed | `.env` (with API keys) is committed to git | **Fixed 2026-07-01:** `.env` untracked (`git rm --cached`), added to `.gitignore`, and a placeholder `.env.example` committed. Keys ever committed should still be rotated. |
 | 6 | 🟠 High | Product ID typo `flowly_montly` | Monthly purchases may fail to resolve against the store. *(Not changed — must match the store SKU, which can't be verified from the repo.)* |
 
 > **Re-check note (2026-07-01):** After verifying the build pipeline, the original "backend unreachable / localhost" finding was **downgraded**. The production API is live and working (§2.1).
 >
-> **Fix round (2026-07-01):** Items 1, 2, 4 and 5 were fixed in code (see table). Also fixed in the same round: `NewTask` error handling + permanent-spinner hang (§4.1-D), sign-up validation with email/password rules and a Privacy/Terms consent checkbox (§7 P1-5), and stable list keys replacing `Math.random()` (§6). **The one remaining launch blocker is item 3 (paywall enforcement)**, pending a free-tier decision; item 6 needs the store SKU confirmed.
+> **Fix round (2026-07-01):** Items 1, 2, 4 and 5 were fixed in code (see table). Also fixed in the same round: `NewTask` error handling + permanent-spinner hang (§4.1-D), sign-up validation with email/password rules and a Privacy/Terms consent checkbox (§7 P1-5), and stable list keys replacing `Math.random()` (§6).
+>
+> **Fix round 2 (2026-07-01):** Item 3 (paywall enforcement) fixed — feature-flagged trial (7/14/21 days), hard lock on expiry, day-0 purchase entry points. **All launch blockers are now resolved**; item 6 (`flowly_montly`) still needs the store SKU confirmed.
 
 The rest of this report details each area with file references and a prioritized plan.
 
@@ -215,7 +217,7 @@ If `/goals/labels` returns `[]` (or the call is unhandled and rejects), the scre
 ### P0 — Blockers for a real launch (do first)
 1. ✅ **Unify the API URL across all build paths.** *(Fixed 2026-07-01)* `resolveBaseURL()` in `src/lib/network/config.ts` now falls back to the production HTTPS URL in non-dev builds when the env value is missing or points at localhost — no build path can ship the dev URL. (Startup connectivity check still open.)
 2. ✅ **Fix energy collection on Tasks.** *(Fixed 2026-07-01)* `refreshEnergy` awaits `collect()`; `energyReady` flag replaces the `if (!energyLevel)` hard gate so tasks load even at level 0 or on collection failure.
-3. **Enforce monetization.** Re-enable `useSubscription` in the app shell and gate premium features on `isPremium || isTrialing`. Decide the free-tier boundary and lock the rest. Fix the `flowly_montly` product ID to match the store. *(Deferred — awaits free-tier decision + store SKU confirmation.)*
+3. ✅ (partial) **Enforce monetization.** *(Fixed 2026-07-01)* `useSubscription` re-enabled in the app shell (`app/index.tsx`); access = subscription (backend + RevenueCat) **or** a local trial whose duration is feature-flagged (`src/lib/featureFlags`, `trialDays`: 7/14/21, remote-overridable via `GET /feature-flags`). On expiry the app hard-locks on the paywall with a `TrialEnded` fallback screen (only exits: subscribe or logout). Day-0 purchase available via the onboarding paywall step and a trial banner on Tasks. Still open: fix the `flowly_montly` product ID to match the store SKU.
 4. ✅ **Make onboarding durable.** *(Fixed 2026-07-01)* Onboarding progress (step index, goal setup, activities) persists via `usePersistedState` (`onboarding_progress_v1`) and is restored on relaunch; `NewGoals.submit()` failures show a "Tentar novamente / Continuar mesmo assim" alert instead of silently discarding work.
 
 ### P1 — Activation, retention, trust (next)
