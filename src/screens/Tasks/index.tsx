@@ -51,6 +51,7 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
   const [refreshing, setRefreshing] = useState(false);
   const [energyScore, setEnergyScore] = useState<number>(0);
   const [energyLevel, setEnergyLevel] = useState<number>(0);
+  const [energyReady, setEnergyReady] = useState<boolean>(false);
 
   const [concludedTasks, setConcludedTasks] = useState<Task[]>([]);
   const [visibleTasks, setVisibleTasks] = useState<Task[]>([]);
@@ -137,7 +138,7 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
   };
 
   const fetchTasks = useCallback(async () => {
-    if (!energyLevel) return;
+    if (!energyReady) return;
 
     try {
       const { visibleTasks: nextVisible, concludedTasks: nextConcluded } = await fetchTodayTasks(energyLevel);
@@ -148,21 +149,24 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
     } finally {
       setLoading(false);
     }
-  }, [energyLevel]);
+  }, [energyLevel, energyReady]);
 
-  const refreshEnergy = useCallback(() => {
-    const metrics = getHealthProvider().collect() as any;
+  const refreshEnergy = useCallback(async () => {
+    // `collect()` é assíncrono; sem o await o engine recebe uma Promise e cai
+    // no fallback, ignorando os dados reais de saúde do usuário.
+    const metrics = await getHealthProvider().collect();
     const input = flowlyInputFromMetrics(metrics, 8);
     const result = computeEnergyAtMoment(input, toLocalISOString());
     setEnergyScore(result.doubleEnergyScore);
     setEnergyLevel(result.doubleEnergyLevel);
+    setEnergyReady(true);
     return result;
   }, []);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
-      const result = refreshEnergy();
+      const result = await refreshEnergy();
       const { visibleTasks: nextVisible, concludedTasks: nextConcluded } = await fetchTodayTasks(result.doubleEnergyLevel);
       setVisibleTasks(nextVisible);
       setConcludedTasks(nextConcluded);
@@ -176,13 +180,18 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
   const appState = useRef(AppState.currentState);
 
   useEffect(() => {
-    refreshEnergy();
+    // Garante que a Home carregue mesmo se a coleta de energia falhar.
+    const runRefresh = () => {
+      refreshEnergy().catch(() => setEnergyReady(true));
+    };
 
-    const interval = setInterval(refreshEnergy, 60_000);
+    runRefresh();
+
+    const interval = setInterval(runRefresh, 60_000);
 
     const subscription = AppState.addEventListener('change', (nextState) => {
       if (appState.current.match(/inactive|background/) && nextState === 'active') {
-        refreshEnergy();
+        runRefresh();
       }
       appState.current = nextState;
     });
