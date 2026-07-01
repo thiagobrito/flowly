@@ -1,7 +1,7 @@
 import * as Sentry from '@sentry/react-native';
 import { Check } from 'lucide-react-native';
 import { useState } from 'react';
-import { Text, View } from 'react-native';
+import { Alert, Linking, Text, View } from 'react-native';
 
 import { useNotifications } from '@/lib/notifications';
 
@@ -24,12 +24,33 @@ export default function NotificationsStep({ step, isDark, onNext }: Notification
   const handleEnable = async () => {
     setBusy(true);
     try {
-      await registerForPush();
+      const { status } = await registerForPush();
+
+      if (status === 'denied') {
+        // Não avança silenciosamente: reconhece a negativa e oferece o caminho
+        // dos ajustes do sistema. Quem abrir os ajustes volta para este passo e
+        // pode tocar no CTA de novo (a permissão é relida a cada tentativa).
+        Alert.alert('Notificações desativadas', 'Sem elas, você não recebe os lembretes das suas atividades. Dá para ativar nos ajustes do sistema — ou depois, em Configurações > Notificações.', [
+          { text: 'Abrir ajustes', onPress: () => Linking.openSettings().catch(() => undefined) },
+          { text: 'Seguir sem lembretes', onPress: onNext },
+        ]);
+        return;
+      }
+
+      if (status === 'error') {
+        // Falha técnica (ex.: offline ao obter o token): informa e segue — o
+        // usuário pode reativar depois em Configurações.
+        Alert.alert('Não foi possível ativar agora', 'Você pode ativar as notificações mais tarde em Configurações > Notificações.', [{ text: 'Continuar', onPress: onNext }]);
+        return;
+      }
+
+      // `granted`: sucesso. `unsupported` (simulador/Expo Go): nada a fazer.
+      onNext();
     } catch (error) {
       Sentry.captureException(error);
+      onNext();
     } finally {
       setBusy(false);
-      onNext();
     }
   };
 

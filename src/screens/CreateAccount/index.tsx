@@ -9,19 +9,13 @@ import AuthHeader from '../Login/components/AuthHeader';
 import AuthTabs from '../Login/components/AuthTabs';
 import Checkbox from '../Login/components/Checkbox';
 import SwipeButton from '../Login/components/SwipeButton';
+import { isValidEmail, validatePassword } from './validation';
 
 type CreateAccountProps = {
   onCreateAccount?: (payload: { email: string; password: string }) => void;
   onNavigateToLogin?: () => void;
   pending?: boolean;
 };
-
-const MIN_PASSWORD_LENGTH = 8;
-
-/** Validação leve de formato (o backend continua sendo a autoridade final). */
-function isValidEmail(value: string): boolean {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(value);
-}
 
 export default function CreateAccount({ onCreateAccount, onNavigateToLogin, pending = false }: CreateAccountProps) {
   const isDark = useColorScheme() === 'dark';
@@ -33,10 +27,10 @@ export default function CreateAccount({ onCreateAccount, onNavigateToLogin, pend
 
   const trimmedEmail = email.trim();
   const emailError = trimmedEmail.length > 0 && !isValidEmail(trimmedEmail) ? 'Informe um e-mail válido.' : null;
-  const passwordError = password.length > 0 && password.length < MIN_PASSWORD_LENGTH ? `A senha precisa ter pelo menos ${MIN_PASSWORD_LENGTH} caracteres.` : null;
+  const passwordError = password.length > 0 ? validatePassword(password, trimmedEmail) : null;
   const confirmError = confirmPassword.length > 0 && password !== confirmPassword ? 'As senhas não coincidem.' : null;
 
-  const canSubmit = useMemo(() => isValidEmail(trimmedEmail) && password.length >= MIN_PASSWORD_LENGTH && password === confirmPassword && consentAccepted, [trimmedEmail, password, confirmPassword, consentAccepted]);
+  const canSubmit = useMemo(() => isValidEmail(trimmedEmail) && password.length > 0 && validatePassword(password, trimmedEmail) === null && password === confirmPassword && consentAccepted, [trimmedEmail, password, confirmPassword, consentAccepted]);
 
   const handleCreate = () => {
     if (!canSubmit) return;

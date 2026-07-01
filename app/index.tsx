@@ -9,6 +9,7 @@ import BottomTabBar from '@/components/BottomTabBar';
 import { useSession } from '@/lib/auth';
 import { useFeatureFlags } from '@/lib/featureFlags';
 import { useOnboarding } from '@/lib/onboarding';
+import { usePendingSyncFlush } from '@/lib/pendingSync';
 import { useLocalTrial, useSubscription } from '@/lib/subscription';
 import Calendar from '@/screens/Calendar';
 import { onceFrequencyFromISO } from '@/screens/Calendar/scheduleSync';
@@ -66,6 +67,11 @@ function Home() {
   const { isReady: subscriptionReady, isPremium } = useSubscription();
   const { isHydrated: trialHydrated, isExpired: trialExpired, startIfNeeded: startTrialIfNeeded } = useLocalTrial(trialDays);
   const [paywallVisible, setPaywallVisible] = useState(true);
+
+  // Reenvia escritas que falharam por rede (metas/atividades do onboarding etc.)
+  // assim que houver sessão — na montagem, na hidratação da fila e ao voltar
+  // ao foreground.
+  usePendingSyncFlush(isAuthenticated);
 
   // Inicia o trial local na primeira entrada na Home (pós-login + onboarding).
   useEffect(() => {

@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, Text, TextInput, useColorScheme, View } from 'react-native';
 
 import { api } from '@/lib/network';
+import { usePendingSync } from '@/lib/pendingSync';
 import { syncTaskReminders } from '@/lib/taskReminders';
 
 import { LIFE_AREAS } from '../common';
@@ -36,6 +37,7 @@ export default function NewTask({ task, initialFrequency, initialArea, onCreate,
   const [estimatedMinutes, setEstimatedMinutes] = useState<number | null>(task?.estimatedMinutes ?? null);
   const [labels, setLabels] = useState<string[]>(['SAÚDE', 'FLOWLY']);
   const [submitting, setSubmitting] = useState(false);
+  const { enqueue } = usePendingSync();
 
   const canSubmit = useMemo(() => name.trim().length > 0 && isFrequencyConfigValid(frequency) && area !== null, [name, frequency, area]);
   const areaLabels = useMemo(() => {
@@ -70,21 +72,41 @@ export default function NewTask({ task, initialFrequency, initialArea, onCreate,
       payload.isEditing = true;
     }
 
+    const finish = async () => {
+      onCreate?.(payload);
+      // A atividade já foi salva (ou enfileirada); falha no agendamento de
+      // lembretes não deve travar o fluxo.
+      await syncTaskReminders({ enabled: preferences.taskRemindersEnabled ?? true, tasksHint: [payload] }).catch(() => undefined);
+      onSuccess?.();
+    };
+
     setSubmitting(true);
     try {
       await api.put(`/tasks`, payload);
     } catch {
-      // Mantém o formulário preenchido para o usuário tentar de novo.
-      Alert.alert('Erro', isEditing ? 'Não foi possível salvar as alterações. Tente novamente.' : 'Não foi possível criar a atividade. Tente novamente.');
+      // Não descarta o que o usuário preencheu: permite tentar de novo (o
+      // formulário segue preenchido) ou guardar na fila de sincronização
+      // pendente e continuar o fluxo.
+      Alert.alert(
+        'Não foi possível salvar',
+        isEditing ? 'Verifique sua conexão e tente novamente. Se preferir, salvamos as alterações assim que a conexão voltar.' : 'Verifique sua conexão e tente novamente. Se preferir, criamos a atividade assim que a conexão voltar.',
+        [
+          { text: 'Tentar novamente', style: 'cancel' },
+          {
+            text: 'Salvar depois e continuar',
+            onPress: () => {
+              enqueue('PUT', '/tasks', payload);
+              finish();
+            },
+          },
+        ],
+      );
       return;
     } finally {
       setSubmitting(false);
     }
 
-    onCreate?.(payload);
-    // A atividade já foi salva; falha no agendamento de lembretes não deve travar o fluxo.
-    await syncTaskReminders({ enabled: preferences.taskRemindersEnabled ?? true, tasksHint: [payload] }).catch(() => undefined);
-    onSuccess?.();
+    await finish();
   };
 
   useEffect(() => {

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react';
-import { Alert, AppState } from 'react-native';
+import { Alert, AppState, Linking } from 'react-native';
 
 import { ensurePermissions, getPermissionStatus } from '@/lib/notifications';
 import { cancelTaskReminders, syncTaskReminders } from '@/lib/taskReminders';
@@ -49,7 +49,12 @@ export function useTaskReminders() {
       if (next) {
         const status = await ensurePermissions();
         if (status !== 'granted') {
-          Alert.alert('Permissão necessária', 'Para receber lembretes, permita as notificações nas configurações do dispositivo.');
+          // Permissão negada no sistema: só os ajustes do dispositivo resolvem —
+          // oferece o deep link em vez de apenas instruir.
+          Alert.alert('Permissão necessária', 'Para receber lembretes, permita as notificações nos ajustes do dispositivo.', [
+            { text: 'Abrir ajustes', onPress: () => Linking.openSettings().catch(() => undefined) },
+            { text: 'Agora não', style: 'cancel' },
+          ]);
           setTaskRemindersEnabled(false);
           await cancelTaskReminders();
           return;

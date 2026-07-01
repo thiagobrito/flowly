@@ -23,6 +23,7 @@ import NotificationsStep from './components/NotificationsStep';
 import PaymentStep from './components/PaymentStep';
 import ProgressHeader from './components/ProgressHeader';
 import QuoteStep from './components/QuoteStep';
+import SleepProfileStep from './components/SleepProfileStep';
 import type { OnboardingConfig } from './data';
 import { DEFAULT_ONBOARDING } from './data';
 
@@ -135,6 +136,8 @@ export default function Onboarding({ isDark, onComplete }: OnboardingProps) {
         return <ActivitiesStep step={step} isDark={isDark} goalName={goalName} activities={activities} onAddActivity={() => setShowActivities(true)} onNext={goNext} />;
       case 'notifications':
         return <NotificationsStep step={step} isDark={isDark} onNext={goNext} />;
+      case 'sleepProfile':
+        return <SleepProfileStep step={step} isDark={isDark} onNext={goNext} />;
       case 'payment':
         return <PaymentStep step={step} isDark={isDark} onOpenPaywall={() => setShowPaywall(true)} onSkip={goNext} />;
       case 'completed':

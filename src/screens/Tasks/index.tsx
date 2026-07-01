@@ -6,6 +6,7 @@ import { toLocalISOString } from '@/lib/date';
 import { computeEnergyAtMoment, flowlyInputFromMetrics, getHealthProvider } from '@/lib/energy';
 import { useFeatureFlags } from '@/lib/featureFlags';
 import { api } from '@/lib/network';
+import { applySleepProfile, useSleepProfile } from '@/lib/sleepProfile';
 import { useLocalTrial, useSubscription } from '@/lib/subscription';
 
 import { useNotificationTest } from '../Config/hooks/useNotificationTest';
@@ -69,6 +70,12 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
   const [selectedDateFilter, setSelectedDateFilter] = useState<DateFilterId | null>(null);
 
   const { showNow, showIn30Seconds } = useNotificationTest();
+
+  // Perfil de sono: fallback do Energy Score para quem não tem wearable.
+  // Ref mantém `refreshEnergy` estável (o intervalo de 60s pega o valor atual).
+  const { profile: sleepProfile } = useSleepProfile();
+  const sleepProfileRef = useRef(sleepProfile);
+  sleepProfileRef.current = sleepProfile;
 
   // Trial/assinatura: permite assinar a qualquer momento (dia 0 inclusive).
   const { trialDays } = useFeatureFlags();
@@ -166,7 +173,9 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
   const refreshEnergy = useCallback(async () => {
     // `collect()` é assíncrono; sem o await o engine recebe uma Promise e cai
     // no fallback, ignorando os dados reais de saúde do usuário.
-    const metrics = await getHealthProvider().collect();
+    const collected = await getHealthProvider().collect();
+    // Sem wearable, o perfil de sono preenche acordar/dormir/duração.
+    const metrics = applySleepProfile(collected, sleepProfileRef.current);
     const input = flowlyInputFromMetrics(metrics, 8);
     const result = computeEnergyAtMoment(input, toLocalISOString());
     setEnergyScore(result.doubleEnergyScore);

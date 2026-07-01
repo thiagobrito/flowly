@@ -1,7 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
 
 import { api } from '@/lib/network';
+import { usePendingSync } from '@/lib/pendingSync';
+import type { PersistedRecord } from '@/lib/storage';
+import { usePersistedState } from '@/lib/storage';
 import type { Goal, GoalSetup } from '@/screens/Goals/data';
 import { createEmptyGoalSetup, secondarySetupToGoal } from '@/screens/Goals/data';
 
@@ -34,12 +37,55 @@ function initialSetup(mode: 'full' | 'addSecondary'): GoalSetup {
   return { ...setup, mainGoal: { ...setup.mainGoal, metrics: [createEmptyMetric()] } };
 }
 
+/**
+ * Rascunho da anamnese persistido em storage: se o app for fechado/morto no
+ * meio do questionário (o trecho mais longo do onboarding), o usuário retoma
+ * do passo em que parou com as respostas preservadas. Limpo ao concluir.
+ * Aplica-se apenas ao fluxo completo — `addSecondary` é curto e pós-onboarding.
+ */
+type NewGoalsDraft = PersistedRecord & {
+  index: number;
+  setup: GoalSetup | null;
+  loaded?: boolean;
+  lastUpdate?: string;
+};
+
+const DRAFT_KEY = 'new_goals_draft_v1';
+
+const EMPTY_DRAFT: NewGoalsDraft = { index: 0, setup: null };
+
 export default function NewGoals({ isDark, mode = 'full', existingGoals = [], onComplete, onClose }: NewGoalsProps) {
   const isAddSecondary = mode === 'addSecondary';
   const [baseSteps, setBaseSteps] = useState<AnamnesisStep[]>(ANAMNESIS_STEPS);
   const [index, setIndex] = useState(0);
   const [setup, setSetup] = useState<GoalSetup>(() => initialSetup(mode));
   const [submitting, setSubmitting] = useState(false);
+  const { enqueue } = usePendingSync();
+
+  const [draft, setDraft] = usePersistedState<NewGoalsDraft>(EMPTY_DRAFT, DRAFT_KEY);
+  const [draftRestored, setDraftRestored] = useState(isAddSecondary);
+  const draftRestoreRef = useRef(false);
+
+  // Restaura o rascunho salvo (uma vez, após a hidratação do storage).
+  useEffect(() => {
+    if (isAddSecondary || draftRestoreRef.current || !draft.loaded) return;
+    draftRestoreRef.current = true;
+    if (draft.setup) {
+      setSetup(draft.setup);
+      setIndex(Math.max(0, draft.index));
+    }
+    setDraftRestored(true);
+  }, [isAddSecondary, draft.loaded, draft.setup, draft.index]);
+
+  // Persiste cada resposta/avanço para retomar se o app for fechado no meio.
+  useEffect(() => {
+    if (isAddSecondary || !draftRestored) return;
+    setDraft({ index, setup });
+  }, [isAddSecondary, draftRestored, index, setup, setDraft]);
+
+  const clearDraft = useCallback(() => {
+    if (!isAddSecondary) setDraft({ ...EMPTY_DRAFT });
+  }, [isAddSecondary, setDraft]);
 
   useEffect(() => {
     if (isAddSecondary) return undefined;
@@ -72,30 +118,41 @@ export default function NewGoals({ isDark, mode = 'full', existingGoals = [], on
 
   const submit = useCallback(async () => {
     setSubmitting(true);
+    const pending: { method: 'POST' | 'PUT'; path: string; payload: unknown } | null = (() => {
+      if (!isAddSecondary) return { method: 'POST', path: '/goals/anamnesis', payload: setup };
+      const secondary = setup.secondaryGoals[0];
+      const primary = existingGoals.find((goal) => goal.type === 'primary');
+      if (!secondary || !primary) return null;
+      return { method: 'PUT', path: '/goals', payload: secondarySetupToGoal(secondary, primary) };
+    })();
+
     try {
-      if (isAddSecondary) {
-        const secondary = setup.secondaryGoals[0];
-        const primary = existingGoals.find((goal) => goal.type === 'primary');
-        if (secondary && primary) {
-          const payload = secondarySetupToGoal(secondary, primary);
-          await api.put('/goals', payload);
-        }
-      } else {
-        await api.post('/goals/anamnesis', setup);
+      if (pending) {
+        if (pending.method === 'POST') await api.post(pending.path, pending.payload);
+        else await api.put(pending.path, pending.payload);
       }
     } catch {
       // Não descarta silenciosamente o trabalho do usuário: oferece retry
-      // explícito antes de seguir sem salvar no backend.
+      // explícito e, se o usuário seguir, guarda a escrita na fila de
+      // sincronização pendente para reenvio automático.
       setSubmitting(false);
-      Alert.alert('Não foi possível salvar', 'Verifique sua conexão e tente novamente.', [
+      Alert.alert('Não foi possível salvar', 'Verifique sua conexão e tente novamente. Se preferir, seguimos agora e sincronizamos assim que a conexão voltar.', [
         { text: 'Tentar novamente', onPress: () => submit() },
-        { text: 'Continuar mesmo assim', style: 'destructive', onPress: () => onComplete?.(setup) },
+        {
+          text: 'Salvar depois e continuar',
+          onPress: () => {
+            if (pending) enqueue(pending.method, pending.path, pending.payload);
+            clearDraft();
+            onComplete?.(setup);
+          },
+        },
       ]);
       return;
     }
     setSubmitting(false);
+    clearDraft();
     onComplete?.(setup);
-  }, [isAddSecondary, setup, existingGoals, onComplete]);
+  }, [isAddSecondary, setup, existingGoals, onComplete, enqueue, clearDraft]);
 
   const goNext = useCallback(() => {
     if (isLast) {
@@ -112,7 +169,9 @@ export default function NewGoals({ isDark, mode = 'full', existingGoals = [], on
     }));
   }, []);
 
-  if (!step) return null;
+  // Aguarda a restauração do rascunho para não piscar o primeiro passo antes
+  // de retomar de onde o usuário parou.
+  if (!step || !draftRestored) return null;
 
   let footerLabel = 'Continuar';
   if (isLast) footerLabel = isAddSecondary ? 'Adicionar meta' : 'Criar meu ciclo';

@@ -8,6 +8,9 @@ import StepShell from './StepShell';
 
 const ACCENT = '#6366f1';
 
+/** Quantidade sugerida de atividades no onboarding (recomendação, não bloqueio). */
+const RECOMMENDED_ACTIVITIES = 3;
+
 export type OnboardingActivity = { id: string; name: string };
 
 type ActivitiesStepProps = {
@@ -65,6 +68,13 @@ export default function ActivitiesStep({ step, isDark, goalName, activities, onA
               <Text className="ml-3 flex-1 text-[15px] text-zinc-800 dark:text-zinc-100">{activity.name}</Text>
             </View>
           ))}
+
+          {activities.length < RECOMMENDED_ACTIVITIES ? (
+            <Text className="mt-1 text-center text-sm text-zinc-500 dark:text-zinc-400">
+              {activities.length === 1 ? 'Ótimo começo! ' : 'Quase lá! '}
+              Recomendamos {RECOMMENDED_ACTIVITIES} atividades — {RECOMMENDED_ACTIVITIES - activities.length === 1 ? 'falta só mais 1' : `faltam ${RECOMMENDED_ACTIVITIES - activities.length}`}.
+            </Text>
+          ) : null}
         </View>
       )}
 
