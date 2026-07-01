@@ -38,6 +38,11 @@ export function resolveLifeAreaId(value?: string | null): string {
   return trimmed;
 }
 
+export function isKnownLifeAreaId(id: string): boolean {
+  const resolvedId = resolveLifeAreaId(id);
+  return LIFE_AREAS.some((area) => area.id === resolvedId);
+}
+
 export function GetLifeArea(id: string): LifeArea {
   const resolvedId = resolveLifeAreaId(id);
   const result = LIFE_AREAS.find((area) => area.id === resolvedId);

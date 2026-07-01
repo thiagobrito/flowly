@@ -63,6 +63,7 @@ export type Goal = {
   id: string;
   name: string;
   areaId: string;
+  label: string;
   type: GoalTypeKind;
   status: GoalStatus;
   rpm: {
@@ -139,6 +140,7 @@ export function createEmptyGoal(): Goal {
     id: createGoalId(),
     name: '',
     areaId: 'goal',
+    label: 'goal',
     type: 'primary',
     status: 'active',
     rpm: { result: '', purpose: '', impact: '' },
@@ -272,6 +274,7 @@ export const MOCK_GOALS: Goal[] = [
     id: 'goal-bodyfat',
     name: 'Reduzir gordura para 15%',
     areaId: 'health',
+    label: 'goal',
     type: 'primary',
     status: 'active',
     rpm: {
@@ -303,6 +306,7 @@ export const MOCK_GOALS: Goal[] = [
     id: 'goal-flowly',
     name: 'Lançar o MVP do Flowly',
     areaId: 'work',
+    label: 'goal',
     type: 'secondary',
     status: 'active',
     rpm: {

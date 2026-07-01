@@ -25,7 +25,7 @@ export function getTaskDurationMin(task: Task): number {
 }
 
 function eventColor(task: Task): string {
-  let areaColor = getLifeArea(task.area)?.accent;
+  let areaColor = getLifeArea(task.goal.name)?.accent;
 
   if (areaColor) {
     if (task.done) areaColor += '20';
@@ -77,6 +77,15 @@ function scheduleSlots(task: Task): ScheduledSlot[] {
   return task.schedule.filter((slot) => Boolean(slot?.dateTime) && !Number.isNaN(new Date(slot.dateTime).getTime()));
 }
 
+function shouldAddTaskToUnscheduled(task: Task): boolean {
+  if (task.frequency.kind === 'once' || task.frequency.kind === 'notime') {
+    if (task.schedule && task.schedule.length > 0) {
+      return false;
+    }
+  }
+  return true;
+}
+
 /**
  * Converte as tarefas em eventos do calendário usando exclusivamente o
  * agendamento vindo do servidor: a lista `task.schedule` (momento + duração) e,
@@ -117,9 +126,7 @@ export function buildCalendarEvents(tasks: Task[], visibleDateKeys?: Set<string>
         if (onceISO && isVisibleDay(onceISO)) {
           events.push(buildEvent(task, task.id, onceISO, getTaskDurationMin(task)));
         } else if (!task.done) {
-          // const scheduledForAnotherDay = task && task.schedule && task?.schedule?.length > 0 && task?.schedule?.filter((slot) => isVisibleDay(slot.dateTime)).length === 0;
-          // if (scheduledForAnotherDay) unscheduled.push(task);
-          unscheduled.push(task);
+          if (shouldAddTaskToUnscheduled(task)) unscheduled.push(task);
         }
       }
     }

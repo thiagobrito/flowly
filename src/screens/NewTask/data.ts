@@ -28,6 +28,7 @@ export type Subtask = { id: string; name: string; done: boolean };
 
 export type NewTaskPayload = {
   name: string;
+  description?: string;
   energy: number;
   impact: number;
   frequency: FrequencyConfig;
@@ -116,6 +117,11 @@ export type Task = {
   id: string;
   randomId: string;
   name: string;
+  description?: string;
+  goal: {
+    id: string;
+    name: string;
+  };
   area: string;
   energy?: number;
   impact?: number;

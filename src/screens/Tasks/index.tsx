@@ -77,7 +77,7 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
   const filterAreas = useMemo<FilterArea[]>(() => {
     const counts = new Map<string, number>();
     allTasks.forEach((task) => {
-      counts.set(task.area, (counts.get(task.area) ?? 0) + 1);
+      counts.set(task.goal.name, (counts.get(task.goal.name) ?? 0) + 1);
     });
 
     return Array.from(counts.entries()).map(([id, count]) => {
@@ -95,7 +95,7 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
   const applyFilters = useCallback(
     (tasks: Task[]) =>
       tasks.filter((task) => {
-        const areaOk = selectedAreas.length === 0 || selectedAreas.includes(task.area);
+        const areaOk = selectedAreas.length === 0 || selectedAreas.includes(task.goal.name);
         const dateOk = !selectedDateFilter || taskMatchesDateFilter(task, selectedDateFilter);
         return areaOk && dateOk;
       }),
@@ -207,15 +207,7 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
 
   return (
     <View className="flex-1">
-      <Header
-        isDark={isDark}
-        energyScore={energyScore}
-        onLogout={onLogout}
-        onOpenConfig={onOpenConfig}
-        onOpenFilter={() => setFilterOpen(true)}
-        onOpenNotificationTest={/* () => setTestModalVisible(true) */ undefined}
-        onOpenPurchaseTest={() => setSubscriptionVisible(true)}
-      />
+      <Header isDark={isDark} energyScore={energyScore} onLogout={onLogout} onOpenConfig={onOpenConfig} onOpenFilter={() => setFilterOpen(true)} />
 
       <ScrollView
         className="mt-2 flex-1"

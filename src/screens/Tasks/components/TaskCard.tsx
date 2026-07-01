@@ -1,4 +1,4 @@
-import { Check, ChevronDown, ChevronRight, Clock, GoalIcon, Pencil, Trash2, TrendingUp, Zap } from 'lucide-react-native';
+import { AlignLeft, Check, ChevronDown, ChevronRight, Clock, GoalIcon, Pencil, Trash2, TrendingUp, Zap } from 'lucide-react-native';
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -59,7 +59,7 @@ export default function TaskCard({ highlight, task, selected, isDark, onComplete
   const scale = useSharedValue(1);
   const translateX = useSharedValue(0);
   const startX = useSharedValue(0);
-  const area = getLifeArea(task.area);
+  const area = getLifeArea(task.goal.name);
   const accent = area?.accent ?? '#71717a';
   const AreaIcon = area?.Icon;
   const freqMeta = getFrequencyMeta(task.frequency.kind);
@@ -129,6 +129,9 @@ export default function TaskCard({ highlight, task, selected, isDark, onComplete
 
   const hasSubtasks = localSubtasks.length > 0;
   const doneCount = localSubtasks.filter((item) => item.done).length;
+  const description = task.description?.trim() ?? '';
+  const hasDescription = description.length > 0;
+  const canExpand = hasSubtasks || hasDescription;
 
   const panGesture = Gesture.Pan()
     .activeOffsetX([-15, 15])
@@ -196,7 +199,7 @@ export default function TaskCard({ highlight, task, selected, isDark, onComplete
                     <View className="mt-1.5 flex-row items-center">
                       <View className="rounded-full px-2 py-0.5" style={{ backgroundColor: `${accent}22`, marginRight: 8 }}>
                         <Text className="text-xs font-semibold" style={{ color: accent }}>
-                          {area?.label.toUpperCase() || task.area.toUpperCase()}
+                          {area?.label.toUpperCase() || task.goal.name.toUpperCase()}
                         </Text>
                       </View>
 
@@ -228,12 +231,23 @@ export default function TaskCard({ highlight, task, selected, isDark, onComplete
                         </View>
                       ) : null}
 
-                      {hasSubtasks ? (
-                        <Pressable onPress={() => setExpanded((prev) => !prev)} accessibilityRole="button" accessibilityLabel="Mostrar sub-tarefas" accessibilityState={{ expanded }} className="ml-auto flex-row items-center active:opacity-70">
-                          <Text className="text-xs font-semibold" style={{ color: mutedColor, marginRight: 4 }}>
-                            {doneCount}/{localSubtasks.length}
-                          </Text>
-                          {expanded ? <ChevronDown size={16} color={mutedColor} /> : <ChevronRight size={16} color={mutedColor} />}
+                      {canExpand ? (
+                        <Pressable
+                          onPress={() => setExpanded((prev) => !prev)}
+                          accessibilityRole="button"
+                          accessibilityLabel="Mostrar detalhes"
+                          accessibilityState={{ expanded }}
+                          className="ml-auto flex-row items-center rounded-full px-2 py-1 active:opacity-70"
+                          style={{ backgroundColor: `${accent}1f` }}
+                        >
+                          {hasSubtasks ? (
+                            <Text className="text-xs font-semibold" style={{ color: accent, marginRight: 4 }}>
+                              {doneCount}/{localSubtasks.length}
+                            </Text>
+                          ) : (
+                            <AlignLeft size={14} color={accent} style={{ marginRight: 4 }} />
+                          )}
+                          {expanded ? <ChevronDown size={16} color={accent} /> : <ChevronRight size={16} color={accent} />}
                         </Pressable>
                       ) : null}
                     </View>
@@ -246,9 +260,16 @@ export default function TaskCard({ highlight, task, selected, isDark, onComplete
                   </Pressable>
                 </View>
 
-                {hasSubtasks && expanded ? (
+                {canExpand && expanded ? (
                   <View className="px-3 pb-3">
                     <View className="border-t pt-2" style={{ borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }}>
+                      {hasDescription ? (
+                        <View className={hasSubtasks ? 'mb-1 pb-1' : ''}>
+                          <Text className="py-1 text-sm leading-5" style={{ color: isDark ? '#d4d4d8' : '#52525b' }}>
+                            {description}
+                          </Text>
+                        </View>
+                      ) : null}
                       {localSubtasks.map((subtask) => {
                         let subtaskColor = isDark ? '#e4e4e7' : '#3f3f46';
                         if (subtask.done) subtaskColor = mutedColor;

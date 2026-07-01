@@ -425,7 +425,7 @@ export default function Calendar({ onEdit, onCreateAt }: CalendarProps) {
     );
   }
 
-  const ghostAccent = drag ? (getLifeArea(drag.task.area)?.accent ?? '#6366f1') : '#6366f1';
+  const ghostAccent = drag ? (getLifeArea(drag.task.goal.name)?.accent ?? '#6366f1') : '#6366f1';
 
   return (
     <View ref={screenRootRef} className="flex-1" onLayout={syncCalendarBounds}>

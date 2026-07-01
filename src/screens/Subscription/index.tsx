@@ -9,6 +9,7 @@ import type { SubscriptionPlanId } from '@/lib/subscription';
 import { getCurrentOffering, initPurchases, isNativePurchasesAvailable, isPurchasesSupported, purchasePackage, restorePurchases, SUBSCRIPTION_PLANS, useSubscription } from '@/lib/subscription';
 
 import IllustrationHeader from './components/IllustrationHeader';
+import LegalLinks from './components/LegalLinks';
 import PlanToggle from './components/PlanToggle';
 import TrialTimeline from './components/TrialTimeline';
 import { TRIAL_DAYS } from './constants';
@@ -45,6 +46,13 @@ export default function Subscription({ onClose, onDevBypass }: SubscriptionProps
     }
     return `Primeiros ${TRIAL_DAYS} dias grátis, depois ${monthly.priceLabel}/mês`;
   }, [monthly.priceLabel, selectedPlan, yearly.amount, yearly.priceLabel]);
+
+  const planDetails = useMemo(() => {
+    if (selectedPlan === 'flowly_yearly') {
+      return `Flowly Premium ${yearly.title} · 12 meses · ${yearly.priceLabel}/ano (R$ ${formatMonthlyEquivalent(yearly.amount)}/mês)`;
+    }
+    return `Flowly Premium ${monthly.title} · 1 mês · ${monthly.priceLabel}/mês`;
+  }, [monthly.priceLabel, monthly.title, selectedPlan, yearly.amount, yearly.priceLabel, yearly.title]);
 
   const handleSubscribe = async () => {
     if (!isPurchasesSupported()) {
@@ -135,6 +143,10 @@ export default function Subscription({ onClose, onDevBypass }: SubscriptionProps
             <View className="mt-6">
               <PlanToggle value={selectedPlan} onChange={setSelectedPlan} isDark={isDark} />
             </View>
+
+            <Text className="mt-3 text-center text-xs leading-4" style={{ color: mutedColor }}>
+              {planDetails}
+            </Text>
           </View>
 
           <TrialTimeline isDark={isDark} />
@@ -171,6 +183,8 @@ export default function Subscription({ onClose, onDevBypass }: SubscriptionProps
               {busy ? <ActivityIndicator color="#ffffff" /> : <Text className="text-base font-semibold text-white">Iniciar minha assinatura</Text>}
             </LinearGradient>
           </Pressable>
+
+          <LegalLinks isDark={isDark} />
         </View>
       </SafeAreaView>
     </View>

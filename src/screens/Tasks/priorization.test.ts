@@ -7,6 +7,7 @@ const baseTask = (overrides: Partial<PrioritizableTask>): PrioritizableTask => (
   id: 'task-id',
   randomId: 'random-id',
   name: 'Tarefa',
+  goal: { id: '', name: '' },
   area: 'work',
   frequency: { kind: 'interval', everyNDays: 1 },
   ...overrides,

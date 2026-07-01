@@ -45,7 +45,7 @@ export default function ConcludedTasksTable({ tasks, isDark }: ConcludedTasksTab
           </View>
         ) : (
           tasks.map((task, index) => {
-            const area = getLifeArea(task.area);
+            const area = getLifeArea(task.goal.name);
             const accent = area?.accent ?? '#71717a';
 
             return (
@@ -57,7 +57,7 @@ export default function ConcludedTasksTable({ tasks, isDark }: ConcludedTasksTab
                 <View className="w-24 pr-2">
                   <View className="self-start rounded-full px-2 py-0.5" style={{ backgroundColor: `${accent}22` }}>
                     <Text className="text-xs font-semibold" style={{ color: accent }} numberOfLines={1}>
-                      {area?.label ?? task.area}
+                      {area?.label ?? task.goal.name}
                     </Text>
                   </View>
                 </View>

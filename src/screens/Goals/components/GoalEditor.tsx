@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 import { api } from '@/lib/network';
-import { LIFE_AREAS } from '@/screens/common';
+import { isKnownLifeAreaId, LIFE_AREAS } from '@/screens/common';
 
 import type { Goal, GoalHealth, GoalMetric } from '../data';
 import { createEmptyHealth, createEmptyMetric, HEALTH_DOT_COLOR, HEALTH_LEVEL_CYCLE, nextMetricDirection } from '../data';
@@ -103,9 +103,18 @@ export default function GoalEditor({ goal, isNew, isDark, onCancel, onSave, onDe
 
   const canSave = draft.name.trim().length > 0;
 
+  const isCustomArea = !isKnownLifeAreaId(draft.areaId);
+  const selectedAreaChip = isCustomArea ? 'other' : draft.areaId;
+
   const handleSave = async () => {
     if (!canSave) {
       Alert.alert('Nome obrigatório', 'Dê um nome para a meta antes de salvar.');
+      return;
+    }
+
+    const areaId = draft.areaId === 'other' ? '' : draft.areaId.trim();
+    if (selectedAreaChip === 'other' && !areaId) {
+      Alert.alert('Área personalizada', 'Informe o nome da área da vida ou escolha uma das opções disponíveis.');
       return;
     }
 
@@ -113,6 +122,7 @@ export default function GoalEditor({ goal, isNew, isDark, onCancel, onSave, onDe
       ...draft,
       id: draft.id,
       name: draft.name.trim(),
+      areaId: areaId || draft.areaId,
       metrics: draft.metrics.filter((metric) => metric.label.trim().length > 0).map((metric) => ({ ...metric, label: metric.label.trim() })),
       health: draft.health.filter((item) => item.label.trim().length > 0).map((item) => ({ ...item, label: item.label.trim() })),
     };
@@ -139,6 +149,16 @@ export default function GoalEditor({ goal, isNew, isDark, onCancel, onSave, onDe
   const placeholderColor = isDark ? '#71717a' : '#a1a1aa';
   const textInputClass = 'rounded-xl border px-3 py-2.5 text-[15px] text-zinc-900 dark:text-zinc-50';
 
+  const customAreaLabel = isCustomArea ? draft.areaId : '';
+
+  const selectArea = (areaId: string) => {
+    if (areaId === 'other') {
+      update('areaId', customAreaLabel || 'other');
+      return;
+    }
+    update('areaId', areaId);
+  };
+
   return (
     <View className="flex-1">
       <View className="flex-row items-center pt-2">
@@ -157,12 +177,12 @@ export default function GoalEditor({ goal, isNew, isDark, onCancel, onSave, onDe
         <SectionLabel>Área da vida</SectionLabel>
         <View className="flex-row flex-wrap gap-2">
           {LIFE_AREAS.map((area) => {
-            const selected = area.id === draft.areaId;
+            const selected = area.id === selectedAreaChip;
             const AreaIcon = area.Icon;
             return (
               <Pressable
                 key={area.id}
-                onPress={() => update('areaId', area.id)}
+                onPress={() => selectArea(area.id)}
                 accessibilityRole="button"
                 accessibilityState={{ selected }}
                 className="flex-row items-center gap-1.5 rounded-full border px-3 py-2 active:opacity-80"
@@ -176,6 +196,22 @@ export default function GoalEditor({ goal, isNew, isDark, onCancel, onSave, onDe
             );
           })}
         </View>
+        {selectedAreaChip === 'other' ? (
+          <View className="mt-2.5">
+            <FieldLabel>Nome da área personalizada</FieldLabel>
+            <TextInput
+              value={customAreaLabel === 'other' ? '' : customAreaLabel}
+              onChangeText={(label) => {
+                update('areaId', label || 'other');
+                update('label', label || 'other');
+              }}
+              placeholder="Ex.: Voluntariado, Criatividade..."
+              placeholderTextColor={placeholderColor}
+              className={textInputClass}
+              style={inputStyle(isDark)}
+            />
+          </View>
+        ) : null}
 
         {/* RPM */}
         <SectionLabel>RPM</SectionLabel>

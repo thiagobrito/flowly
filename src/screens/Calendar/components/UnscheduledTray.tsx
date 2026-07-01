@@ -31,7 +31,7 @@ function TaskChip({
   onDragMove: (x: number, y: number) => void;
   onDragEnd: (task: Task, x: number, y: number) => void;
 }) {
-  const accent = getLifeArea(task.area)?.accent ?? '#6366f1';
+  const accent = getLifeArea(task.goal.name)?.accent ?? '#6366f1';
   const background = isDark ? 'rgba(39,39,42,0.7)' : 'rgba(255,255,255,0.8)';
   const titleColor = isDark ? '#fafafa' : '#18181b';
   const metaColor = isDark ? '#a1a1aa' : '#71717a';

@@ -10,7 +10,6 @@ import Goals from './Goals';
 import IntegrationSection from './Integration';
 import LegalSection from './Legal';
 import NotificationsSection from './Notifications';
-import SubscriptionSection from './Subscription';
 
 type ConfigProps = {
   onBack: () => void;
@@ -45,7 +44,6 @@ export default function Config({ onBack }: ConfigProps) {
 
       <ScrollView className="mt-4 flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 110 }}>
         <AccountSection isDark={isDark} onOpenGoals={() => setShowGoals(true)} />
-        <SubscriptionSection isDark={isDark} />
         <NotificationsSection isDark={isDark} />
         <IntegrationSection isDark={isDark} />
         <LegalSection isDark={isDark} />

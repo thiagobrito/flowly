@@ -1,11 +1,11 @@
 import type { LucideIcon } from 'lucide-react-native';
-import { CalendarClock, CalendarRange, Sun } from 'lucide-react-native';
+import { CalendarClock, CalendarRange, CalendarX, Sun } from 'lucide-react-native';
 
 import { APP_TIME_ZONE, localDateKey, startOfLocalDay } from '@/lib/date';
 
 import type { Task } from '../NewTask/data';
 
-export type DateFilterId = 'today' | 'tomorrow' | 'thisWeek';
+export type DateFilterId = 'today' | 'tomorrow' | 'thisWeek' | 'nodate';
 
 export type DateFilterOption = {
   id: DateFilterId;
@@ -18,6 +18,7 @@ export const DATE_FILTERS: DateFilterOption[] = [
   { id: 'today', label: 'Hoje', Icon: Sun, accent: '#f59e0b' },
   { id: 'tomorrow', label: 'Amanhã', Icon: CalendarClock, accent: '#8b5cf6' },
   { id: 'thisWeek', label: 'Esta semana', Icon: CalendarRange, accent: '#3b82f6' },
+  { id: 'nodate', label: 'Sem data', Icon: CalendarX, accent: '#ef4444' },
 ];
 
 const WEEKDAY_INDEX: Record<string, number> = {
@@ -83,12 +84,13 @@ export function taskMatchesDateFilter(task: Task, filterId: DateFilterId, refere
 
   switch (filterId) {
     case 'today':
-      if (keys.size === 0) return true;
       return keys.has(todayKey);
     case 'tomorrow':
       return keys.has(tomorrowKey);
     case 'thisWeek':
       return [...keys].some((key) => weekKeys.has(key));
+    case 'nodate':
+      return keys.size === 0;
     default:
       return true;
   }

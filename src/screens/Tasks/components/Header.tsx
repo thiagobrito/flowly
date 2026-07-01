@@ -1,4 +1,4 @@
-import { Bell, Crown, ListChecks, LogOut, SlidersHorizontal, Zap } from 'lucide-react-native';
+import { ListChecks, LogOut, SlidersHorizontal, Zap } from 'lucide-react-native';
 import { Pressable, Text, View } from 'react-native';
 
 import { energyScoreToLevel } from '@/lib/energy';
@@ -11,8 +11,6 @@ type HeaderProps = {
   onLogout?: () => void;
   onOpenConfig?: () => void;
   onOpenFilter?: () => void;
-  onOpenNotificationTest?: () => void;
-  onOpenPurchaseTest?: () => void;
 };
 
 function BatteryData({ energyScore }: { energyScore: number }) {
@@ -30,7 +28,7 @@ function BatteryData({ energyScore }: { energyScore: number }) {
   );
 }
 
-export default function Header({ isDark, energyScore, onLogout, onOpenConfig, onOpenFilter, onOpenNotificationTest, onOpenPurchaseTest }: HeaderProps) {
+export default function Header({ isDark, energyScore, onLogout, onOpenConfig, onOpenFilter }: HeaderProps) {
   return (
     <View className="flex-row items-start justify-between pt-2">
       <View className="flex-row items-center">
@@ -44,21 +42,9 @@ export default function Header({ isDark, energyScore, onLogout, onOpenConfig, on
       </View>
 
       <View className="flex-row items-center" style={{ gap: 8 }}>
-        {onOpenNotificationTest ? (
-          <Pressable onPress={onOpenNotificationTest} accessibilityRole="button" accessibilityLabel="Testar notificação" className="size-10 items-center justify-center rounded-full bg-white/40 dark:bg-white/10">
-            <Bell size={18} color={isDark ? '#e4e4e7' : '#27272a'} />
-          </Pressable>
-        ) : null}
-
         <Pressable onPress={onOpenConfig} accessibilityRole="button" accessibilityLabel="Settings" className="size-10 items-center justify-center rounded-full bg-white/40 dark:bg-white/10">
           <SlidersHorizontal size={18} color={isDark ? '#e4e4e7' : '#27272a'} />
         </Pressable>
-
-        {onOpenPurchaseTest ? (
-          <Pressable onPress={onOpenPurchaseTest} accessibilityRole="button" accessibilityLabel="Testar compra" className="size-10 items-center justify-center rounded-full bg-white/40 dark:bg-white/10">
-            <Crown size={18} color={isDark ? '#facc15' : '#eab308'} />
-          </Pressable>
-        ) : null}
 
         {onLogout ? (
           <Pressable onPress={onLogout} accessibilityRole="button" accessibilityLabel="Sair" className="size-10 items-center justify-center rounded-full bg-white/40 dark:bg-white/10">

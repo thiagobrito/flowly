@@ -69,7 +69,7 @@ function frequencyLabel(task: Task): string {
 export default function TaskDetailModal({ visible, task, isDark, onClose }: TaskDetailModalProps) {
   if (!task) return null;
 
-  const area = getLifeArea(task.area);
+  const area = getLifeArea(task.goal.name);
   const accent = area?.accent ?? '#71717a';
   const AreaIcon = area?.Icon;
   const FreqIcon = getFrequencyMeta(task.frequency.kind)?.Icon;

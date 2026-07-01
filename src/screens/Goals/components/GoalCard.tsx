@@ -6,6 +6,7 @@ import { GetLifeArea } from '@/screens/common';
 import type { Goal } from '../data';
 import { STATUS_LABELS, TYPE_LABELS } from '../data';
 import ConfidenceMeter from './ConfidenceMeter';
+import GoalCompletedTasksTable from './GoalCompletedTasksTable';
 import HealthDiagnostics from './HealthDiagnostics';
 import MetricRow from './MetricRow';
 import MomentumCard from './MomentumCard';
@@ -106,6 +107,11 @@ export default function GoalCard({ goal, isDark, onEdit }: GoalCardProps) {
           </View>
         </>
       ) : null}
+
+      <Divider isDark={isDark} />
+
+      <SectionLabel>Tarefas realizadas</SectionLabel>
+      <GoalCompletedTasksTable goal={goal} isDark={isDark} accent={accent} />
 
       <Divider isDark={isDark} />
 

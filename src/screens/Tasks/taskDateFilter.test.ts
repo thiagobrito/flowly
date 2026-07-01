@@ -8,6 +8,7 @@ function baseTask(overrides: Partial<Task> = {}): Task {
     id: 'task-1',
     randomId: 'random-1',
     name: 'Tarefa',
+    goal: { id: 'goal-1', name: 'Meta' },
     area: 'work',
     frequency: { kind: 'notime' },
     ...overrides,
@@ -42,9 +43,10 @@ describe('getTaskDateKeys', () => {
 });
 
 describe('taskMatchesDateFilter', () => {
-  it('inclui tarefa sem data explícita apenas em Hoje', () => {
+  it('inclui tarefa sem data explícita apenas em Sem data', () => {
     const task = baseTask();
-    expect(taskMatchesDateFilter(task, 'today', REFERENCE)).toBe(true);
+    expect(taskMatchesDateFilter(task, 'nodate', REFERENCE)).toBe(true);
+    expect(taskMatchesDateFilter(task, 'today', REFERENCE)).toBe(false);
     expect(taskMatchesDateFilter(task, 'tomorrow', REFERENCE)).toBe(false);
     expect(taskMatchesDateFilter(task, 'thisWeek', REFERENCE)).toBe(false);
   });

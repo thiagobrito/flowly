@@ -1,4 +1,4 @@
-import { Clock, GoalIcon, HeartPulse, ListChecks, Timer, TrendingUp, Zap } from 'lucide-react-native';
+import { AlignLeft, Clock, GoalIcon, HeartPulse, ListChecks, Timer, TrendingUp, Zap } from 'lucide-react-native';
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, useColorScheme, View } from 'react-native';
 
@@ -27,6 +27,7 @@ export default function NewTask({ task, initialFrequency, initialArea, onCreate,
   const { preferences } = useConfigPreferences();
 
   const [name, setName] = useState(task?.name ?? '');
+  const [description, setDescription] = useState(task?.description ?? '');
   const [energy, setEnergy] = useState(task?.energy ?? 3);
   const [impact, setImpact] = useState(task?.impact ?? 3);
   const [frequency, setFrequency] = useState<FrequencyConfig | null>(task?.frequency ?? initialFrequency ?? null);
@@ -36,7 +37,10 @@ export default function NewTask({ task, initialFrequency, initialArea, onCreate,
   const [labels, setLabels] = useState<string[]>(['SAÚDE', 'FLOWLY']);
 
   const canSubmit = useMemo(() => name.trim().length > 0 && isFrequencyConfigValid(frequency) && area !== null, [name, frequency, area]);
-  const areaLabels = useMemo(() => (initialArea && !labels.includes(initialArea) ? [initialArea, ...labels] : labels), [labels, initialArea]);
+  const areaLabels = useMemo(() => {
+    const merged = initialArea && !labels.includes(initialArea) ? [initialArea, ...labels] : labels;
+    return [...new Set(merged)];
+  }, [labels, initialArea]);
   let buttonBackground = isDark ? 'rgba(255,255,255,0.12)' : 'rgba(10, 21, 241, 0.08)';
   let buttonTextColor = isDark ? '#71717a' : '#a1a1aa';
 
@@ -49,9 +53,9 @@ export default function NewTask({ task, initialFrequency, initialArea, onCreate,
     if (!isFrequencyConfigValid(frequency) || area === null || name.trim().length === 0) {
       return;
     }
-
     const payload = {
       name: name.trim(),
+      description: description.trim(),
       energy,
       impact,
       frequency,
@@ -100,6 +104,19 @@ export default function NewTask({ task, initialFrequency, initialArea, onCreate,
         />
 
         <View className="mt-6">
+          <SectionHeader label="Descrição" Icon={AlignLeft} accent="#0ea5e9" />
+          <TextInput
+            value={description}
+            onChangeText={setDescription}
+            placeholder="Adicione detalhes ou anotações (opcional)"
+            placeholderTextColor={isDark ? '#71717a' : '#a1a1aa'}
+            multiline
+            textAlignVertical="top"
+            className="min-h-[88px] rounded-2xl border border-zinc-200 bg-white/70 px-4 py-3 text-base text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800/60 dark:text-zinc-50"
+          />
+        </View>
+
+        <View className="mt-6">
           <SectionHeader label="Gasto de Energia" Icon={Zap} accent="#22c55e" />
           <LevelScale value={energy} onChange={setEnergy} Icon={Zap} accent="#22c55e" isDark={isDark} />
         </View>
@@ -129,7 +146,18 @@ export default function NewTask({ task, initialFrequency, initialArea, onCreate,
           <View className="-mx-1 flex-row flex-wrap">
             {areaLabels.map((item) => (
               <View key={item} className="w-1/2 p-1">
-                <OptionChip label={item} isGoal Icon={GoalIcon} selected={area === item} accent="#22c55e" isDark={isDark} onPress={() => setArea(item)} className="w-full" />
+                <OptionChip
+                  label={item}
+                  isGoal
+                  Icon={GoalIcon}
+                  selected={area === item}
+                  accent="#22c55e"
+                  isDark={isDark}
+                  onPress={() => {
+                    setArea(item);
+                  }}
+                  className="w-full"
+                />
               </View>
             ))}
 
