@@ -1,6 +1,7 @@
 import { ChevronLeft } from 'lucide-react-native';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import Animated, { FadeInLeft, FadeInRight, FadeOutLeft, FadeOutRight } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { api } from '@/lib/network';
@@ -59,6 +60,12 @@ export default function Onboarding({ isDark, onComplete }: OnboardingProps) {
   const [showActivities, setShowActivities] = useState(false);
 
   const { index, goalSetup, activities } = progress;
+
+  // Índice do passo anterior, para saber a direção da animação de transição.
+  const prevIndexRef = useRef(index);
+  useEffect(() => {
+    prevIndexRef.current = index;
+  }, [index]);
 
   const goalName = goalSetup?.mainGoal.name?.trim() ? goalSetup.mainGoal.name.trim() : null;
 
@@ -151,14 +158,19 @@ export default function Onboarding({ isDark, onComplete }: OnboardingProps) {
   // antes de restaurar o ponto em que o usuário parou.
   if (!step || !progress.loaded) return null;
 
+  // Direção da transição: avançar desliza da direita, voltar da esquerda.
+  const forward = index >= prevIndexRef.current;
+  const entering = (forward ? FadeInRight : FadeInLeft).duration(320);
+  const exiting = (forward ? FadeOutLeft : FadeOutRight).duration(200);
+
   return (
-    <View className="flex-1">
+    <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ProgressHeader current={index} total={steps.length} isDark={isDark} canGoBack={index > 0} onBack={goBack} />
 
       <ScrollView className="mt-4 flex-1" showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 24, flexGrow: 1 }}>
-        <View key={step.id} className="flex-1">
+        <Animated.View key={step.id} entering={entering} exiting={exiting} className="flex-1">
           {content}
-        </View>
+        </Animated.View>
       </ScrollView>
 
       <Modal visible={showPaywall} animationType="slide" presentationStyle="fullScreen" onRequestClose={handlePaywallClose}>
@@ -169,7 +181,7 @@ export default function Onboarding({ isDark, onComplete }: OnboardingProps) {
       <Modal visible={showGoals} animationType="slide" presentationStyle="fullScreen" onRequestClose={() => setShowGoals(false)}>
         <View className="flex-1 bg-white dark:bg-black">
           <Background isDark={isDark} />
-          <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
+          <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
             <View className="flex-1 px-4 pt-2">
               <NewGoals isDark={isDark} onComplete={handleGoalsComplete} onClose={() => setShowGoals(false)} />
             </View>
@@ -180,7 +192,7 @@ export default function Onboarding({ isDark, onComplete }: OnboardingProps) {
       <Modal visible={showActivities} animationType="slide" presentationStyle="fullScreen" onRequestClose={() => setShowActivities(false)}>
         <View className="flex-1 bg-white dark:bg-black">
           <Background isDark={isDark} />
-          <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
+          <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
             <View className="flex-1 px-4 pt-2">
               <View className="h-10 flex-row items-center">
                 <Pressable onPress={() => setShowActivities(false)} accessibilityRole="button" accessibilityLabel="Voltar ao onboarding" className="-ml-1 flex-row items-center active:opacity-70">
@@ -193,6 +205,6 @@ export default function Onboarding({ isDark, onComplete }: OnboardingProps) {
           </SafeAreaView>
         </View>
       </Modal>
-    </View>
+    </KeyboardAvoidingView>
   );
 }

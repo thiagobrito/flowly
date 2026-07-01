@@ -35,7 +35,7 @@ export default function OnboardingRoute() {
     <View className="flex-1 bg-white dark:bg-black">
       <Background isDark={isDark} />
 
-      <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
+      <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
         <View className="flex-1 px-4 pt-2">
           <Onboarding isDark={isDark} onComplete={handleComplete} />
         </View>

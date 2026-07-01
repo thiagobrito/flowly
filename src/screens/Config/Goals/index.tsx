@@ -1,8 +1,6 @@
 import { ChevronLeft, RefreshCw } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, Text, useColorScheme, View } from 'react-native';
-
-import { HttpError } from '@/lib/network';
+import { ActivityIndicator, Pressable, ScrollView, Text, useColorScheme, View } from 'react-native';
 
 import SectionTitle from '../components/SectionTitle';
 import CycleCard from './components/CycleCard';
@@ -71,17 +69,9 @@ export default function Goals({ onBack }: GoalsProps) {
         setMainGoal(goals.mainGoal);
         setSecondaryGoals(goals.secondaryGoals);
       })
-      .catch((error) => {
-        if (!active) return;
-
-        if (error instanceof HttpError && error.status === 404) return;
-
-        Alert.alert('Erro', error.message);
-      })
       .finally(() => {
         if (active) setLoading(false);
       });
-
     return () => {
       active = false;
     };
