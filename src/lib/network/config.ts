@@ -14,15 +14,31 @@ export const DEFAULT_HEADERS: Headers = {
 };
 
 /**
+ * URL de produção da API. Mesmo valor usado pela automação de build iOS
+ * (`build/config.py` → `PRODUCTION_API_URL`); mantenha os dois em sincronia.
+ */
+export const PRODUCTION_API_URL = 'https://flowly-web-coral.vercel.app/api/v1';
+
+/** `true` quando a URL aponta para um ambiente local de desenvolvimento. */
+function isLocalUrl(url: string): boolean {
+  return /^https?:\/\/(localhost|127\.0\.0\.1|10\.0\.2\.2)([:/]|$)/i.test(url);
+}
+
+/**
  * Resolve a `baseURL` padrão a partir do ambiente.
  *
  * Lê `EXPO_PUBLIC_API_URL` (variáveis com prefixo `EXPO_PUBLIC_` são embutidas
- * no bundle pelo Expo). Retorna string vazia se não definida — nesse caso,
- * paths absolutos (`https://...`) ainda funcionam.
+ * no bundle pelo Expo). Em builds de release, uma URL ausente ou apontando para
+ * localhost (o valor de dev do `.env`) cai na URL de produção — garante que
+ * builds Android/EAS, que não passam pela override do `build.py`, nunca
+ * embarquem o localhost.
  */
 export function resolveBaseURL(): string {
   const fromEnv = process.env.EXPO_PUBLIC_API_URL;
-  return typeof fromEnv === 'string' ? fromEnv.trim().replace(/\/+$/, '') : '';
+  const url = typeof fromEnv === 'string' ? fromEnv.trim().replace(/\/+$/, '') : '';
+
+  if (!__DEV__ && (!url || isLocalUrl(url))) return PRODUCTION_API_URL;
+  return url;
 }
 
 /** Serializa um valor de query param em uma ou mais entradas `key=value`. */

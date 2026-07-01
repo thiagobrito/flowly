@@ -2,10 +2,14 @@ import { Lock, Mail } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, useColorScheme, View } from 'react-native';
 
+import { openLegalLink, PRIVACY_POLICY_URL, TERMS_OF_USE_URL } from '@/lib/legal';
+
 import AuthField from '../Login/components/AuthField';
 import AuthHeader from '../Login/components/AuthHeader';
 import AuthTabs from '../Login/components/AuthTabs';
+import Checkbox from '../Login/components/Checkbox';
 import SwipeButton from '../Login/components/SwipeButton';
+import { isValidEmail, validatePassword } from './validation';
 
 type CreateAccountProps = {
   onCreateAccount?: (payload: { email: string; password: string }) => void;
@@ -19,12 +23,18 @@ export default function CreateAccount({ onCreateAccount, onNavigateToLogin, pend
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [consentAccepted, setConsentAccepted] = useState(false);
 
-  const canSubmit = useMemo(() => email.trim().length > 0 && password.length > 0 && password === confirmPassword, [email, password, confirmPassword]);
+  const trimmedEmail = email.trim();
+  const emailError = trimmedEmail.length > 0 && !isValidEmail(trimmedEmail) ? 'Informe um e-mail válido.' : null;
+  const passwordError = password.length > 0 ? validatePassword(password, trimmedEmail) : null;
+  const confirmError = confirmPassword.length > 0 && password !== confirmPassword ? 'As senhas não coincidem.' : null;
+
+  const canSubmit = useMemo(() => isValidEmail(trimmedEmail) && password.length > 0 && validatePassword(password, trimmedEmail) === null && password === confirmPassword && consentAccepted, [trimmedEmail, password, confirmPassword, consentAccepted]);
 
   const handleCreate = () => {
     if (!canSubmit) return;
-    onCreateAccount?.({ email: email.trim(), password });
+    onCreateAccount?.({ email: trimmedEmail, password });
   };
 
   return (
@@ -37,9 +47,35 @@ export default function CreateAccount({ onCreateAccount, onNavigateToLogin, pend
             <AuthTabs active="signup" onChange={(tab) => tab === 'login' && onNavigateToLogin?.()} isDark={isDark} />
 
             <View className="mt-6" style={{ gap: 18 }}>
-              <AuthField label="E-mail" placeholder="Digite seu e-mail" value={email} onChangeText={setEmail} Icon={Mail} isDark={isDark} keyboardType="email-address" />
-              <AuthField label="Senha" placeholder="Digite sua senha" value={password} onChangeText={setPassword} Icon={Lock} isDark={isDark} secure />
-              <AuthField label="Confirmar senha" placeholder="Confirme sua senha" value={confirmPassword} onChangeText={setConfirmPassword} Icon={Lock} isDark={isDark} secure />
+              <View>
+                <AuthField label="E-mail" placeholder="Digite seu e-mail" value={email} onChangeText={setEmail} Icon={Mail} isDark={isDark} keyboardType="email-address" />
+                {emailError ? <Text className="mt-1.5 text-xs text-red-500">{emailError}</Text> : null}
+              </View>
+              <View>
+                <AuthField label="Senha" placeholder="Digite sua senha" value={password} onChangeText={setPassword} Icon={Lock} isDark={isDark} secure />
+                {passwordError ? <Text className="mt-1.5 text-xs text-red-500">{passwordError}</Text> : null}
+              </View>
+              <View>
+                <AuthField label="Confirmar senha" placeholder="Confirme sua senha" value={confirmPassword} onChangeText={setConfirmPassword} Icon={Lock} isDark={isDark} secure />
+                {confirmError ? <Text className="mt-1.5 text-xs text-red-500">{confirmError}</Text> : null}
+              </View>
+            </View>
+
+            <View className="mt-5">
+              <View className="flex-row items-start">
+                <Checkbox label="" checked={consentAccepted} onChange={setConsentAccepted} isDark={isDark} />
+                <Text className="-ml-1 flex-1 text-sm leading-5 text-zinc-600 dark:text-zinc-300">
+                  Li e concordo com a{' '}
+                  <Text className="font-semibold text-[#6366f1]" onPress={() => openLegalLink(PRIVACY_POLICY_URL)} accessibilityRole="link">
+                    Política de Privacidade
+                  </Text>{' '}
+                  e os{' '}
+                  <Text className="font-semibold text-[#6366f1]" onPress={() => openLegalLink(TERMS_OF_USE_URL)} accessibilityRole="link">
+                    Termos de Uso
+                  </Text>
+                  .
+                </Text>
+              </View>
             </View>
 
             <View className="mt-8">

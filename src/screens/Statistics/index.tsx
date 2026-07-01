@@ -132,7 +132,7 @@ export default function Statistics() {
         </View>
 
         <View className="mt-7">
-          <SleepCard energyInfo={energyInfo} isDark={isDark} />
+          <SleepCard energyInfo={energyInfo} isDark={isDark} selectedDay={selectedDay} />
         </View>
 
         <View className="mt-7">

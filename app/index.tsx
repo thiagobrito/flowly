@@ -1,13 +1,16 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { Redirect } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, useColorScheme, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { TabKey } from '@/components/BottomTabBar';
 import BottomTabBar from '@/components/BottomTabBar';
 import { useSession } from '@/lib/auth';
+import { useFeatureFlags } from '@/lib/featureFlags';
 import { useOnboarding } from '@/lib/onboarding';
+import { usePendingSyncFlush } from '@/lib/pendingSync';
+import { useLocalTrial, useSubscription } from '@/lib/subscription';
 import Calendar from '@/screens/Calendar';
 import { onceFrequencyFromISO } from '@/screens/Calendar/scheduleSync';
 import Config from '@/screens/Config';
@@ -15,6 +18,8 @@ import Goals from '@/screens/Goals';
 import NewTask from '@/screens/NewTask';
 import type { FrequencyConfig, Task } from '@/screens/NewTask/data';
 import Statistics from '@/screens/Statistics';
+import Subscription from '@/screens/Subscription';
+import TrialEnded from '@/screens/Subscription/TrialEnded';
 import Tasks from '@/screens/Tasks/index';
 
 type NewTaskDraft = {
@@ -55,7 +60,23 @@ function Home() {
   const [newTaskDraft, setNewTaskDraft] = useState<NewTaskDraft | null>(null);
   const { isHydrated, isAuthenticated, signOut } = useSession();
   const { isHydrated: onboardingHydrated, completed: onboardingCompleted } = useOnboarding();
-  // const { isReady: subscriptionReady, isPremium, refresh: refreshSubscription } = useSubscription();
+
+  // Gating premium: assinatura (backend + RevenueCat) ou trial local em vigor.
+  // A duração do trial (7/14/21 dias) vem de feature flag.
+  const { trialDays } = useFeatureFlags();
+  const { isReady: subscriptionReady, isPremium } = useSubscription();
+  const { isHydrated: trialHydrated, isExpired: trialExpired, startIfNeeded: startTrialIfNeeded } = useLocalTrial(trialDays);
+  const [paywallVisible, setPaywallVisible] = useState(true);
+
+  // Reenvia escritas que falharam por rede (metas/atividades do onboarding etc.)
+  // assim que houver sessão — na montagem, na hidratação da fila e ao voltar
+  // ao foreground.
+  usePendingSyncFlush(isAuthenticated);
+
+  // Inicia o trial local na primeira entrada na Home (pós-login + onboarding).
+  useEffect(() => {
+    if (isAuthenticated && onboardingCompleted) startTrialIfNeeded();
+  }, [isAuthenticated, onboardingCompleted, startTrialIfNeeded]);
 
   const handleTabChange = (next: TabKey) => {
     if (next === 'new') {
@@ -107,6 +128,19 @@ function Home() {
       { text: 'Sair', style: 'destructive', onPress: signOut },
     ]);
   };
+
+  // Trial expirado e sem assinatura ativa: bloqueia o app no paywall.
+  // (`isPremium` já cobre o entitlement do RevenueCat e o trial do backend.)
+  const isLocked = subscriptionReady && trialHydrated && !isPremium && trialExpired;
+
+  if (isLocked) {
+    return (
+      <View className="flex-1 bg-white dark:bg-black">
+        <Background isDark={isDark} />
+        {paywallVisible ? <Subscription onClose={() => setPaywallVisible(false)} /> : <TrialEnded isDark={isDark} onSeePlans={() => setPaywallVisible(true)} onLogout={handleLogout} />}
+      </View>
+    );
+  }
 
   return (
     <View className="flex-1 bg-white dark:bg-black">

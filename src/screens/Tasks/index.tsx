@@ -1,10 +1,13 @@
-import { GoalIcon } from 'lucide-react-native';
+import { Crown, GoalIcon } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, AppState, Modal, Platform, RefreshControl, ScrollView, Text, useColorScheme, View } from 'react-native';
+import { ActivityIndicator, Alert, AppState, Modal, Platform, Pressable, RefreshControl, ScrollView, Text, useColorScheme, View } from 'react-native';
 
 import { toLocalISOString } from '@/lib/date';
 import { computeEnergyAtMoment, flowlyInputFromMetrics, getHealthProvider } from '@/lib/energy';
+import { useFeatureFlags } from '@/lib/featureFlags';
 import { api } from '@/lib/network';
+import { applySleepProfile, useSleepProfile } from '@/lib/sleepProfile';
+import { useLocalTrial, useSubscription } from '@/lib/subscription';
 
 import { useNotificationTest } from '../Config/hooks/useNotificationTest';
 import NotificationTestModal from '../Config/NotificationTestModal';
@@ -24,12 +27,16 @@ type TasksProps = {
 };
 
 function OrganizeTasks(tasks: any): Task[] {
-  return tasks.map((task: any) => ({
-    ...task,
+  return tasks.map((task: any, index: number) => {
     // eslint-disable-next-line no-underscore-dangle -- campo `_id` retornado pela API MongoDB
-    id: task.id ?? (task as Task & { _id?: string })._id ?? '',
-    randomId: Math.random().toString(36).substring(2, 15),
-  }));
+    const id = task.id ?? (task as Task & { _id?: string })._id ?? '';
+    return {
+      ...task,
+      id,
+      // Chave estável entre refetches (id + posição) para o React reconciliar as listas.
+      randomId: `${id || 'task'}-${index}`,
+    };
+  });
 }
 
 async function fetchTodayTasks(energyLevel: number): Promise<{ visibleTasks: Task[]; concludedTasks: Task[] }> {
@@ -51,6 +58,7 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
   const [refreshing, setRefreshing] = useState(false);
   const [energyScore, setEnergyScore] = useState<number>(0);
   const [energyLevel, setEnergyLevel] = useState<number>(0);
+  const [energyReady, setEnergyReady] = useState<boolean>(false);
 
   const [concludedTasks, setConcludedTasks] = useState<Task[]>([]);
   const [visibleTasks, setVisibleTasks] = useState<Task[]>([]);
@@ -62,6 +70,18 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
   const [selectedDateFilter, setSelectedDateFilter] = useState<DateFilterId | null>(null);
 
   const { showNow, showIn30Seconds } = useNotificationTest();
+
+  // Perfil de sono: fallback do Energy Score para quem não tem wearable.
+  // Ref mantém `refreshEnergy` estável (o intervalo de 60s pega o valor atual).
+  const { profile: sleepProfile } = useSleepProfile();
+  const sleepProfileRef = useRef(sleepProfile);
+  sleepProfileRef.current = sleepProfile;
+
+  // Trial/assinatura: permite assinar a qualquer momento (dia 0 inclusive).
+  const { trialDays } = useFeatureFlags();
+  const { isPremium } = useSubscription();
+  const { isActive: trialActive, daysLeft: trialDaysLeft } = useLocalTrial(trialDays);
+  const showTrialBanner = !isPremium && trialActive;
 
   const allTasks = useMemo(() => [...visibleTasks, ...concludedTasks], [visibleTasks, concludedTasks]);
 
@@ -137,7 +157,7 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
   };
 
   const fetchTasks = useCallback(async () => {
-    if (!energyLevel) return;
+    if (!energyReady) return;
 
     try {
       const { visibleTasks: nextVisible, concludedTasks: nextConcluded } = await fetchTodayTasks(energyLevel);
@@ -148,21 +168,26 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
     } finally {
       setLoading(false);
     }
-  }, [energyLevel]);
+  }, [energyLevel, energyReady]);
 
-  const refreshEnergy = useCallback(() => {
-    const metrics = getHealthProvider().collect() as any;
+  const refreshEnergy = useCallback(async () => {
+    // `collect()` é assíncrono; sem o await o engine recebe uma Promise e cai
+    // no fallback, ignorando os dados reais de saúde do usuário.
+    const collected = await getHealthProvider().collect();
+    // Sem wearable, o perfil de sono preenche acordar/dormir/duração.
+    const metrics = applySleepProfile(collected, sleepProfileRef.current);
     const input = flowlyInputFromMetrics(metrics, 8);
     const result = computeEnergyAtMoment(input, toLocalISOString());
     setEnergyScore(result.doubleEnergyScore);
     setEnergyLevel(result.doubleEnergyLevel);
+    setEnergyReady(true);
     return result;
   }, []);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
-      const result = refreshEnergy();
+      const result = await refreshEnergy();
       const { visibleTasks: nextVisible, concludedTasks: nextConcluded } = await fetchTodayTasks(result.doubleEnergyLevel);
       setVisibleTasks(nextVisible);
       setConcludedTasks(nextConcluded);
@@ -176,13 +201,18 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
   const appState = useRef(AppState.currentState);
 
   useEffect(() => {
-    refreshEnergy();
+    // Garante que a Home carregue mesmo se a coleta de energia falhar.
+    const runRefresh = () => {
+      refreshEnergy().catch(() => setEnergyReady(true));
+    };
 
-    const interval = setInterval(refreshEnergy, 60_000);
+    runRefresh();
+
+    const interval = setInterval(runRefresh, 60_000);
 
     const subscription = AppState.addEventListener('change', (nextState) => {
       if (appState.current.match(/inactive|background/) && nextState === 'active') {
-        refreshEnergy();
+        runRefresh();
       }
       appState.current = nextState;
     });
@@ -208,6 +238,24 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
   return (
     <View className="flex-1">
       <Header isDark={isDark} energyScore={energyScore} onLogout={onLogout} onOpenConfig={onOpenConfig} onOpenFilter={() => setFilterOpen(true)} />
+
+      {showTrialBanner ? (
+        <Pressable
+          onPress={() => setSubscriptionVisible(true)}
+          accessibilityRole="button"
+          accessibilityLabel="Assinar o Flowly Premium"
+          className="mt-3 flex-row items-center rounded-2xl border px-4 py-3 active:opacity-80"
+          style={{ borderColor: isDark ? 'rgba(99,102,241,0.35)' : 'rgba(99,102,241,0.25)', backgroundColor: isDark ? 'rgba(99,102,241,0.12)' : 'rgba(99,102,241,0.08)' }}
+        >
+          <Crown size={16} color="#6366f1" />
+          <Text className="ml-2 flex-1 text-sm text-zinc-700 dark:text-zinc-200">
+            Teste grátis: {trialDaysLeft} {trialDaysLeft === 1 ? 'dia restante' : 'dias restantes'}
+          </Text>
+          <Text className="text-sm font-semibold" style={{ color: '#6366f1' }}>
+            Assinar
+          </Text>
+        </Pressable>
+      ) : null}
 
       <ScrollView
         className="mt-2 flex-1"

@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { applySleepProfile, useSleepProfile } from '@/lib/sleepProfile';
+
 import { getHealthProvider } from '../collectors';
 import type { EnergyConfig } from '../config';
 import { defaultConfig } from '../config';
@@ -41,6 +43,14 @@ export const useEnergyScore = (options: UseEnergyScoreOptions = {}): UseEnergySc
   const provider = useMemo(() => getHealthProvider(), []);
   const mounted = useRef(true);
 
+  // Perfil de sono informado pelo usuário: preenche horários de acordar/dormir
+  // quando a saúde não os traz (sem wearable) e aplica correções manuais.
+  // Ref mantém `refresh` estável (evita re-pedir permissões a cada mudança).
+  const { profile } = useSleepProfile();
+  const profileRef = useRef(profile);
+  profileRef.current = profile;
+  const lastCollectedRef = useRef<HealthMetrics | null>(null);
+
   const [energy, setEnergy] = useState<EnergyScore | null>(null);
   const [metrics, setMetrics] = useState<HealthMetrics | null>(null);
   const [loading, setLoading] = useState(false);
@@ -67,9 +77,13 @@ export const useEnergyScore = (options: UseEnergyScoreOptions = {}): UseEnergySc
     }
     try {
       const collected = await provider.collect(range);
-      const computed = computeEnergyScore(collected, config);
+      lastCollectedRef.current = collected;
+      // O dia de referência do perfil é o dia visualizado (fim do range), não
+      // necessariamente hoje — importa para overrides de dias anteriores.
+      const augmented = applySleepProfile(collected, profileRef.current, range?.endDate);
+      const computed = computeEnergyScore(augmented, config);
       if (mounted.current) {
-        setMetrics(collected);
+        setMetrics(augmented);
         setEnergy(computed);
       }
     } catch (err) {
@@ -80,6 +94,17 @@ export const useEnergyScore = (options: UseEnergyScoreOptions = {}): UseEnergySc
       if (mounted.current) setLoading(false);
     }
   }, [provider, range, config]);
+
+  // Reaplica o perfil sobre a última coleta quando ele muda (ex.: horário
+  // editado no SleepCard ou definido no onboarding) — sem nova coleta nem
+  // novo pedido de permissão.
+  useEffect(() => {
+    const collected = lastCollectedRef.current;
+    if (!collected) return;
+    const augmented = applySleepProfile(collected, profile, range?.endDate);
+    setMetrics(augmented);
+    setEnergy(computeEnergyScore(augmented, config));
+  }, [profile, range, config]);
 
   useEffect(() => {
     mounted.current = true;

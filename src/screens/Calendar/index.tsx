@@ -85,13 +85,15 @@ function snapISOToStep(iso: string, stepMin: number): string {
 function organizeTasks(tasks: unknown): Task[] {
   if (!Array.isArray(tasks)) return [];
 
-  return tasks.map((task) => {
+  return tasks.map((task, index) => {
     const item = task as Task & { _id?: string };
+    // eslint-disable-next-line no-underscore-dangle -- campo `_id` retornado pela API MongoDB
+    const id = item.id ?? item._id ?? '';
     return {
       ...item,
-      // eslint-disable-next-line no-underscore-dangle -- campo `_id` retornado pela API MongoDB
-      id: item.id ?? item._id ?? '',
-      randomId: Math.random().toString(36).substring(2, 15),
+      id,
+      // Chave estável entre refetches (id + posição) para o React reconciliar as listas.
+      randomId: `${id || 'task'}-${index}`,
     };
   });
 }

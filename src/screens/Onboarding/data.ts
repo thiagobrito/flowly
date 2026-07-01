@@ -13,7 +13,7 @@ import type { OnboardingLanguage } from '@/lib/onboarding';
  */
 
 /** Tipo de tela renderizada em cada passo. */
-export type OnboardingStepKind = 'language' | 'intro' | 'quote' | 'goals' | 'activities' | 'notifications' | 'payment' | 'completed';
+export type OnboardingStepKind = 'language' | 'intro' | 'quote' | 'goals' | 'activities' | 'notifications' | 'sleepProfile' | 'payment' | 'completed';
 
 /** Campos comuns a todos os passos. */
 type BaseStep = {
@@ -93,6 +93,12 @@ export type NotificationsStep = BaseStep & {
   skipLabel: string;
 };
 
+export type SleepProfileStep = BaseStep & {
+  kind: 'sleepProfile';
+  /** Rótulo para seguir sem configurar. */
+  skipLabel: string;
+};
+
 export type PaymentStep = BaseStep & {
   kind: 'payment';
   benefits: string[];
@@ -111,7 +117,7 @@ export type CompletedStep = BaseStep & {
   ctaLabel: string;
 };
 
-export type OnboardingStep = LanguageStep | IntroStep | QuoteStep | GoalsStep | ActivitiesStep | NotificationsStep | PaymentStep | CompletedStep;
+export type OnboardingStep = LanguageStep | IntroStep | QuoteStep | GoalsStep | ActivitiesStep | NotificationsStep | SleepProfileStep | PaymentStep | CompletedStep;
 
 export type OnboardingConfig = {
   steps: OnboardingStep[];
@@ -150,8 +156,8 @@ export const DEFAULT_ONBOARDING: OnboardingConfig = {
       title: 'Bem-vindo ao Flowly',
       subtitle: 'O Flowly transforma a sua visão em metas claras e em ações do dia a dia, respeitando a sua energia. Veja o que vamos configurar juntos:',
       highlights: [
-        { icon: 'Target', title: 'Defina seus objetivos', description: 'Escolha pelo menos 3 metas que importam para este ciclo.' },
-        { icon: 'ListChecks', title: 'Crie suas atividades', description: 'Defina pelo menos 3 atividades para colocar as metas em prática.' },
+        { icon: 'Target', title: 'Defina seus objetivos', description: 'Escolha sua meta principal e as áreas que importam para este ciclo.' },
+        { icon: 'ListChecks', title: 'Crie suas atividades', description: 'Crie as primeiras atividades para colocar as metas em prática — recomendamos 3.' },
         { icon: 'TrendingUp', title: 'Acompanhe seu progresso', description: 'Veja sua evolução semana a semana e mantenha o foco.' },
       ],
       ctaLabel: 'Continuar',
@@ -167,6 +173,14 @@ export const DEFAULT_ONBOARDING: OnboardingConfig = {
       skipLabel: 'Agora não',
     },
     {
+      id: 'sleep-profile',
+      kind: 'sleepProfile',
+      icon: 'BatteryCharging',
+      title: 'Sua energia ao longo do dia',
+      subtitle: 'O Flowly organiza suas atividades pela sua energia biológica. Para isso, precisamos saber quando você dorme e acorda.',
+      skipLabel: 'Pular por agora',
+    },
+    {
       id: 'quote-habits',
       kind: 'quote',
       quote: 'Pequenas ações repetidas todos os dias constroem grandes resultados. A consistência vence a intensidade.',
@@ -177,7 +191,7 @@ export const DEFAULT_ONBOARDING: OnboardingConfig = {
       kind: 'goals',
       icon: 'Target',
       title: 'Defina seus objetivos',
-      subtitle: 'Metas transformam visão em execução. Crie pelo menos 3 metas para as próximas 12 semanas.',
+      subtitle: 'Metas transformam visão em execução. Defina sua meta principal — e, se quiser, metas secundárias — para as próximas 12 semanas.',
       highlights: [
         { icon: 'Target', title: 'Escolha sua área de foco', description: 'Selecione o que mais importa neste ciclo.' },
         { icon: 'Flag', title: 'Nomeie seu resultado', description: 'Defina o que estará concluído ao fim do ciclo.' },
@@ -191,7 +205,7 @@ export const DEFAULT_ONBOARDING: OnboardingConfig = {
       kind: 'activities',
       icon: 'ListChecks',
       title: 'Crie suas atividades',
-      subtitle: 'Atividades são as ações concretas que levam você até o seu objetivo. Crie pelo menos 3 para começar.',
+      subtitle: 'Atividades são as ações concretas que levam você até o seu objetivo. Recomendamos criar 3 para começar com o pé direito.',
       highlights: [
         { icon: 'ListChecks', title: 'Ações do dia a dia', description: 'Transforme cada meta em passos executáveis.' },
         { icon: 'Timer', title: 'Defina a frequência', description: 'Escolha quando e com que ritmo realizar cada atividade.' },
