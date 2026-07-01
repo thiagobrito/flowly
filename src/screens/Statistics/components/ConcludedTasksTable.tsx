@@ -45,7 +45,7 @@ export default function ConcludedTasksTable({ tasks, isDark }: ConcludedTasksTab
           </View>
         ) : (
           tasks.map((task, index) => {
-            const area = getLifeArea(task.goal.name);
+            const area = getLifeArea(task?.goal?.name || task.area);
             const accent = area?.accent ?? '#71717a';
 
             return (
