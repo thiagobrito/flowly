@@ -10,7 +10,7 @@
 import * as Sentry from '@sentry/react-native';
 import * as WebBrowser from 'expo-web-browser';
 
-export const PRIVACY_POLICY_URL = 'https://furqahh8duzndywu.public.blob.vercel-storage.com/politica_de_privacidade.pdf';
+export const PRIVACY_POLICY_URL = 'https://flowly-web-coral.vercel.app/privacy';
 
 /** EULA padrão da Apple. Se um EULA customizado for criado, troque por essa URL. */
 export const TERMS_OF_USE_URL = 'https://www.apple.com/legal/internet-services/itunes/dev/stdeula/';
