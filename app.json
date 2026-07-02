@@ -27,7 +27,7 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.flowly-v2.app",
+      "package": "com.flowlyv2.app",
       "permissions": [
         "android.permission.health.READ_SLEEP",
         "android.permission.health.READ_HEART_RATE",
