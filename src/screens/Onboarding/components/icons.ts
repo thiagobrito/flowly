@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react-native';
-import { BatteryCharging, Bell, CircleCheck, Crown, Flag, Gauge, Languages, ListChecks, Sparkles, Target, Timer, TrendingUp } from 'lucide-react-native';
+import { BatteryCharging, Bell, CircleCheck, Crown, Flag, Gauge, Languages, ListChecks, Mic, Sparkles, Target, Timer, TrendingUp } from 'lucide-react-native';
 
 /** Resolve o nome de ícone vindo do schema (backend) para um componente Lucide. */
 const ICON_MAP: Record<string, LucideIcon> = {
@@ -15,6 +15,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   Crown,
   CircleCheck,
   BatteryCharging,
+  Mic,
 };
 
 export function resolveIcon(name?: string): LucideIcon {

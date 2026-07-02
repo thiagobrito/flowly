@@ -13,7 +13,7 @@ import type { OnboardingLanguage } from '@/lib/onboarding';
  */
 
 /** Tipo de tela renderizada em cada passo. */
-export type OnboardingStepKind = 'language' | 'intro' | 'quote' | 'goals' | 'activities' | 'notifications' | 'sleepProfile' | 'payment' | 'completed';
+export type OnboardingStepKind = 'language' | 'intro' | 'quote' | 'goals' | 'activities' | 'notifications' | 'microphone' | 'sleepProfile' | 'payment' | 'completed';
 
 /** Campos comuns a todos os passos. */
 type BaseStep = {
@@ -93,6 +93,15 @@ export type NotificationsStep = BaseStep & {
   skipLabel: string;
 };
 
+export type MicrophoneStep = BaseStep & {
+  kind: 'microphone';
+  benefits: string[];
+  /** Rótulo do botão que solicita a permissão. */
+  ctaLabel: string;
+  /** Rótulo para seguir sem habilitar. */
+  skipLabel: string;
+};
+
 export type SleepProfileStep = BaseStep & {
   kind: 'sleepProfile';
   /** Rótulo para seguir sem configurar. */
@@ -117,7 +126,7 @@ export type CompletedStep = BaseStep & {
   ctaLabel: string;
 };
 
-export type OnboardingStep = LanguageStep | IntroStep | QuoteStep | GoalsStep | ActivitiesStep | NotificationsStep | SleepProfileStep | PaymentStep | CompletedStep;
+export type OnboardingStep = LanguageStep | IntroStep | QuoteStep | GoalsStep | ActivitiesStep | NotificationsStep | MicrophoneStep | SleepProfileStep | PaymentStep | CompletedStep;
 
 export type OnboardingConfig = {
   steps: OnboardingStep[];
@@ -170,6 +179,16 @@ export const DEFAULT_ONBOARDING: OnboardingConfig = {
       subtitle: 'Lembretes no momento certo aumentam muito a sua chance de concluir o que planejou.',
       benefits: ['Lembretes das suas atividades no horário ideal', 'Avisos de revisão semanal do seu progresso', 'Incentivos para manter a consistência'],
       ctaLabel: 'Ativar notificações',
+      skipLabel: 'Agora não',
+    },
+    {
+      id: 'microphone',
+      kind: 'microphone',
+      icon: 'Mic',
+      title: 'Fale com o Flowly',
+      subtitle: 'Crie tarefas por voz, sem digitar: segure o botão de microfone e diga o que precisa fazer.',
+      benefits: ['Crie tarefas falando, em qualquer tela', 'Diga a data naturalmente: "hoje às 2 da tarde"', 'Mais rápido do que preencher o formulário'],
+      ctaLabel: 'Permitir microfone',
       skipLabel: 'Agora não',
     },
     {

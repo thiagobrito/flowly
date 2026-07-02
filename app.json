@@ -82,7 +82,14 @@
           "organization": "149-digital"
         }
       ],
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "Permitir que o Flowly use o microfone para voc\u00ea criar tarefas por voz.",
+          "speechRecognitionPermission": "Permitir que o Flowly reconhe\u00e7a a sua fala para criar tarefas por voz."
+        }
+      ]
     ],
     "extra": {
       "router": {

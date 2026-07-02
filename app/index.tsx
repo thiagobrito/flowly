@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { TabKey } from '@/components/BottomTabBar';
 import BottomTabBar from '@/components/BottomTabBar';
+import VoiceMicButton from '@/components/VoiceMicButton';
 import { useSession } from '@/lib/auth';
 import { useFeatureFlags } from '@/lib/featureFlags';
 import { useOnboarding } from '@/lib/onboarding';
@@ -21,9 +22,13 @@ import Statistics from '@/screens/Statistics';
 import Subscription from '@/screens/Subscription';
 import TrialEnded from '@/screens/Subscription/TrialEnded';
 import Tasks from '@/screens/Tasks/index';
+import VoiceAssistant, { type VoiceTaskDraft } from '@/screens/VoiceAssistant';
 
 type NewTaskDraft = {
   initialFrequency: FrequencyConfig;
+  /** Nome/área pré-preenchidos quando o rascunho vem do assistente de voz. */
+  initialName?: string;
+  initialArea?: string;
   returnTab: TabKey;
 };
 
@@ -40,7 +45,7 @@ type ActiveScreenProps = {
 
 function ActiveScreen({ tab, onLogout, onOpenConfig, editingTask, newTaskDraft, onEdit, onCreateAt, onNewTaskSuccess }: ActiveScreenProps) {
   if (tab === 'new') {
-    return <NewTask task={editingTask} initialFrequency={newTaskDraft?.initialFrequency} onSuccess={onNewTaskSuccess} />;
+    return <NewTask task={editingTask} initialName={newTaskDraft?.initialName} initialFrequency={newTaskDraft?.initialFrequency} initialArea={newTaskDraft?.initialArea} onSuccess={onNewTaskSuccess} />;
   }
   if (tab === 'goals') return <Goals />;
   if (tab === 'calendar') return <Calendar onEdit={onEdit} onCreateAt={onCreateAt} />;
@@ -58,6 +63,7 @@ function Home() {
   const [showConfig, setShowConfig] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [newTaskDraft, setNewTaskDraft] = useState<NewTaskDraft | null>(null);
+  const [voiceVisible, setVoiceVisible] = useState(false);
   const { isHydrated, isAuthenticated, signOut } = useSession();
   const { isHydrated: onboardingHydrated, completed: onboardingCompleted } = useOnboarding();
 
@@ -103,6 +109,19 @@ function Home() {
     setEditingTask(null);
     setNewTaskDraft(null);
     setTab(target);
+  };
+
+  // Rascunho ditado no assistente de voz → abre o formulário pré-preenchido.
+  const handleVoiceEdit = (draft: VoiceTaskDraft) => {
+    setVoiceVisible(false);
+    setEditingTask(null);
+    setNewTaskDraft({ initialName: draft.name, initialFrequency: draft.frequency, initialArea: draft.area, returnTab: 'home' });
+    setTab('new');
+  };
+
+  const handleVoiceCreated = () => {
+    setVoiceVisible(false);
+    setTab('home');
   };
 
   if (!isHydrated || !onboardingHydrated) {
@@ -154,9 +173,12 @@ function Home() {
             <ActiveScreen tab={tab} onLogout={handleLogout} onOpenConfig={() => setShowConfig(true)} editingTask={editingTask} newTaskDraft={newTaskDraft} onEdit={handleEdit} onCreateAt={handleCreateAt} onNewTaskSuccess={handleNewTaskSuccess} />
           )}
 
+          {!showConfig ? <VoiceMicButton onActivate={() => setVoiceVisible(true)} /> : null}
           {!showConfig ? <BottomTabBar active={tab} onChange={handleTabChange} /> : null}
         </View>
       </SafeAreaView>
+
+      <VoiceAssistant visible={voiceVisible} onClose={() => setVoiceVisible(false)} onEdit={handleVoiceEdit} onCreated={handleVoiceCreated} />
     </View>
   );
 }

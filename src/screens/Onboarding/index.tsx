@@ -20,6 +20,7 @@ import CompletedStep from './components/CompletedStep';
 import GoalsStep from './components/GoalsStep';
 import IntroStep from './components/IntroStep';
 import LanguageStep from './components/LanguageStep';
+import MicrophoneStep from './components/MicrophoneStep';
 import NotificationsStep from './components/NotificationsStep';
 import PaymentStep from './components/PaymentStep';
 import ProgressHeader from './components/ProgressHeader';
@@ -143,6 +144,8 @@ export default function Onboarding({ isDark, onComplete }: OnboardingProps) {
         return <ActivitiesStep step={step} isDark={isDark} goalName={goalName} activities={activities} onAddActivity={() => setShowActivities(true)} onNext={goNext} />;
       case 'notifications':
         return <NotificationsStep step={step} isDark={isDark} onNext={goNext} />;
+      case 'microphone':
+        return <MicrophoneStep step={step} isDark={isDark} onNext={goNext} />;
       case 'sleepProfile':
         return <SleepProfileStep step={step} isDark={isDark} onNext={goNext} />;
       case 'payment':

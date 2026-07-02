@@ -1,10 +1,9 @@
 import { AlignLeft, Clock, GoalIcon, HeartPulse, ListChecks, Timer, TrendingUp, Zap } from 'lucide-react-native';
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, Text, TextInput, useColorScheme, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, useColorScheme, View } from 'react-native';
 
 import { api } from '@/lib/network';
 import { usePendingSync } from '@/lib/pendingSync';
-import { syncTaskReminders } from '@/lib/taskReminders';
 
 import { LIFE_AREAS } from '../common';
 import { useConfigPreferences } from '../Config/hooks/useConfigPreferences';
@@ -12,9 +11,12 @@ import { EstimatedTimePicker, LevelScale, OptionChip, SectionHeader, SubtaskEdit
 import type { FrequencyConfig, NewTaskPayload, Subtask, Task } from './data';
 import { isFrequencyConfigValid } from './data';
 import { FrequencyPicker } from './FrequencyPicker';
+import { submitTask } from './submit';
 
 type NewTaskProps = {
   task?: Task | null;
+  /** Nome pré-preenchido (ex.: rascunho vindo do assistente de voz). */
+  initialName?: string | null;
   initialFrequency?: FrequencyConfig | null;
   /** Objetivo/área pré-selecionado (ex.: durante o onboarding, para vincular a atividade a uma meta específica). */
   initialArea?: string | null;
@@ -22,12 +24,12 @@ type NewTaskProps = {
   onSuccess?: () => void;
 };
 
-export default function NewTask({ task, initialFrequency, initialArea, onCreate, onSuccess }: NewTaskProps) {
+export default function NewTask({ task, initialName, initialFrequency, initialArea, onCreate, onSuccess }: NewTaskProps) {
   const isDark = useColorScheme() === 'dark';
   const isEditing = !!task;
   const { preferences } = useConfigPreferences();
 
-  const [name, setName] = useState(task?.name ?? '');
+  const [name, setName] = useState(task?.name ?? initialName ?? '');
   const [description, setDescription] = useState(task?.description ?? '');
   const [energy, setEnergy] = useState(task?.energy ?? 3);
   const [impact, setImpact] = useState(task?.impact ?? 3);
@@ -41,7 +43,10 @@ export default function NewTask({ task, initialFrequency, initialArea, onCreate,
 
   const canSubmit = useMemo(() => name.trim().length > 0 && isFrequencyConfigValid(frequency) && area !== null, [name, frequency, area]);
   const areaLabels = useMemo(() => {
-    const merged = initialArea && !labels.includes(initialArea) ? [initialArea, ...labels] : labels;
+    // Áreas da vida já têm chip próprio; só injeta o initialArea como "meta"
+    // quando ele não é um id de área conhecida (ex.: nome de meta do onboarding).
+    const isLifeAreaId = LIFE_AREAS.some((item) => item.id === initialArea);
+    const merged = initialArea && !isLifeAreaId && !labels.includes(initialArea) ? [initialArea, ...labels] : labels;
     return [...new Set(merged)];
   }, [labels, initialArea]);
   let buttonBackground = isDark ? 'rgba(255,255,255,0.12)' : 'rgba(10, 21, 241, 0.08)';
@@ -72,41 +77,18 @@ export default function NewTask({ task, initialFrequency, initialArea, onCreate,
       payload.isEditing = true;
     }
 
-    const finish = async () => {
-      onCreate?.(payload);
-      // A atividade já foi salva (ou enfileirada); falha no agendamento de
-      // lembretes não deve travar o fluxo.
-      await syncTaskReminders({ enabled: preferences.taskRemindersEnabled ?? true, tasksHint: [payload] }).catch(() => undefined);
-      onSuccess?.();
-    };
-
     setSubmitting(true);
     try {
-      await api.put(`/tasks`, payload);
-    } catch {
-      // Não descarta o que o usuário preencheu: permite tentar de novo (o
-      // formulário segue preenchido) ou guardar na fila de sincronização
-      // pendente e continuar o fluxo.
-      Alert.alert(
-        'Não foi possível salvar',
-        isEditing ? 'Verifique sua conexão e tente novamente. Se preferir, salvamos as alterações assim que a conexão voltar.' : 'Verifique sua conexão e tente novamente. Se preferir, criamos a atividade assim que a conexão voltar.',
-        [
-          { text: 'Tentar novamente', style: 'cancel' },
-          {
-            text: 'Salvar depois e continuar',
-            onPress: () => {
-              enqueue('PUT', '/tasks', payload);
-              finish();
-            },
-          },
-        ],
-      );
-      return;
+      // Em falha de rede o helper oferece tentar de novo ('retry': o
+      // formulário segue preenchido) ou guardar na fila pendente ('queued').
+      const result = await submitTask(payload, { enqueue, remindersEnabled: preferences.taskRemindersEnabled ?? true });
+      if (result === 'retry') return;
+
+      onCreate?.(payload);
+      onSuccess?.();
     } finally {
       setSubmitting(false);
     }
-
-    await finish();
   };
 
   useEffect(() => {
