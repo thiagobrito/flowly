@@ -17,9 +17,10 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.flowly-v2.app",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSPhotoLibraryUsageDescription": "O Flowly pode acessar sua galeria para salvar ou importar arquivos quando você realizar essa ação no app."
       },
-      "buildNumber": "1",
+      "buildNumber": "2",
       "appleTeamId": "WCZL6FK4U7"
     },
     "android": {
@@ -37,7 +38,7 @@
         "android.permission.health.READ_ACTIVE_CALORIES_BURNED",
         "android.permission.POST_NOTIFICATIONS"
       ],
-      "versionCode": 2026070201
+      "versionCode": 2026070202
     },
     "web": {
       "favicon": "./assets/favicon.png",
