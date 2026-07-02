@@ -1,0 +1,17 @@
+diff --git a/node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios/ReactCommon/RCTTurboModule.mm b/node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios/ReactCommon/RCTTurboModule.mm
+index 2a67797..5f00715 100644
+--- a/node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios/ReactCommon/RCTTurboModule.mm
++++ b/node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios/ReactCommon/RCTTurboModule.mm
+@@ -435,7 +435,11 @@ TraceSection s(
+     @try {
+       [inv invokeWithTarget:strongModule];
+     } @catch (NSException *exception) {
+-      throw convertNSExceptionToJSError(runtime, exception, std::string{moduleName}, methodNameStr);
++      // Void methods are always async, re-throw instead of converting to
++      // JSError, same as the async branch in performMethodInvocation.
++      // Backport of react-native commit a9a976a (PR #56265) — converting on
++      // the native call invoker thread corrupts the Hermes heap on iOS 26.
++      @throw exception;
+     } @finally {
+       [retainedObjectsForInvocation removeAllObjects];
+     }
