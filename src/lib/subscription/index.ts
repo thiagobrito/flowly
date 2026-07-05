@@ -48,6 +48,7 @@
 export { buildPaymentPayload, fetchSubscription, notifyPayment } from './api';
 export {
   addCustomerInfoListener,
+  checkIntroEligibility,
   getCurrentOffering,
   getCustomerInfo,
   hasProEntitlement,
@@ -60,7 +61,7 @@ export {
   purchasePackage,
   restorePurchases,
 } from './client';
-export { ENTITLEMENT_ID, RC_API_KEY, resolvePlanId, SUBSCRIPTION_PLANS } from './config';
+export { describeIntroOffer, ENTITLEMENT_ID, RC_API_KEY, resolvePlanId, SUBSCRIPTION_PLANS } from './config';
 export { useLocalTrial } from './trial';
 export type { PaymentPayload, SubscriptionCache, SubscriptionPlan, SubscriptionPlanId, SubscriptionStatus, SubscriptionStatusValue } from './types';
 export { useSubscription } from './useSubscription';

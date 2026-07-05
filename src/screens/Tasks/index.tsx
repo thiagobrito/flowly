@@ -249,7 +249,7 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
         >
           <Crown size={16} color="#6366f1" />
           <Text className="ml-2 flex-1 text-sm text-zinc-700 dark:text-zinc-200">
-            Teste grátis: {trialDaysLeft} {trialDaysLeft === 1 ? 'dia restante' : 'dias restantes'}
+            Período de avaliação: {trialDaysLeft} {trialDaysLeft === 1 ? 'dia restante' : 'dias restantes'}
           </Text>
           <Text className="text-sm font-semibold" style={{ color: '#6366f1' }}>
             Assinar

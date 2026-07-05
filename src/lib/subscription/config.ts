@@ -8,6 +8,7 @@
  */
 
 import { Platform } from 'react-native';
+import type { PurchasesIntroPrice } from 'react-native-purchases';
 
 import type { SubscriptionPlan, SubscriptionPlanId } from './plans';
 
@@ -38,6 +39,42 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionPlanId, SubscriptionPlan> = 
   flowly_montly: { id: 'flowly_montly', productId: 'flowly_montly', priceLabel: 'R$ 19,90', amount: 19.9, period: 'month', title: 'Mensal' },
   flowly_yearly: { id: 'flowly_yearly', productId: 'flowly_yearly', priceLabel: 'R$ 197,00', amount: 197, period: 'year', title: 'Anual' },
 };
+
+/** Descrição normalizada da oferta introdutória (trial) de um produto. */
+export type IntroOfferInfo = {
+  /** `true` quando a oferta é 100% gratuita (free trial). */
+  isFree: boolean;
+  /** Duração total da oferta em dias (ex.: P1W → 7, P1M → 30). */
+  periodDays: number;
+  /** Rótulo curto pronto para exibição (ex.: "7 dias"). */
+  label: string;
+};
+
+const PERIOD_UNIT_DAYS: Record<string, number> = {
+  YEAR: 365,
+  MONTH: 30,
+  WEEK: 7,
+};
+
+/** Converte uma unidade/valor ISO 8601 em quantidade aproximada de dias. */
+function periodToDays(unit: string, units: number): number {
+  return units * (PERIOD_UNIT_DAYS[unit] ?? 1);
+}
+
+/**
+ * Normaliza o `introPrice` de um produto (RevenueCat/StoreKit) num objeto
+ * amigável à UI. Retorna `null` quando não há oferta introdutória — nesse caso
+ * o paywall deve mostrar apenas o preço cheio, sem mencionar "grátis".
+ */
+export function describeIntroOffer(introPrice: PurchasesIntroPrice | null | undefined): IntroOfferInfo | null {
+  if (!introPrice) return null;
+
+  const totalUnits = introPrice.periodNumberOfUnits * Math.max(1, introPrice.cycles);
+  const periodDays = periodToDays(introPrice.periodUnit, totalUnits);
+  const label = periodDays === 1 ? '1 dia' : `${periodDays} dias`;
+
+  return { isFree: introPrice.price === 0, periodDays, label };
+}
 
 /** Tenta inferir o plano a partir do identificador de produto da loja. */
 export function resolvePlanId(productId: string | null | undefined): SubscriptionPlanId | null {

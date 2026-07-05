@@ -2,12 +2,12 @@ import * as Sentry from '@sentry/react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { X } from 'lucide-react-native';
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, Text, useColorScheme, View } from 'react-native';
+import { ActivityIndicator, Alert, Platform, Pressable, ScrollView, Text, useColorScheme, View } from 'react-native';
+import { INTRO_ELIGIBILITY_STATUS, type PurchasesOffering, type PurchasesPackage } from 'react-native-purchases';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { useFeatureFlags } from '@/lib/featureFlags';
 import type { SubscriptionPlanId } from '@/lib/subscription';
-import { getCurrentOffering, initPurchases, isNativePurchasesAvailable, isPurchasesSupported, purchasePackage, restorePurchases, SUBSCRIPTION_PLANS, useSubscription } from '@/lib/subscription';
+import { checkIntroEligibility, describeIntroOffer, getCurrentOffering, initPurchases, isNativePurchasesAvailable, isPurchasesSupported, purchasePackage, restorePurchases, SUBSCRIPTION_PLANS, useSubscription } from '@/lib/subscription';
 
 import IllustrationHeader from './components/IllustrationHeader';
 import LegalLinks from './components/LegalLinks';
@@ -27,33 +27,83 @@ function Background({ isDark }: { isDark: boolean }) {
   return <LinearGradient colors={isDark ? ['#0b1220', '#070b14', '#000000'] : ['#cfe3f5', '#eaf1f8', '#f7f8fa']} locations={[0, 0.45, 1]} style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 }} />;
 }
 
+/** iOS resolve a elegibilidade real; Android sempre retorna UNKNOWN e a loja
+ *  já aplica o trial apenas a quem é elegível — por isso aceitamos exibir a
+ *  oferta no Android quando o produto tem trial. No iOS só anunciamos "grátis"
+ *  com status ELIGIBLE explícito (UNKNOWN → mostra preço cheio). */
+function isTrialEligible(status: INTRO_ELIGIBILITY_STATUS | undefined): boolean {
+  if (status === INTRO_ELIGIBILITY_STATUS.INTRO_ELIGIBILITY_STATUS_ELIGIBLE) return true;
+  if (Platform.OS === 'android') {
+    return status === undefined || status === INTRO_ELIGIBILITY_STATUS.INTRO_ELIGIBILITY_STATUS_UNKNOWN;
+  }
+  return false;
+}
+
 export default function Subscription({ onClose, onDevBypass }: SubscriptionProps) {
   const isDark = useColorScheme() === 'dark';
   const { confirmPurchase } = useSubscription();
-  const { trialDays } = useFeatureFlags();
   const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlanId>('flowly_yearly');
   const [busy, setBusy] = useState(false);
+  const [offering, setOffering] = useState<PurchasesOffering | null>(null);
+  const [eligibility, setEligibility] = useState<Record<string, INTRO_ELIGIBILITY_STATUS>>({});
 
   useEffect(() => {
     initPurchases();
+
+    let active = true;
+    (async () => {
+      try {
+        const current = await getCurrentOffering();
+        if (!active) return;
+        setOffering(current);
+
+        const productIds = current?.availablePackages.map((item) => item.product.identifier) ?? [];
+        const elig = await checkIntroEligibility(productIds);
+        if (active) setEligibility(elig);
+      } catch (error) {
+        Sentry.captureException(error);
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   const yearly = SUBSCRIPTION_PLANS.flowly_yearly;
   const monthly = SUBSCRIPTION_PLANS.flowly_montly;
 
+  const findPackage = (planId: SubscriptionPlanId): PurchasesPackage | null => {
+    const { productId } = SUBSCRIPTION_PLANS[planId];
+    return offering?.availablePackages.find((item) => item.product.identifier === productId) ?? null;
+  };
+
+  const selectedPkg = findPackage(selectedPlan);
+  const introInfo = describeIntroOffer(selectedPkg?.product.introPrice);
+  const showFreeTrial = Boolean(introInfo?.isFree) && isTrialEligible(eligibility[SUBSCRIPTION_PLANS[selectedPlan].productId]);
+
+  // Preço exibido: prioriza o valor real da loja; cai no label parametrizado.
+  const yearlyPriceLabel = findPackage('flowly_yearly')?.product.priceString ?? yearly.priceLabel;
+  const monthlyPriceLabel = findPackage('flowly_montly')?.product.priceString ?? monthly.priceLabel;
+  const yearlyPerMonth = findPackage('flowly_yearly')?.product.pricePerMonthString ?? `R$ ${formatMonthlyEquivalent(yearly.amount)}`;
+
   const pricingSubtitle = useMemo(() => {
+    const trialPrefix = showFreeTrial && introInfo ? `Primeiros ${introInfo.label} grátis, depois ` : '';
     if (selectedPlan === 'flowly_yearly') {
-      return `Primeiros ${trialDays} dias grátis, depois ${yearly.priceLabel} (R$ ${formatMonthlyEquivalent(yearly.amount)}/mês)`;
+      return `${trialPrefix || 'Assine por '}${yearlyPriceLabel} (${yearlyPerMonth}/mês)`;
     }
-    return `Primeiros ${trialDays} dias grátis, depois ${monthly.priceLabel}/mês`;
-  }, [monthly.priceLabel, selectedPlan, trialDays, yearly.amount, yearly.priceLabel]);
+    return `${trialPrefix || 'Assine por '}${monthlyPriceLabel}/mês`;
+  }, [introInfo, monthlyPriceLabel, selectedPlan, showFreeTrial, yearlyPerMonth, yearlyPriceLabel]);
 
   const planDetails = useMemo(() => {
     if (selectedPlan === 'flowly_yearly') {
-      return `Flowly Premium ${yearly.title} · 12 meses · ${yearly.priceLabel}/ano (R$ ${formatMonthlyEquivalent(yearly.amount)}/mês)`;
+      return `Flowly Premium ${yearly.title} · 12 meses · ${yearlyPriceLabel}/ano (${yearlyPerMonth}/mês)`;
     }
-    return `Flowly Premium ${monthly.title} · 1 mês · ${monthly.priceLabel}/mês`;
-  }, [monthly.priceLabel, monthly.title, selectedPlan, yearly.amount, yearly.priceLabel, yearly.title]);
+    return `Flowly Premium ${monthly.title} · 1 mês · ${monthlyPriceLabel}/mês`;
+  }, [monthly.title, monthlyPriceLabel, selectedPlan, yearly.title, yearlyPerMonth, yearlyPriceLabel]);
+
+  const ctaLabel = showFreeTrial ? 'Começar teste grátis' : 'Assinar agora';
+  const headerTitle = showFreeTrial ? 'Como o teste funciona' : 'Desbloqueie o Flowly Premium';
 
   const handleSubscribe = async () => {
     if (!isPurchasesSupported()) {
@@ -72,9 +122,12 @@ export default function Subscription({ onClose, onDevBypass }: SubscriptionProps
 
     setBusy(true);
     try {
-      const offering = await getCurrentOffering();
       const { productId } = SUBSCRIPTION_PLANS[selectedPlan];
-      const pkg = offering?.availablePackages.find((item) => item.product.identifier === productId);
+      let pkg = selectedPkg;
+      if (!pkg) {
+        const current = await getCurrentOffering();
+        pkg = current?.availablePackages.find((item) => item.product.identifier === productId) ?? null;
+      }
 
       if (!pkg) {
         Alert.alert('Plano indisponível', 'Este plano não está configurado no RevenueCat.');
@@ -135,7 +188,7 @@ export default function Subscription({ onClose, onDevBypass }: SubscriptionProps
 
           <View className="px-6 pt-6">
             <Text className="text-center text-2xl font-bold" style={{ color: titleColor }}>
-              Como o teste funciona
+              {headerTitle}
             </Text>
             <Text className="mt-2 text-center text-sm leading-5" style={{ color: subtitleColor }}>
               {pricingSubtitle}
@@ -150,7 +203,7 @@ export default function Subscription({ onClose, onDevBypass }: SubscriptionProps
             </Text>
           </View>
 
-          <TrialTimeline isDark={isDark} trialDays={trialDays} />
+          <TrialTimeline isDark={isDark} hasFreeTrial={showFreeTrial} trialDays={introInfo?.periodDays ?? 7} />
         </ScrollView>
 
         <View className="px-6 pb-2 pt-3">
@@ -181,7 +234,7 @@ export default function Subscription({ onClose, onDevBypass }: SubscriptionProps
                 elevation: 8,
               }}
             >
-              {busy ? <ActivityIndicator color="#ffffff" /> : <Text className="text-base font-semibold text-white">Iniciar minha assinatura</Text>}
+              {busy ? <ActivityIndicator color="#ffffff" /> : <Text className="text-base font-semibold text-white">{ctaLabel}</Text>}
             </LinearGradient>
           </Pressable>
 

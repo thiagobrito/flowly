@@ -241,7 +241,7 @@ export const DEFAULT_ONBOARDING: OnboardingConfig = {
       title: 'Desbloqueie todo o Flowly',
       subtitle: 'Tenha acesso completo aos recursos que aceleram o seu progresso.',
       benefits: ['Metas e atividades ilimitadas', 'Acompanhamento de energia e estatísticas avançadas', 'Sincronização com o calendário', 'Suporte prioritário'],
-      priceLabel: 'Comece com 7 dias grátis',
+      priceLabel: 'Escolha seu plano',
       ctaLabel: 'Ver planos',
       skipLabel: 'Continuar sem assinar',
       footnote: 'Cancele quando quiser.',

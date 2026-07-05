@@ -33,14 +33,19 @@ function buildSteps(trialDays: number): TrialStep[] {
 
 type TrialTimelineProps = {
   isDark: boolean;
-  /** Duração do trial vigente (feature flag: 7, 14 ou 21 dias). */
+  /** Duração do trial (em dias) lida da oferta introdutória da loja. */
   trialDays: number;
+  /** Só renderiza a linha do tempo quando há free trial real e elegível. */
+  hasFreeTrial: boolean;
 };
 
-export default function TrialTimeline({ isDark, trialDays }: TrialTimelineProps) {
+export default function TrialTimeline({ isDark, trialDays, hasFreeTrial }: TrialTimelineProps) {
   const lineColor = isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)';
   const titleColor = isDark ? '#fafafa' : '#18181b';
   const descriptionColor = isDark ? '#a1a1aa' : '#71717a';
+
+  if (!hasFreeTrial) return null;
+
   const steps = buildSteps(trialDays);
 
   return (

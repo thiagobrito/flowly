@@ -7,7 +7,8 @@
  */
 
 import { NativeModules, Platform } from 'react-native';
-import Purchases, { type CustomerInfo, LOG_LEVEL, type PurchasesOffering, type PurchasesPackage } from 'react-native-purchases';
+import type { CustomerInfo, INTRO_ELIGIBILITY_STATUS, PurchasesOffering, PurchasesPackage } from 'react-native-purchases';
+import Purchases, { LOG_LEVEL } from 'react-native-purchases';
 
 import { ENTITLEMENT_ID, isUsableApiKey, RC_API_KEY } from './config';
 
@@ -95,6 +96,22 @@ export async function purchasePackage(pkg: PurchasesPackage): Promise<CustomerIn
 export async function restorePurchases(): Promise<CustomerInfo | null> {
   if (!configured || !isPurchasesSupported()) return null;
   return Purchases.restorePurchases();
+}
+
+/**
+ * Verifica a elegibilidade do usuário à oferta introdutória (trial) de cada
+ * produto. iOS-only — no Android/web (ou sem SDK) retorna `{}`. Quando o SDK
+ * não consegue determinar, o status vem como `UNKNOWN` e a UI deve exibir o
+ * preço cheio (não anunciar "grátis") para não repetir o problema de review.
+ */
+export async function checkIntroEligibility(productIds: string[]): Promise<Record<string, INTRO_ELIGIBILITY_STATUS>> {
+  if (!configured || !isPurchasesSupported() || productIds.length === 0) return {};
+  try {
+    const map = await Purchases.checkTrialOrIntroductoryPriceEligibility(productIds);
+    return Object.fromEntries(Object.entries(map).map(([id, entry]) => [id, entry.status]));
+  } catch {
+    return {};
+  }
 }
 
 /**

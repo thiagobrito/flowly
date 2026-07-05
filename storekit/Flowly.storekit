@@ -33,7 +33,12 @@
           "familyShareable" : false,
           "groupNumber" : 1,
           "internalID" : "flowly_montly",
-          "introductoryOffer" : null,
+          "introductoryOffer" : {
+            "internalID" : "flowly_montly_intro",
+            "paymentMode" : "free",
+            "numberOfPeriods" : 1,
+            "subscriptionPeriod" : "P1W"
+          },
           "localizations" : [
             {
               "description" : "Assinatura mensal do Flowly Pro",
@@ -61,7 +66,12 @@
           "familyShareable" : false,
           "groupNumber" : 1,
           "internalID" : "flowly_yearly",
-          "introductoryOffer" : null,
+          "introductoryOffer" : {
+            "internalID" : "flowly_yearly_intro",
+            "paymentMode" : "free",
+            "numberOfPeriods" : 1,
+            "subscriptionPeriod" : "P1W"
+          },
           "localizations" : [
             {
               "description" : "Assinatura anual do Flowly Pro",
