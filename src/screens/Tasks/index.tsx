@@ -1,9 +1,9 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Crown, GoalIcon } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, AppState, Modal, Platform, Pressable, RefreshControl, ScrollView, Text, useColorScheme, View } from 'react-native';
 
-import { localDateKey, toLocalISOString } from '@/lib/date';
+import { localDateKey, startOfLocalDay, toLocalISOString } from '@/lib/date';
 import { computeEnergyAtMoment, flowlyInputFromMetrics, getHealthProvider } from '@/lib/energy';
 import { useFeatureFlags } from '@/lib/featureFlags';
 import { api } from '@/lib/network';
@@ -21,7 +21,7 @@ import FilterDrawer from './components/FilterDrawer';
 import Header from './components/Header';
 import TaskCard from './components/TaskCard';
 import { moveTask, removeTaskFromLists, type TasksData } from './taskCache';
-import { DATE_FILTERS, type DateFilterId, taskMatchesDateFilter } from './taskDateFilter';
+import { DATE_FILTERS, type DateFilterId, getTomorrowDate, getWeekDates, taskMatchesDateFilter } from './taskDateFilter';
 
 type TasksProps = {
   onEdit?: (task: Task) => void;
@@ -54,11 +54,21 @@ async function fetchTodayTasks(energyLevel: number): Promise<{ visibleTasks: Tas
   return { visibleTasks, concludedTasks };
 }
 
-// Todas as tarefas do usuário (sem filtro de dia). Necessário para os filtros
-// Amanhã/Esta semana alcançarem tarefas que não estão previstas para hoje.
+// Todas as tarefas do usuário (sem filtro de dia). Necessário para o filtro
+// "Sem data", que é um conceito client-side (o servidor não tem esse recorte).
 async function fetchAllTasks(): Promise<Task[]> {
   const results = await api.get<any>('/tasks', { params: { scope: 'all' } });
   return OrganizeTasks(results.tasks ?? []);
+}
+
+// Busca as tarefas de um dia específico direto do servidor (fonte da verdade,
+// via `FilterTasksToShow`), no mesmo formato do Calendário: visíveis + concluídas
+// com a flag `done`. A energia é fixa (5) para manter o cache estável e
+// compartilhado com a tela de Calendário (chave `tasksCalendar`).
+async function fetchDayTasks(dateISO: string): Promise<Task[]> {
+  const response = await api.get<any>('/tasks', { params: { date: dateISO, energyLevel: 5 } });
+  const combined = [...(response.visibleTasks ?? []).map((task: Task) => ({ ...task, done: false })), ...(response.concludedTasks ?? []).map((task: Task) => ({ ...task, done: true }))];
+  return OrganizeTasks(combined);
 }
 
 export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
@@ -115,26 +125,70 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
 
   const allTasks = useMemo(() => [...visibleTasks, ...concludedTasks], [visibleTasks, concludedTasks]);
 
-  // Amanhã/Esta semana buscam tarefas fora do dia de hoje: a fonte passa a ser a
-  // lista completa do usuário.
+  // Amanhã/Esta semana produzem uma lista única (sem separar "concluídas", pois
+  // conclusão é por dia e dias futuros não têm conclusão).
   const isFutureFilter = selectedDateFilter === 'tomorrow' || selectedDateFilter === 'thisWeek';
 
-  // Contagens dos filtros de data usam TODAS as tarefas do usuário, para que
-  // Amanhã/Esta semana reflitam também tarefas que não estão previstas para hoje.
+  // "Amanhã" e "Esta semana" seguem o modelo do Calendário: buscam cada dia
+  // direto do servidor (fonte da verdade), em vez de reimplementar a recorrência
+  // no cliente. As queries só disparam quando o drawer está aberto ou o filtro
+  // está ativo, e compartilham o cache `tasksCalendar` com o Calendário.
+  const tomorrowDate = useMemo(() => getTomorrowDate(startOfLocalDay(dateKey)), [dateKey]);
+  const tomorrowKey = localDateKey(tomorrowDate);
+  const wantTomorrow = filterOpen || selectedDateFilter === 'tomorrow';
+
+  const tomorrowQuery = useQuery<Task[]>({
+    queryKey: queryKeys.tasksCalendar(tomorrowKey),
+    queryFn: () => fetchDayTasks(toLocalISOString(tomorrowDate)),
+    enabled: energyReady && wantTomorrow,
+  });
+  const tomorrowTasks = useMemo(() => (tomorrowQuery.data ?? []).filter((task) => !task.done), [tomorrowQuery.data]);
+
+  const weekDates = useMemo(() => getWeekDates(startOfLocalDay(dateKey)), [dateKey]);
+  const wantWeek = filterOpen || selectedDateFilter === 'thisWeek';
+
+  const week = useQueries({
+    queries: weekDates.map((day) => ({
+      queryKey: queryKeys.tasksCalendar(localDateKey(day)),
+      queryFn: () => fetchDayTasks(toLocalISOString(day)),
+      enabled: energyReady && wantWeek,
+    })),
+    combine: (results) => {
+      const byId = new Map<string, Task>();
+      results.forEach((result) =>
+        (result.data ?? []).forEach((task) => {
+          if (!task.done && !byId.has(task.id)) byId.set(task.id, task);
+        }),
+      );
+      return { tasks: Array.from(byId.values()), isLoading: results.some((result) => result.isLoading) };
+    },
+  });
+
+  const matchesArea = useCallback((task: Task) => selectedAreas.length === 0 || selectedAreas.includes(task.goal.name), [selectedAreas]);
+
+  // Contagens dos filtros: Hoje/Amanhã/Esta semana vêm dos dados reais do
+  // servidor; "Sem data" continua sendo um recorte client-side sobre a lista
+  // completa do usuário.
   const filterDateOptions = useMemo(
     () =>
-      DATE_FILTERS.map((filter) => ({
-        ...filter,
-        count: allUserTasks.filter((task) => taskMatchesDateFilter(task, filter.id)).length,
-      })),
-    [allUserTasks],
+      DATE_FILTERS.map((filter) => {
+        let count = 0;
+        if (filter.id === 'today') count = visibleTasks.length + concludedTasks.length;
+        else if (filter.id === 'tomorrow') count = tomorrowTasks.length;
+        else if (filter.id === 'thisWeek') count = week.tasks.length;
+        else count = allUserTasks.filter((task) => taskMatchesDateFilter(task, 'nodate')).length;
+        return { ...filter, count };
+      }),
+    [visibleTasks.length, concludedTasks.length, tomorrowTasks, week.tasks, allUserTasks],
   );
 
-  // Com um filtro futuro ativo, a lista vem de `allUserTasks`; as opções de área
-  // devem refletir a mesma fonte, senão áreas presentes só em dias futuros não
-  // apareceriam para filtrar.
+  // As opções de área derivam da fonte do filtro ativo, senão áreas presentes só
+  // no dia/semana selecionados não apareceriam para filtrar.
   const filterAreas = useMemo<FilterArea[]>(() => {
-    const source = isFutureFilter ? allUserTasks : allTasks;
+    let source = allTasks;
+    if (selectedDateFilter === 'tomorrow') source = tomorrowTasks;
+    else if (selectedDateFilter === 'thisWeek') source = week.tasks;
+
     const counts = new Map<string, number>();
     source.forEach((task) => {
       counts.set(task.goal.name, (counts.get(task.goal.name) ?? 0) + 1);
@@ -150,31 +204,28 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
         count,
       };
     });
-  }, [isFutureFilter, allUserTasks, allTasks]);
+  }, [selectedDateFilter, tomorrowTasks, week.tasks, allTasks]);
 
   const applyFilters = useCallback(
     (tasks: Task[]) =>
       tasks.filter((task) => {
-        const areaOk = selectedAreas.length === 0 || selectedAreas.includes(task.goal.name);
         const dateOk = !selectedDateFilter || taskMatchesDateFilter(task, selectedDateFilter);
-        return areaOk && dateOk;
+        return matchesArea(task) && dateOk;
       }),
-    [selectedAreas, selectedDateFilter],
+    [matchesArea, selectedDateFilter],
   );
 
-  // Amanhã/Esta semana produzem uma lista única (sem separar "concluídas", pois
-  // conclusão é por dia e dias futuros não têm conclusão).
   const filteredVisible = useMemo(() => {
-    if (isFutureFilter && selectedDateFilter) {
-      return allUserTasks.filter((task) => {
-        const areaOk = selectedAreas.length === 0 || selectedAreas.includes(task.goal.name);
-        return areaOk && taskMatchesDateFilter(task, selectedDateFilter);
-      });
-    }
+    if (selectedDateFilter === 'tomorrow') return tomorrowTasks.filter(matchesArea);
+    if (selectedDateFilter === 'thisWeek') return week.tasks.filter(matchesArea);
+    if (selectedDateFilter === 'nodate') return allUserTasks.filter((task) => taskMatchesDateFilter(task, 'nodate') && matchesArea(task));
     return applyFilters(visibleTasks);
-  }, [isFutureFilter, selectedDateFilter, allUserTasks, selectedAreas, visibleTasks, applyFilters]);
+  }, [selectedDateFilter, tomorrowTasks, week.tasks, allUserTasks, matchesArea, visibleTasks, applyFilters]);
 
   const filteredConcluded = useMemo(() => (isFutureFilter ? [] : applyFilters(concludedTasks)), [isFutureFilter, concludedTasks, applyFilters]);
+
+  // Enquanto o filtro futuro selecionado ainda busca, evita mostrar vazio.
+  const futureLoading = (selectedDateFilter === 'tomorrow' && tomorrowQuery.isLoading) || (selectedDateFilter === 'thisWeek' && week.isLoading);
 
   const toggleArea = (id: string) => {
     setSelectedAreas((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]));
@@ -311,9 +362,15 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
         contentContainerStyle={{ paddingBottom: 70 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={isDark ? '#e4e4e7' : '#3b82f6'} colors={['#3b82f6']} />}
       >
-        {filteredVisible.map((task, index) => (
-          <TaskCard key={task.randomId} highlight={index === 0} task={task} selected={false} isDark={isDark} onComplete={() => handleToggled(task, true)} onEdit={() => onEdit?.(task)} onDelete={() => handleDelete(task)} />
-        ))}
+        {futureLoading ? (
+          <View className="items-center justify-center py-10">
+            <ActivityIndicator color={isDark ? '#e4e4e7' : '#3b82f6'} />
+          </View>
+        ) : (
+          filteredVisible.map((task, index) => (
+            <TaskCard key={task.randomId} highlight={index === 0} task={task} selected={false} isDark={isDark} onComplete={() => handleToggled(task, true)} onEdit={() => onEdit?.(task)} onDelete={() => handleDelete(task)} />
+          ))
+        )}
 
         {isFutureFilter ? null : (
           <View className="w-full border-t border-zinc-200 dark:border-zinc-800" style={Platform.select({ web: { filter: 'grayscale(100%)' }, default: { opacity: 0.5 } })}>
