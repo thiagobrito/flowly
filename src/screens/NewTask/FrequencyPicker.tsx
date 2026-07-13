@@ -57,6 +57,15 @@ const parseTime = (time: string | null, baseDate: Date) => {
   return date;
 };
 
+const addDays = (date: Date, amount: number) => {
+  const next = new Date(date);
+  next.setDate(next.getDate() + amount);
+  return next;
+};
+
+const TODAY_ISO = () => toIsoDate(new Date());
+const TOMORROW_ISO = () => toIsoDate(addDays(new Date(), 1));
+
 function DateTimeField({ label, value, placeholder, Icon, onPress, isDark, accent }: { label: string; value: string | null; placeholder: string; Icon: LucideIcon; onPress: () => void; isDark: boolean; accent: string }) {
   let borderColor = 'rgba(0,0,0,0.08)';
   let iconColor = '#71717a';
@@ -94,6 +103,29 @@ function DateTimeField({ label, value, placeholder, Icon, onPress, isDark, accen
   );
 }
 
+function QuickChip({ label, selected, onPress, isDark, accent }: { label: string; selected: boolean; onPress: () => void; isDark: boolean; accent: string }) {
+  const emptyBorder = isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)';
+  const emptyBg = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.5)';
+  const emptyText = isDark ? '#a1a1aa' : '#71717a';
+
+  return (
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityState={{ selected }} className="active:opacity-80">
+      <View
+        className="rounded-full px-4 py-2"
+        style={{
+          borderWidth: 1,
+          borderColor: selected ? accent : emptyBorder,
+          backgroundColor: selected ? `${accent}18` : emptyBg,
+        }}
+      >
+        <Text className="text-sm font-semibold" style={{ color: selected ? accent : emptyText }}>
+          {label}
+        </Text>
+      </View>
+    </Pressable>
+  );
+}
+
 function OnceConfigPanel({ config, onChange, isDark, accent }: { config: OnceConfig; onChange: (config: OnceConfig) => void; isDark: boolean; accent: string }) {
   const [pickerMode, setPickerMode] = useState<PickerMode>(null);
 
@@ -122,9 +154,22 @@ function OnceConfigPanel({ config, onChange, isDark, accent }: { config: OnceCon
   };
 
   const clearTime = () => onChange({ ...config, time: null });
+  const setNow = () => onChange({ ...config, time: toTimeString(new Date()) });
+
+  const todayIso = TODAY_ISO();
+  const tomorrowIso = TOMORROW_ISO();
 
   return (
     <View>
+      <View className="-mx-1 flex-row flex-wrap items-center">
+        <View className="p-1">
+          <QuickChip label="Hoje" selected={config.date === todayIso} onPress={() => onChange({ ...config, date: todayIso })} isDark={isDark} accent={accent} />
+        </View>
+        <View className="p-1">
+          <QuickChip label="Amanhã" selected={config.date === tomorrowIso} onPress={() => onChange({ ...config, date: tomorrowIso })} isDark={isDark} accent={accent} />
+        </View>
+      </View>
+
       <View className="flex-row">
         <View className="mt-2 min-w-0 flex-[3]" style={{ marginRight: 6 }}>
           <DateTimeField label="Data" value={config.date ? formatDate(config.date) : null} placeholder="Selecionar" Icon={Calendar} onPress={() => setPickerMode('date')} isDark={isDark} accent={accent} />
@@ -134,13 +179,18 @@ function OnceConfigPanel({ config, onChange, isDark, accent }: { config: OnceCon
         </View>
       </View>
 
-      {config.time ? (
-        <Pressable onPress={clearTime} className="mt-2 self-start active:opacity-70">
+      <View className="mt-2 flex-row items-center gap-4">
+        <Pressable onPress={setNow} className="self-start active:opacity-70">
           <Text className="text-xs font-medium" style={{ color: accent }}>
-            Remover hora
+            Agora
           </Text>
         </Pressable>
-      ) : null}
+        {config.time ? (
+          <Pressable onPress={clearTime} className="self-start active:opacity-70">
+            <Text className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Remover hora</Text>
+          </Pressable>
+        ) : null}
+      </View>
 
       {pickerMode ? <DateTimePicker value={pickerValue} mode={pickerMode} display={Platform.OS === 'ios' ? 'spinner' : 'default'} onChange={handlePickerChange} /> : null}
     </View>
@@ -254,6 +304,12 @@ export function FrequencyPicker({ value, onChange, isDark, accent }: FrequencyPi
 
   const handleSelectMode = (kind: FrequencyId) => {
     if (value?.kind === kind) return;
+    // "Data Específica" já entra com hoje pré-selecionado: é o caso mais comum e
+    // evita depender do spinner (que só dispara onChange ao sair do valor exibido).
+    if (kind === 'once') {
+      onChange({ kind: 'once', date: TODAY_ISO(), time: null });
+      return;
+    }
     onChange(DEFAULT_FREQUENCY_CONFIG[kind]);
   };
 
