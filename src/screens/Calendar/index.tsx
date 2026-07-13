@@ -1,5 +1,6 @@
 import type { CalendarKitHandle, DateOrDateTime, OnEventResponse, PackedEvent, RenderHourProps } from '@howljs/calendar-kit';
 import { CalendarBody, CalendarContainer } from '@howljs/calendar-kit';
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { CircleCheckIcon, TrendingUp, Zap } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, StyleSheet, Text, useColorScheme, View } from 'react-native';
@@ -7,6 +8,7 @@ import { ActivityIndicator, Alert, StyleSheet, Text, useColorScheme, View } from
 import { APP_TIME_ZONE, localDateKey, startOfLocalDay, toLocalISOString } from '@/lib/date';
 import { hasGoogleClientIds, useGoogleCalendarSync } from '@/lib/googleCalendar';
 import { api } from '@/lib/network';
+import { queryKeys } from '@/lib/query';
 import { cancelTaskRemindersFor, syncTaskReminders } from '@/lib/taskReminders';
 
 import { useConfigPreferences } from '../Config/hooks/useConfigPreferences';
@@ -112,40 +114,56 @@ export default function Calendar({ onEdit, onCreateAt }: CalendarProps) {
   const lastPress = useRef<{ id: string; ts: number }>({ id: '', ts: 0 });
   const singlePressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [visibleDate, setVisibleDate] = useState<string>(() => toLocalISOString());
   const [drag, setDrag] = useState<DragState | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
-  const fetchTasks = useCallback(async () => {
-    try {
-      const response = await api.get<any>('/tasks', { params: { date: visibleDate, energyLevel: 5 } });
+  const visibleDateRef = useRef(visibleDate);
+  visibleDateRef.current = visibleDate;
 
-      // concat with concluded tasks
+  const calendarDateKey = localDateKey(startOfLocalDay(visibleDate));
+  const calendarKey = useMemo(() => queryKeys.tasksCalendar(calendarDateKey), [calendarDateKey]);
+  const calendarKeyRef = useRef(calendarKey);
+  calendarKeyRef.current = calendarKey;
+
+  const tasksQuery = useQuery<Task[]>({
+    queryKey: calendarKey,
+    queryFn: async () => {
+      const response = await api.get<any>('/tasks', { params: { date: visibleDateRef.current, energyLevel: 5 } });
       const visible = [...response.visibleTasks.map((task: Task) => ({ ...task, done: false })), ...response.concludedTasks.map((task: Task) => ({ ...task, done: true }))];
-      setTasks(organizeTasks(visible));
-    } catch {
-      setTasks([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [visibleDate]);
+      return organizeTasks(visible);
+    },
+    // Mantém o dia anterior visível durante a troca de datas (sem tela vazia).
+    placeholderData: keepPreviousData,
+  });
+
+  const tasks = useMemo(() => tasksQuery.data ?? [], [tasksQuery.data]);
+  const loading = tasksQuery.isLoading;
+
+  // Atualiza otimisticamente o cache do dia visível (sem esperar o servidor).
+  const setCalendarTasks = useCallback(
+    (updater: (prev: Task[]) => Task[]) => {
+      queryClient.setQueryData<Task[]>(calendarKeyRef.current, (prev) => updater(prev ?? []));
+    },
+    [queryClient],
+  );
+
+  // Revalida todas as listas de tarefas (Home e Calendar compartilham o prefixo).
+  const refetchTasks = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.tasksAll() });
+  }, [queryClient]);
 
   const {
     isConnected,
     pending: syncPending,
     syncNow,
   } = useGoogleCalendarSync({
-    onSynced: () => fetchTasks(),
+    onSynced: () => refetchTasks(),
     onError: () => Alert.alert('Erro na sincronização', 'Não foi possível importar os eventos do Google Calendar. Tente novamente.'),
   });
 
   const googleSyncEnabled = hasGoogleClientIds() && isConnected;
-
-  useEffect(() => {
-    fetchTasks();
-  }, [fetchTasks]);
 
   const handleGoogleSync = useCallback(() => {
     syncNow().catch(() => undefined);
@@ -262,24 +280,33 @@ export default function Calendar({ onEdit, onCreateAt }: CalendarProps) {
     setDrag((current) => (current ? { ...current, x, y } : current));
   }, []);
 
-  const restoreTask = useCallback((snapshot: Task) => {
-    setTasks((prev) => prev.map((item) => (item.id === snapshot.id ? snapshot : item)));
-  }, []);
+  const restoreTask = useCallback(
+    (snapshot: Task) => {
+      setCalendarTasks((prev) => prev.map((item) => (item.id === snapshot.id ? snapshot : item)));
+    },
+    [setCalendarTasks],
+  );
 
-  const applyScheduleLocally = useCallback((taskId: string, slot: ScheduledSlot) => {
-    setTasks((prev) => prev.map((item) => (item.id === taskId ? { ...item, schedule: [slot] } : item)));
-  }, []);
+  const applyScheduleLocally = useCallback(
+    (taskId: string, slot: ScheduledSlot) => {
+      setCalendarTasks((prev) => prev.map((item) => (item.id === taskId ? { ...item, schedule: [slot] } : item)));
+    },
+    [setCalendarTasks],
+  );
 
-  const clearScheduleLocally = useCallback((taskId: string) => {
-    setTasks((prev) =>
-      prev.map((item) => {
-        if (item.id !== taskId) return item;
-        const next: Task = { ...item, schedule: [] };
-        if (item.frequency.kind === 'once') next.frequency = { kind: 'notime' };
-        return next;
-      }),
-    );
-  }, []);
+  const clearScheduleLocally = useCallback(
+    (taskId: string) => {
+      setCalendarTasks((prev) =>
+        prev.map((item) => {
+          if (item.id !== taskId) return item;
+          const next: Task = { ...item, schedule: [] };
+          if (item.frequency.kind === 'once') next.frequency = { kind: 'notime' };
+          return next;
+        }),
+      );
+    },
+    [setCalendarTasks],
+  );
 
   const scheduleAndSyncTask = useCallback(
     async (task: Task, startISO: string, durationMin: number) => {
@@ -294,13 +321,13 @@ export default function Calendar({ onEdit, onCreateAt }: CalendarProps) {
 
       try {
         await syncTaskScheduleToServer(task, startISO, durationMin);
-        fetchTasks();
+        refetchTasks();
         await syncTaskReminders({ enabled: remindersEnabledRef.current, tasksHint: [taskHint] });
       } catch {
         restoreTask(snapshot);
       }
     },
-    [applyScheduleLocally, fetchTasks, restoreTask],
+    [applyScheduleLocally, refetchTasks, restoreTask],
   );
 
   const removeFromDayAndSyncTask = useCallback(
@@ -310,29 +337,32 @@ export default function Calendar({ onEdit, onCreateAt }: CalendarProps) {
 
       try {
         await syncTaskUnscheduleToServer(task, dateKey);
-        fetchTasks();
+        refetchTasks();
         await syncTaskReminders({ enabled: remindersEnabledRef.current });
       } catch {
         restoreTask(snapshot);
       }
     },
-    [clearScheduleLocally, fetchTasks, restoreTask],
+    [clearScheduleLocally, refetchTasks, restoreTask],
   );
 
   const markTaskAsDone = useCallback(
-    async (task: Task) => {
+    // `completionISO` reflete o dia que está sendo visualizado (não "hoje"): ao
+    // concluir uma tarefa no calendário de outro dia, a conclusão é registrada
+    // no dia correto.
+    async (task: Task, completionISO: string) => {
       const snapshot = task;
-      setTasks((prev) => prev.map((item) => (item.id === task.id ? { ...item, done: true } : item)));
+      setCalendarTasks((prev) => prev.map((item) => (item.id === task.id ? { ...item, done: true } : item)));
 
       try {
-        await api.post('/tasks/complete', { taskId: task.id, date: toLocalISOString() });
+        await api.post('/tasks/complete', { taskId: task.id, date: completionISO });
         await cancelTaskRemindersFor(task.id);
-        fetchTasks();
+        refetchTasks();
       } catch {
         restoreTask(snapshot);
       }
     },
-    [fetchTasks, restoreTask],
+    [setCalendarTasks, refetchTasks, restoreTask],
   );
 
   const handleDragEnd = useCallback(
@@ -352,7 +382,10 @@ export default function Calendar({ onEdit, onCreateAt }: CalendarProps) {
     (task: Task, startISO?: string) => {
       const buttons: any = [];
       if (!task.done) {
-        buttons.push({ text: 'Concluir tarefa', onPress: () => markTaskAsDone(task) });
+        // Usa o horário do evento (dia visível) quando disponível; senão, o dia
+        // atualmente visível no calendário.
+        const completionISO = startISO ?? visibleDateRef.current;
+        buttons.push({ text: 'Concluir tarefa', onPress: () => markTaskAsDone(task, completionISO) });
       }
       buttons.push({ text: 'Editar', onPress: () => onEdit?.(task) });
 

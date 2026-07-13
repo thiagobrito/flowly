@@ -1,11 +1,13 @@
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Crown, GoalIcon } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, AppState, Modal, Platform, Pressable, RefreshControl, ScrollView, Text, useColorScheme, View } from 'react-native';
 
-import { toLocalISOString } from '@/lib/date';
+import { localDateKey, toLocalISOString } from '@/lib/date';
 import { computeEnergyAtMoment, flowlyInputFromMetrics, getHealthProvider } from '@/lib/energy';
 import { useFeatureFlags } from '@/lib/featureFlags';
 import { api } from '@/lib/network';
+import { queryKeys } from '@/lib/query';
 import { applySleepProfile, useSleepProfile } from '@/lib/sleepProfile';
 import { useLocalTrial, useSubscription } from '@/lib/subscription';
 
@@ -18,6 +20,7 @@ import type { FilterArea } from './components/FilterDrawer';
 import FilterDrawer from './components/FilterDrawer';
 import Header from './components/Header';
 import TaskCard from './components/TaskCard';
+import { moveTask, removeTaskFromLists, type TasksData } from './taskCache';
 import { DATE_FILTERS, type DateFilterId, taskMatchesDateFilter } from './taskDateFilter';
 
 type TasksProps = {
@@ -53,15 +56,29 @@ async function fetchTodayTasks(energyLevel: number): Promise<{ visibleTasks: Tas
 
 export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
   const isDark = useColorScheme() === 'dark';
-  const [updateId, setUpdateId] = useState<any>(0);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [refreshing, setRefreshing] = useState(false);
   const [energyScore, setEnergyScore] = useState<number>(0);
   const [energyLevel, setEnergyLevel] = useState<number>(0);
   const [energyReady, setEnergyReady] = useState<boolean>(false);
 
-  const [concludedTasks, setConcludedTasks] = useState<Task[]>([]);
-  const [visibleTasks, setVisibleTasks] = useState<Task[]>([]);
+  // A chave inclui o dia e o nível de energia (arredondado, para não recriar
+  // uma entrada de cache a cada micro-variação da coleta de 60s).
+  const dateKey = localDateKey();
+  const roundedEnergy = Math.round(energyLevel);
+  const tasksKey = useMemo(() => queryKeys.tasks(dateKey, roundedEnergy), [dateKey, roundedEnergy]);
+
+  const tasksQuery = useQuery<TasksData>({
+    queryKey: tasksKey,
+    queryFn: () => fetchTodayTasks(roundedEnergy),
+    enabled: energyReady,
+  });
+
+  const visibleTasks = useMemo(() => tasksQuery.data?.visibleTasks ?? [], [tasksQuery.data]);
+  const concludedTasks = useMemo(() => tasksQuery.data?.concludedTasks ?? [], [tasksQuery.data]);
+  // Spinner só na primeiríssima carga (sem cache) — ao voltar para a Home o
+  // conteúdo do cache aparece instantaneamente.
+  const loading = !energyReady || tasksQuery.isLoading;
 
   const [filterOpen, setFilterOpen] = useState(false);
   const [testModalVisible, setTestModalVisible] = useState(false);
@@ -138,6 +155,8 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
     setSelectedDateFilter(null);
   };
 
+  // Delete otimista: remove do cache na hora e reconcilia com o servidor em
+  // background; em erro, restaura o estado anterior.
   const handleDelete = (task: Task) => {
     Alert.alert('Deletar atividade', `Deseja remover "${task.name}"?`, [
       { text: 'Cancelar', style: 'cancel' },
@@ -145,30 +164,31 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
         text: 'Deletar',
         style: 'destructive',
         onPress: async () => {
+          const previous = queryClient.getQueryData<TasksData>(tasksKey);
+          queryClient.setQueryData<TasksData>(tasksKey, (data) => removeTaskFromLists(data, task.id));
           try {
             await api.delete(`/tasks`, { params: { id: task.id } });
-            setUpdateId((prev: number) => prev + 1);
           } catch {
+            if (previous) queryClient.setQueryData(tasksKey, previous);
             Alert.alert('Erro', 'Não foi possível deletar a atividade.');
+            return;
+          } finally {
+            queryClient.invalidateQueries({ queryKey: queryKeys.tasksAll() });
           }
         },
       },
     ]);
   };
 
-  const fetchTasks = useCallback(async () => {
-    if (!energyReady) return;
-
-    try {
-      const { visibleTasks: nextVisible, concludedTasks: nextConcluded } = await fetchTodayTasks(energyLevel);
-      setVisibleTasks(nextVisible);
-      setConcludedTasks(nextConcluded);
-    } catch {
-      Alert.alert('Erro', 'Não foi possível carregar as atividades.');
-    } finally {
-      setLoading(false);
-    }
-  }, [energyLevel, energyReady]);
+  // Conclusão/desfazer: o TaskCard já fez a chamada e a animação; aqui movemos a
+  // tarefa entre as listas no cache (sem esperar refetch) e revalidamos.
+  const handleToggled = useCallback(
+    (task: Task, nowConcluded: boolean) => {
+      queryClient.setQueryData<TasksData>(tasksKey, (data) => moveTask(data, task.id, nowConcluded));
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasksAll() });
+    },
+    [queryClient, tasksKey],
+  );
 
   const refreshEnergy = useCallback(async () => {
     // `collect()` é assíncrono; sem o await o engine recebe uma Promise e cai
@@ -187,16 +207,14 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
-      const result = await refreshEnergy();
-      const { visibleTasks: nextVisible, concludedTasks: nextConcluded } = await fetchTodayTasks(result.doubleEnergyLevel);
-      setVisibleTasks(nextVisible);
-      setConcludedTasks(nextConcluded);
+      await refreshEnergy();
+      await queryClient.invalidateQueries({ queryKey: queryKeys.tasksAll() });
     } catch {
       Alert.alert('Erro', 'Não foi possível recarregar as atividades.');
     } finally {
       setRefreshing(false);
     }
-  }, [refreshEnergy]);
+  }, [refreshEnergy, queryClient]);
 
   const appState = useRef(AppState.currentState);
 
@@ -222,10 +240,6 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
       subscription.remove();
     };
   }, [refreshEnergy]);
-
-  useEffect(() => {
-    fetchTasks();
-  }, [fetchTasks, updateId]);
 
   if (loading) {
     return (
@@ -264,14 +278,14 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={isDark ? '#e4e4e7' : '#3b82f6'} colors={['#3b82f6']} />}
       >
         {filteredVisible.map((task, index) => (
-          <TaskCard key={task.randomId} highlight={index === 0} task={task} selected={false} isDark={isDark} onComplete={() => setUpdateId(updateId + 1)} onEdit={() => onEdit?.(task)} onDelete={() => handleDelete(task)} />
+          <TaskCard key={task.randomId} highlight={index === 0} task={task} selected={false} isDark={isDark} onComplete={() => handleToggled(task, true)} onEdit={() => onEdit?.(task)} onDelete={() => handleDelete(task)} />
         ))}
 
         <View className="w-full border-t border-zinc-200 dark:border-zinc-800" style={Platform.select({ web: { filter: 'grayscale(100%)' }, default: { opacity: 0.5 } })}>
           <Text className="my-2 text-center text-sm text-zinc-400 dark:text-zinc-400">{filteredConcluded.length} atividades já concluídas</Text>
 
           {filteredConcluded.map((task: Task) => (
-            <TaskCard key={task.randomId} highlight={false} task={task} selected isDark={isDark} onComplete={() => setUpdateId(updateId + 1)} onEdit={() => onEdit?.(task)} onDelete={() => handleDelete(task)} />
+            <TaskCard key={task.randomId} highlight={false} task={task} selected isDark={isDark} onComplete={() => handleToggled(task, false)} onEdit={() => onEdit?.(task)} onDelete={() => handleDelete(task)} />
           ))}
         </View>
       </ScrollView>

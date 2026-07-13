@@ -126,7 +126,13 @@ export default function GoalEditor({ goal, isNew, isDark, onCancel, onSave, onDe
       metrics: draft.metrics.filter((metric) => metric.label.trim().length > 0).map((metric) => ({ ...metric, label: metric.label.trim() })),
       health: draft.health.filter((item) => item.label.trim().length > 0).map((item) => ({ ...item, label: item.label.trim() })),
     };
-    await api.put('/goals', payload);
+
+    try {
+      await api.put('/goals', payload);
+    } catch {
+      Alert.alert('Não foi possível salvar', 'Verifique sua conexão e tente novamente.');
+      return;
+    }
     onSave(payload);
   };
 
@@ -139,7 +145,12 @@ export default function GoalEditor({ goal, isNew, isDark, onCancel, onSave, onDe
         text: 'Excluir',
         style: 'destructive',
         onPress: async () => {
-          await api.delete('/goals', { params: { id: draft.id } });
+          try {
+            await api.delete('/goals', { params: { id: draft.id } });
+          } catch {
+            Alert.alert('Não foi possível excluir', 'Verifique sua conexão e tente novamente.');
+            return;
+          }
           onDelete();
         },
       },

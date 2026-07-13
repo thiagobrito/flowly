@@ -59,7 +59,9 @@ async function syncOnceTaskSchedule(task: Task, startISO: string): Promise<void>
     name: task.name,
     energy: task.energy,
     impact: task.impact,
-    area: task.area,
+    // Tarefas vindas da API expõem a área em `goal.name`; `area` costuma estar
+    // indefinido, o que quebrava o vínculo com a meta ao reagendar.
+    area: task.area ?? task.goal?.name,
     subtasks: task.subtasks,
     estimatedMinutes: task.estimatedMinutes,
     frequency: { kind: 'once', date, time },
@@ -92,7 +94,7 @@ async function syncOnceTaskUnschedule(task: Task): Promise<void> {
     name: task.name,
     energy: task.energy,
     impact: task.impact,
-    area: task.area,
+    area: task.area ?? task.goal?.name,
     subtasks: task.subtasks,
     estimatedMinutes: task.estimatedMinutes,
     frequency: { kind: 'notime' },

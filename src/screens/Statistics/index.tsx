@@ -1,9 +1,11 @@
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { BatteryFull, CheckCircle, HandFist } from 'lucide-react-native';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, RefreshControl, ScrollView, Text, useColorScheme, View } from 'react-native';
 
 import { startOfLocalDay, toLocalISOString } from '@/lib/date';
 import { flowlyInputFromMetrics, lastDaysRange, useEnergyScore } from '@/lib/energy';
+import { queryKeys } from '@/lib/query';
 
 import ConcludedTasksTable from './components/ConcludedTasksTable';
 import DayChip from './components/DayChip';
@@ -16,10 +18,18 @@ import type { ProgressData } from './types';
 
 export default function Statistics() {
   const isDark = useColorScheme() === 'dark';
-  const [data, setData] = useState<ProgressData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [refreshing, setRefreshing] = useState(false);
   const [selectedDay, setSelectedDay] = useState<string>(() => toLocalISOString());
+
+  // `keepPreviousData` evita a tela em branco ao trocar de dia: os dados
+  // anteriores continuam visíveis enquanto o novo dia é carregado.
+  const reportQuery = useQuery<ProgressData>({
+    queryKey: queryKeys.report(selectedDay),
+    queryFn: () => fetchProgress(selectedDay),
+    placeholderData: keepPreviousData,
+  });
+  const data = reportQuery.data ?? null;
 
   const energyRange = useMemo(() => {
     const dayStart = startOfLocalDay(selectedDay);
@@ -38,36 +48,15 @@ export default function Statistics() {
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
-      const [response] = await Promise.all([fetchProgress(selectedDay), refreshEnergy()]);
-      setData(response);
+      await Promise.all([queryClient.invalidateQueries({ queryKey: queryKeys.report(selectedDay) }), refreshEnergy()]);
     } catch {
       Alert.alert('Erro', 'Não foi possível recarregar as estatísticas.');
     } finally {
       setRefreshing(false);
     }
-  }, [selectedDay, refreshEnergy]);
+  }, [selectedDay, refreshEnergy, queryClient]);
 
-  useEffect(() => {
-    let active = true;
-
-    if (selectedDay) {
-      fetchProgress(selectedDay)
-        .then((response: any) => {
-          if (active) {
-            setData(response);
-          }
-        })
-        .finally(() => {
-          if (active) setLoading(false);
-        });
-    }
-
-    return () => {
-      active = false;
-    };
-  }, [selectedDay]);
-
-  if (loading || !data) {
+  if (reportQuery.isLoading || !data) {
     return (
       <View className="flex-1 items-center justify-center">
         <ActivityIndicator color={isDark ? '#e4e4e7' : '#3b82f6'} />

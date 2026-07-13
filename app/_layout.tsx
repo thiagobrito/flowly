@@ -6,6 +6,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { configureNotifications, ensureAndroidChannel, setupNotificationHandler, useNotifications } from '@/lib/notifications';
+import { QueryProvider } from '@/lib/query';
 import { useTaskReminders } from '@/screens/Config/hooks/useTaskReminders';
 
 setupNotificationHandler();
@@ -37,9 +38,11 @@ export default Sentry.wrap(function Layout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaProvider>
-        <Stack screenOptions={{ headerShown: false }} />
-      </SafeAreaProvider>
+      <QueryProvider>
+        <SafeAreaProvider>
+          <Stack screenOptions={{ headerShown: false }} />
+        </SafeAreaProvider>
+      </QueryProvider>
     </GestureHandlerRootView>
   );
 });

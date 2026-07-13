@@ -1,8 +1,10 @@
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus } from 'lucide-react-native';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, useColorScheme, View } from 'react-native';
 
 import { api } from '@/lib/network';
+import { queryKeys } from '@/lib/query';
 import NewGoals from '@/screens/NewGoals';
 
 import EmptyState from './components/EmptyState';
@@ -11,26 +13,44 @@ import GoalEditor from './components/GoalEditor';
 import type { Goal, GoalSetup } from './data';
 import { goalSetupToGoals, normalizeGoal, secondarySetupToGoal } from './data';
 
+async function fetchGoals(): Promise<Goal[]> {
+  const response = await api.get<Partial<Goal>[]>('/goals');
+  return Array.isArray(response) ? response.map(normalizeGoal) : [];
+}
+
 type EditorState = { goal: Goal; isNew: boolean } | null;
 
 export default function Goals() {
   const isDark = useColorScheme() === 'dark';
-  const [goals, setGoals] = useState<Goal[]>([]);
+  const queryClient = useQueryClient();
+  const goalsQuery = useQuery<Goal[]>({ queryKey: queryKeys.goals(), queryFn: fetchGoals });
+  const goals = useMemo(() => goalsQuery.data ?? [], [goalsQuery.data]);
   const [editor, setEditor] = useState<EditorState>(null);
   const [setupMode, setSetupMode] = useState(false);
   const [addSecondaryMode, setAddSecondaryMode] = useState(false);
-  const [loading, setLoading] = useState(true);
+
+  const setGoalsCache = useCallback(
+    (updater: (prev: Goal[]) => Goal[]) => {
+      queryClient.setQueryData<Goal[]>(queryKeys.goals(), (prev) => updater(prev ?? []));
+    },
+    [queryClient],
+  );
 
   const handleAddSecondary = useCallback(() => setAddSecondaryMode(true), []);
   const handleEdit = useCallback((goal: Goal) => setEditor({ goal, isNew: false }), []);
   const handleCancel = useCallback(() => setEditor(null), []);
 
   const handleStartSetup = useCallback(() => setSetupMode(true), []);
-  const handleSetupComplete = useCallback((setup: GoalSetup) => {
-    setGoals(goalSetupToGoals(setup));
-    setSetupMode(false);
-    setLoading(false);
-  }, []);
+  const handleSetupComplete = useCallback(
+    (setup: GoalSetup) => {
+      // Exibe imediatamente as metas recém-criadas (já persistidas pela anamnese)
+      // e revalida em background para trazer os campos calculados do servidor.
+      setGoalsCache(() => goalSetupToGoals(setup));
+      queryClient.invalidateQueries({ queryKey: queryKeys.goals() });
+      setSetupMode(false);
+    },
+    [setGoalsCache, queryClient],
+  );
 
   const handleAddSecondaryComplete = useCallback(
     (setup: GoalSetup) => {
@@ -41,35 +61,35 @@ export default function Goals() {
         return;
       }
 
-      setGoals((prev) => [...prev, secondarySetupToGoal(secondary, primary)]);
+      setGoalsCache((prev) => [...prev, secondarySetupToGoal(secondary, primary)]);
+      queryClient.invalidateQueries({ queryKey: queryKeys.goals() });
       setAddSecondaryMode(false);
     },
-    [goals],
+    [goals, setGoalsCache, queryClient],
   );
 
-  useEffect(() => {
-    async function fetchGoals() {
-      const response = await api.get<Partial<Goal>[]>('/goals');
-      if (Array.isArray(response)) setGoals(response.map(normalizeGoal));
-      setLoading(false);
-    }
-    fetchGoals();
-  }, []);
+  const handleSave = useCallback(
+    (updated: Goal) => {
+      setGoalsCache((prev) => {
+        const exists = prev.some((goal) => goal.id === updated.id);
+        return exists ? prev.map((goal) => (goal.id === updated.id ? updated : goal)) : [...prev, updated];
+      });
+      queryClient.invalidateQueries({ queryKey: queryKeys.goals() });
+      setEditor(null);
+    },
+    [setGoalsCache, queryClient],
+  );
 
-  const handleSave = useCallback((updated: Goal) => {
-    setGoals((prev) => {
-      const exists = prev.some((goal) => goal.id === updated.id);
-      return exists ? prev.map((goal) => (goal.id === updated.id ? updated : goal)) : [...prev, updated];
-    });
-    setEditor(null);
-  }, []);
+  const handleDelete = useCallback(
+    (id: string) => {
+      setGoalsCache((prev) => prev.filter((goal) => goal.id !== id));
+      queryClient.invalidateQueries({ queryKey: queryKeys.goals() });
+      setEditor(null);
+    },
+    [setGoalsCache, queryClient],
+  );
 
-  const handleDelete = useCallback((id: string) => {
-    setGoals((prev) => prev.filter((goal) => goal.id !== id));
-    setEditor(null);
-  }, []);
-
-  if (loading) {
+  if (goalsQuery.isLoading) {
     return (
       <View className="flex-1 items-center justify-center">
         <ActivityIndicator color={isDark ? '#e4e4e7' : '#3b82f6'} />

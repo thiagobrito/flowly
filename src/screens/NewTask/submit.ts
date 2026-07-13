@@ -1,9 +1,20 @@
 import { Alert } from 'react-native';
 
 import { api } from '@/lib/network';
+import { queryClient, queryKeys } from '@/lib/query';
 import { syncTaskReminders } from '@/lib/taskReminders';
 
 import type { NewTaskPayload } from './data';
+
+/**
+ * Invalida as listas de tarefas (e as metas, que dependem das tarefas) para que
+ * a Home/Calendar reflitam a criação/edição assim que forem exibidas — sem
+ * depender de pull-to-refresh.
+ */
+function invalidateTaskCaches(): void {
+  queryClient.invalidateQueries({ queryKey: queryKeys.tasksAll() });
+  queryClient.invalidateQueries({ queryKey: queryKeys.goals() });
+}
 
 export type SubmitTaskPayload = NewTaskPayload & {
   id?: string;
@@ -54,6 +65,7 @@ export async function submitTask(payload: SubmitTaskPayload, { enqueue, reminder
     });
   }
 
+  invalidateTaskCaches();
   await syncReminders();
   return 'saved';
 }
