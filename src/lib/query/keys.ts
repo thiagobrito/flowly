@@ -11,6 +11,8 @@ export const queryKeys = {
   tasks: (dateKey: string, energyLevel: number) => ['tasks', 'list', dateKey, energyLevel] as const,
   /** Tarefas do calendário para um dia (agendadas + concluídas). */
   tasksCalendar: (dateKey: string) => ['tasks', 'calendar', dateKey] as const,
+  /** Todas as tarefas do usuário (sem filtro de dia), para avaliar filtros de data. */
+  tasksAllList: () => ['tasks', 'all'] as const,
   /** Prefixo de todas as listas de tarefas (para invalidação em lote). */
   tasksAll: () => ['tasks'] as const,
   /** Metas com insights computados no servidor. */

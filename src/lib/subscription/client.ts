@@ -14,6 +14,12 @@ import { ENTITLEMENT_ID, isUsableApiKey, RC_API_KEY } from './config';
 
 let configured = false;
 
+function devWarn(message: string, error?: unknown): void {
+  if (!__DEV__) return;
+  // eslint-disable-next-line no-console -- subscription bootstrap diagnostics
+  console.warn(...(error === undefined ? [message] : [message, error]));
+}
+
 /** RevenueCat só roda em iOS/Android. */
 export function isPurchasesSupported(): boolean {
   return Platform.OS === 'ios' || Platform.OS === 'android';
@@ -33,11 +39,11 @@ export function isNativePurchasesUiAvailable(): boolean {
 export function initPurchases(): void {
   if (configured || !isPurchasesSupported()) return;
   if (!isUsableApiKey(RC_API_KEY)) {
-    console.warn('[subscription] RevenueCat API key inválida para esta plataforma/build — configure pulado.');
+    devWarn('[subscription] RevenueCat API key inválida para esta plataforma/build — configure pulado.');
     return;
   }
   if (!isNativePurchasesAvailable()) {
-    console.warn('[subscription] Módulo nativo RNPurchases indisponível — faça prebuild e recompile o app (ex.: npm run ios).');
+    devWarn('[subscription] Módulo nativo RNPurchases indisponível — faça prebuild e recompile o app (ex.: npm run ios).');
     return;
   }
   try {
@@ -47,7 +53,7 @@ export function initPurchases(): void {
     Purchases.configure({ apiKey: RC_API_KEY });
     configured = true;
   } catch (error) {
-    console.warn('[subscription] Falha ao configurar RevenueCat.', error);
+    devWarn('[subscription] Falha ao configurar RevenueCat.', error);
   }
 }
 

@@ -54,6 +54,13 @@ async function fetchTodayTasks(energyLevel: number): Promise<{ visibleTasks: Tas
   return { visibleTasks, concludedTasks };
 }
 
+// Todas as tarefas do usuário (sem filtro de dia). Necessário para os filtros
+// Amanhã/Esta semana alcançarem tarefas que não estão previstas para hoje.
+async function fetchAllTasks(): Promise<Task[]> {
+  const results = await api.get<any>('/tasks', { params: { scope: 'all' } });
+  return OrganizeTasks(results.tasks ?? []);
+}
+
 export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
   const isDark = useColorScheme() === 'dark';
   const queryClient = useQueryClient();
@@ -74,8 +81,14 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
     enabled: energyReady,
   });
 
+  const allTasksQuery = useQuery<Task[]>({
+    queryKey: queryKeys.tasksAllList(),
+    queryFn: fetchAllTasks,
+  });
+
   const visibleTasks = useMemo(() => tasksQuery.data?.visibleTasks ?? [], [tasksQuery.data]);
   const concludedTasks = useMemo(() => tasksQuery.data?.concludedTasks ?? [], [tasksQuery.data]);
+  const allUserTasks = useMemo(() => allTasksQuery.data ?? [], [allTasksQuery.data]);
   // Spinner só na primeiríssima carga (sem cache) — ao voltar para a Home o
   // conteúdo do cache aparece instantaneamente.
   const loading = !energyReady || tasksQuery.isLoading;
@@ -102,13 +115,15 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
 
   const allTasks = useMemo(() => [...visibleTasks, ...concludedTasks], [visibleTasks, concludedTasks]);
 
+  // Contagens dos filtros de data usam TODAS as tarefas do usuário, para que
+  // Amanhã/Esta semana reflitam também tarefas que não estão previstas para hoje.
   const filterDateOptions = useMemo(
     () =>
       DATE_FILTERS.map((filter) => ({
         ...filter,
-        count: allTasks.filter((task) => taskMatchesDateFilter(task, filter.id)).length,
+        count: allUserTasks.filter((task) => taskMatchesDateFilter(task, filter.id)).length,
       })),
-    [allTasks],
+    [allUserTasks],
   );
 
   const filterAreas = useMemo<FilterArea[]>(() => {
@@ -139,8 +154,22 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
     [selectedAreas, selectedDateFilter],
   );
 
-  const filteredVisible = useMemo(() => applyFilters(visibleTasks), [visibleTasks, applyFilters]);
-  const filteredConcluded = useMemo(() => applyFilters(concludedTasks), [concludedTasks, applyFilters]);
+  // Amanhã/Esta semana buscam tarefas fora do dia de hoje: a fonte passa a ser a
+  // lista completa do usuário e o resultado é uma lista única (sem separar
+  // "concluídas", pois conclusão é por dia e dias futuros não têm conclusão).
+  const isFutureFilter = selectedDateFilter === 'tomorrow' || selectedDateFilter === 'thisWeek';
+
+  const filteredVisible = useMemo(() => {
+    if (isFutureFilter && selectedDateFilter) {
+      return allUserTasks.filter((task) => {
+        const areaOk = selectedAreas.length === 0 || selectedAreas.includes(task.goal.name);
+        return areaOk && taskMatchesDateFilter(task, selectedDateFilter);
+      });
+    }
+    return applyFilters(visibleTasks);
+  }, [isFutureFilter, selectedDateFilter, allUserTasks, selectedAreas, visibleTasks, applyFilters]);
+
+  const filteredConcluded = useMemo(() => (isFutureFilter ? [] : applyFilters(concludedTasks)), [isFutureFilter, concludedTasks, applyFilters]);
 
   const toggleArea = (id: string) => {
     setSelectedAreas((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]));
@@ -281,13 +310,15 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
           <TaskCard key={task.randomId} highlight={index === 0} task={task} selected={false} isDark={isDark} onComplete={() => handleToggled(task, true)} onEdit={() => onEdit?.(task)} onDelete={() => handleDelete(task)} />
         ))}
 
-        <View className="w-full border-t border-zinc-200 dark:border-zinc-800" style={Platform.select({ web: { filter: 'grayscale(100%)' }, default: { opacity: 0.5 } })}>
-          <Text className="my-2 text-center text-sm text-zinc-400 dark:text-zinc-400">{filteredConcluded.length} atividades já concluídas</Text>
+        {isFutureFilter ? null : (
+          <View className="w-full border-t border-zinc-200 dark:border-zinc-800" style={Platform.select({ web: { filter: 'grayscale(100%)' }, default: { opacity: 0.5 } })}>
+            <Text className="my-2 text-center text-sm text-zinc-400 dark:text-zinc-400">{filteredConcluded.length} atividades já concluídas</Text>
 
-          {filteredConcluded.map((task: Task) => (
-            <TaskCard key={task.randomId} highlight={false} task={task} selected isDark={isDark} onComplete={() => handleToggled(task, false)} onEdit={() => onEdit?.(task)} onDelete={() => handleDelete(task)} />
-          ))}
-        </View>
+            {filteredConcluded.map((task: Task) => (
+              <TaskCard key={task.randomId} highlight={false} task={task} selected isDark={isDark} onComplete={() => handleToggled(task, false)} onEdit={() => onEdit?.(task)} onDelete={() => handleDelete(task)} />
+            ))}
+          </View>
+        )}
       </ScrollView>
 
       <FilterDrawer

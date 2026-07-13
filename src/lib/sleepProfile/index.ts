@@ -11,8 +11,10 @@
  * Segue o padrão lib-fina + hook do projeto (`featureFlags/`, `pendingSync/`).
  */
 
-import { useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 
+import { api, getAuthToken } from '@/lib/network';
+import { usePendingSync } from '@/lib/pendingSync';
 import type { PersistedRecord } from '@/lib/storage';
 import { usePersistedState } from '@/lib/storage';
 
@@ -37,11 +39,37 @@ export const DEFAULT_BED_TIME = '23:00';
 
 const EMPTY_PROFILE: SleepProfile = { hasDevice: null, usualWakeTime: null, usualBedTime: null, overrides: {} };
 
+/** Endpoint do perfil de sono no servidor (mesmo baseURL da `api`). */
+const SYNC_PATH = '/sleep-profile';
+
+/**
+ * Guarda de hidratação por sessão do app: garante que o GET inicial só rode uma
+ * vez mesmo com vários consumidores montando o hook. Só é marcada como "tentada"
+ * quando de fato disparamos a busca (com sessão autenticada), permitindo que uma
+ * montagem posterior — já logada — tente de novo.
+ */
+let hydrationAttempted = false;
+
 function trimOverrides(overrides: Record<string, SleepDayOverride>): Record<string, SleepDayOverride> {
   const keys = Object.keys(overrides).sort();
   if (keys.length <= MAX_OVERRIDES) return overrides;
   const kept = keys.slice(-MAX_OVERRIDES);
   return Object.fromEntries(kept.map((key) => [key, overrides[key]!]));
+}
+
+/** Extrai apenas os campos de domínio para enviar ao servidor (sem metadados de storage). */
+function toSyncPayload(profile: SleepProfile): SleepProfileData {
+  return {
+    hasDevice: profile.hasDevice ?? null,
+    usualWakeTime: profile.usualWakeTime ?? null,
+    usualBedTime: profile.usualBedTime ?? null,
+    overrides: profile.overrides ?? {},
+  };
+}
+
+/** Um perfil "vazio" (nada informado) — usado para decidir se hidratamos do servidor. */
+function isProfileEmpty(profile: SleepProfileData): boolean {
+  return profile.hasDevice == null && profile.usualWakeTime == null && profile.usualBedTime == null && Object.keys(profile.overrides ?? {}).length === 0;
 }
 
 /**
@@ -50,29 +78,51 @@ function trimOverrides(overrides: Record<string, SleepDayOverride>): Record<stri
  */
 export function useSleepProfile() {
   const [profile, setProfile] = usePersistedState<SleepProfile>(EMPTY_PROFILE, PROFILE_KEY);
+  const { enqueue } = usePendingSync();
 
   const profileRef = useRef(profile);
   profileRef.current = profile;
 
+  /**
+   * Envia o perfil completo ao servidor (documento inteiro, escrita idempotente:
+   * o último PUT vence). O estado local continua sendo a fonte da UI — o sync é
+   * best-effort. Sem sessão autenticada não faz nada; em falha, enfileira para
+   * reenvio automático quando a rede/sessão voltar.
+   */
+  const syncProfile = useCallback(
+    (next: SleepProfile) => {
+      if (!getAuthToken()) return;
+      const payload = toSyncPayload(next);
+      api.put(SYNC_PATH, payload).catch(() => {
+        enqueue('PUT', SYNC_PATH, payload);
+      });
+    },
+    [enqueue],
+  );
+
   /** Registra se o usuário tem dispositivo que monitora sono. */
   const setHasDevice = useCallback(
     (hasDevice: boolean) => {
-      setProfile({ ...profileRef.current, hasDevice });
+      const next = { ...profileRef.current, hasDevice };
+      setProfile(next);
+      syncProfile(next);
     },
-    [setProfile],
+    [setProfile, syncProfile],
   );
 
   /** Define os horários usuais ("HH:MM"). Passe `null` para limpar um campo. */
   const setUsualTimes = useCallback(
     (times: { wakeTime?: string | null; bedTime?: string | null }) => {
       const { current } = profileRef;
-      setProfile({
+      const next = {
         ...current,
         usualWakeTime: times.wakeTime !== undefined ? times.wakeTime : current.usualWakeTime,
         usualBedTime: times.bedTime !== undefined ? times.bedTime : current.usualBedTime,
-      });
+      };
+      setProfile(next);
+      syncProfile(next);
     },
-    [setProfile],
+    [setProfile, syncProfile],
   );
 
   /** Registra a correção manual de uma noite (chave: `YYYY-MM-DD` do dia de acordar). */
@@ -80,10 +130,47 @@ export function useSleepProfile() {
     (dayKey: string, override: SleepDayOverride) => {
       const { current } = profileRef;
       const overrides = trimOverrides({ ...(current.overrides ?? {}), [dayKey]: override });
-      setProfile({ ...current, overrides });
+      const next = { ...current, overrides };
+      setProfile(next);
+      syncProfile(next);
     },
-    [setProfile],
+    [setProfile, syncProfile],
   );
+
+  // Hidratação inicial: em sessão autenticada e com o perfil local ainda vazio
+  // (reinstalação/novo aparelho), busca o perfil salvo no servidor uma vez e
+  // popula o estado local. Não sobrescreve dados locais já informados.
+  useEffect(() => {
+    if (!profile.loaded) return;
+    if (hydrationAttempted) return;
+    if (!getAuthToken()) return;
+    if (!isProfileEmpty(profileRef.current)) {
+      hydrationAttempted = true;
+      return;
+    }
+
+    hydrationAttempted = true;
+    api
+      .get<{ profile: SleepProfileData | null }>(SYNC_PATH)
+      .then((res) => {
+        const remote = res?.profile;
+        // Só popula se ainda estiver vazio (o usuário pode ter editado enquanto
+        // o GET estava em voo) e o servidor tiver algo de fato.
+        if (remote && !isProfileEmpty(remote) && isProfileEmpty(profileRef.current)) {
+          setProfile({
+            ...profileRef.current,
+            hasDevice: remote.hasDevice ?? null,
+            usualWakeTime: remote.usualWakeTime ?? null,
+            usualBedTime: remote.usualBedTime ?? null,
+            overrides: remote.overrides ?? {},
+          });
+        }
+      })
+      .catch(() => {
+        // Falha de rede: libera para uma nova tentativa em outra montagem.
+        hydrationAttempted = false;
+      });
+  }, [profile.loaded, setProfile]);
 
   return {
     profile,

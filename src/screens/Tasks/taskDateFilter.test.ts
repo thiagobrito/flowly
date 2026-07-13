@@ -74,4 +74,36 @@ describe('taskMatchesDateFilter', () => {
 
     expect(taskMatchesDateFilter(task, 'thisWeek', REFERENCE)).toBe(false);
   });
+
+  it('inclui tarefa diária (todo dia) em Hoje, Amanhã e Esta semana', () => {
+    const task = baseTask({ frequency: { kind: 'daily', everyDay: true, days: [] } });
+
+    expect(taskMatchesDateFilter(task, 'today', REFERENCE)).toBe(true);
+    expect(taskMatchesDateFilter(task, 'tomorrow', REFERENCE)).toBe(true);
+    expect(taskMatchesDateFilter(task, 'thisWeek', REFERENCE)).toBe(true);
+    expect(taskMatchesDateFilter(task, 'nodate', REFERENCE)).toBe(false);
+  });
+
+  it('inclui tarefa diária de dias específicos apenas nos dias marcados', () => {
+    // REFERENCE é quarta (3); quinta é 4.
+    const task = baseTask({ frequency: { kind: 'daily', everyDay: false, days: [3] } });
+
+    expect(taskMatchesDateFilter(task, 'today', REFERENCE)).toBe(true);
+    expect(taskMatchesDateFilter(task, 'tomorrow', REFERENCE)).toBe(false);
+    expect(taskMatchesDateFilter(task, 'thisWeek', REFERENCE)).toBe(true);
+  });
+
+  it('inclui tarefa semanal de quinta em Amanhã e Esta semana, mas não em Hoje', () => {
+    const task = baseTask({ frequency: { kind: 'weekly', mode: 'days', count: 1, days: [4] } });
+
+    expect(taskMatchesDateFilter(task, 'today', REFERENCE)).toBe(false);
+    expect(taskMatchesDateFilter(task, 'tomorrow', REFERENCE)).toBe(true);
+    expect(taskMatchesDateFilter(task, 'thisWeek', REFERENCE)).toBe(true);
+  });
+
+  it('inclui once atrasada em Hoje', () => {
+    const task = baseTask({ frequency: { kind: 'once', date: '2026-06-05', time: null } });
+
+    expect(taskMatchesDateFilter(task, 'today', REFERENCE)).toBe(true);
+  });
 });
