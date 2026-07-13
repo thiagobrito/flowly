@@ -41,6 +41,11 @@ function addDays(reference: Date, days: number): Date {
   return new Date(start.getTime() + days * 86_400_000);
 }
 
+/** Meia-noite local do dia seguinte ao de referência (no fuso do app). */
+export function getTomorrowDate(reference: Date = new Date()): Date {
+  return addDays(reference, 1);
+}
+
 /** Retorna as 7 datas (dom→sáb) da semana corrente, normalizadas à meia-noite local. */
 export function getWeekDates(reference: Date = new Date()): Date[] {
   const todayStart = startOfLocalDay(reference);
