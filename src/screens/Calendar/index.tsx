@@ -197,7 +197,7 @@ export default function Calendar({ onEdit, onCreateAt }: CalendarProps) {
       return (
         <View className="flex flex-1 flex-col gap-2">
           <View className="flex flex-row items-center justify-between">
-            <Text className="max-w-[270px] text-gray-800" numberOfLines={2} style={{ fontSize: 12, fontWeight: '500' }}>
+            <Text className="max-w-[250px] text-gray-800" numberOfLines={2} style={{ fontSize: 12, fontWeight: '500' }}>
               {event.title}
             </Text>
             {task.done ? <CircleCheckIcon className="my-auto flex justify-end" size={22} color="white" /> : null}
