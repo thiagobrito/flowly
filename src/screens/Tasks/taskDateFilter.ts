@@ -95,8 +95,11 @@ function weekdayOfKey(dayKey: string): number {
  *
  * - `once` não entra aqui: sua data explícita já é tratada por `getTaskDateKeys`
  *   (o caso "atrasada" é resolvido por `isOverdueOnce`, ligado ao dia de hoje).
- * - `notime`/`trigger` retornam `false` — não são de um dia específico e
- *   pertencem a "Sem data".
+ * - `notime` sem conclusão está disponível qualquer dia (mesmo critério do
+ *   servidor); após concluída, deixa de ser "para fazer".
+ * - `weekly` com `mode: 'count'` (sem dias específicos) é flexível: disponível
+ *   qualquer dia da semana.
+ * - `trigger` retorna `false` — não pertence a um dia específico.
  * - `interval` mantém o comportamento "sempre disponível" do servidor.
  */
 export function isDueOn(task: Task, dayKey: string): boolean {
@@ -105,9 +108,11 @@ export function isDueOn(task: Task, dayKey: string): boolean {
     case 'daily':
       return frequency.everyDay || frequency.days.includes(weekdayOfKey(dayKey));
     case 'weekly':
+      if (frequency.days.length === 0) return true;
       return frequency.days.includes(weekdayOfKey(dayKey));
-    case 'once':
     case 'notime':
+      return (task.completed ?? []).length === 0;
+    case 'once':
     case 'trigger':
       return false;
     default:
@@ -126,8 +131,11 @@ function isOverdueOnce(task: Task, todayKey: string): boolean {
 function hasNoDate(task: Task): boolean {
   if (getTaskDateKeys(task).size > 0) return false;
   const { frequency } = task;
-  if (frequency.kind === 'notime' || frequency.kind === 'trigger') return true;
+  if (frequency.kind === 'trigger') return true;
   if (frequency.kind === 'once' && frequency.date == null) return true;
+  // `notime` sem conclusão é "para hoje" (mesmo critério do servidor); só cai em
+  // "Sem data" depois de concluída.
+  if (frequency.kind === 'notime') return (task.completed ?? []).length > 0;
   return false;
 }
 

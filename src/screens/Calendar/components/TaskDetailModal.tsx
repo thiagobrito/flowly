@@ -1,4 +1,4 @@
-import { Check, GoalIcon, TrendingUp, X, Zap } from 'lucide-react-native';
+import { Check, FileText, GoalIcon, TrendingUp, X, Zap } from 'lucide-react-native';
 import type { ReactNode } from 'react';
 import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
 
@@ -100,6 +100,17 @@ export default function TaskDetailModal({ visible, task, isDark, onClose }: Task
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 8 }}>
+            {task.description ? (
+              <DetailRow label="Descrição" isDark={isDark}>
+                <View className="flex-row items-start">
+                  <FileText size={16} color={mutedColor} style={{ marginRight: 8, marginTop: 2 }} />
+                  <Text className="flex-1 text-sm" style={{ color: isDark ? '#e4e4e7' : '#3f3f46' }}>
+                    {task.description}
+                  </Text>
+                </View>
+              </DetailRow>
+            ) : null}
+
             <DetailRow label="Energia gasta" isDark={isDark}>
               <View className="flex-row items-center">
                 <Zap size={16} color="#22c55e" style={{ marginRight: 8 }} />

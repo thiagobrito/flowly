@@ -115,6 +115,10 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
 
   const allTasks = useMemo(() => [...visibleTasks, ...concludedTasks], [visibleTasks, concludedTasks]);
 
+  // Amanhã/Esta semana buscam tarefas fora do dia de hoje: a fonte passa a ser a
+  // lista completa do usuário.
+  const isFutureFilter = selectedDateFilter === 'tomorrow' || selectedDateFilter === 'thisWeek';
+
   // Contagens dos filtros de data usam TODAS as tarefas do usuário, para que
   // Amanhã/Esta semana reflitam também tarefas que não estão previstas para hoje.
   const filterDateOptions = useMemo(
@@ -126,9 +130,13 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
     [allUserTasks],
   );
 
+  // Com um filtro futuro ativo, a lista vem de `allUserTasks`; as opções de área
+  // devem refletir a mesma fonte, senão áreas presentes só em dias futuros não
+  // apareceriam para filtrar.
   const filterAreas = useMemo<FilterArea[]>(() => {
+    const source = isFutureFilter ? allUserTasks : allTasks;
     const counts = new Map<string, number>();
-    allTasks.forEach((task) => {
+    source.forEach((task) => {
       counts.set(task.goal.name, (counts.get(task.goal.name) ?? 0) + 1);
     });
 
@@ -142,7 +150,7 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
         count,
       };
     });
-  }, [allTasks]);
+  }, [isFutureFilter, allUserTasks, allTasks]);
 
   const applyFilters = useCallback(
     (tasks: Task[]) =>
@@ -154,11 +162,8 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
     [selectedAreas, selectedDateFilter],
   );
 
-  // Amanhã/Esta semana buscam tarefas fora do dia de hoje: a fonte passa a ser a
-  // lista completa do usuário e o resultado é uma lista única (sem separar
-  // "concluídas", pois conclusão é por dia e dias futuros não têm conclusão).
-  const isFutureFilter = selectedDateFilter === 'tomorrow' || selectedDateFilter === 'thisWeek';
-
+  // Amanhã/Esta semana produzem uma lista única (sem separar "concluídas", pois
+  // conclusão é por dia e dias futuros não têm conclusão).
   const filteredVisible = useMemo(() => {
     if (isFutureFilter && selectedDateFilter) {
       return allUserTasks.filter((task) => {

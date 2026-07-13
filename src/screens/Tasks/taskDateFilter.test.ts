@@ -43,12 +43,34 @@ describe('getTaskDateKeys', () => {
 });
 
 describe('taskMatchesDateFilter', () => {
-  it('inclui tarefa sem data explícita apenas em Sem data', () => {
+  it('inclui tarefa notime não concluída em Hoje, Amanhã e Esta semana (não em Sem data)', () => {
     const task = baseTask();
+    expect(taskMatchesDateFilter(task, 'today', REFERENCE)).toBe(true);
+    expect(taskMatchesDateFilter(task, 'tomorrow', REFERENCE)).toBe(true);
+    expect(taskMatchesDateFilter(task, 'thisWeek', REFERENCE)).toBe(true);
+    expect(taskMatchesDateFilter(task, 'nodate', REFERENCE)).toBe(false);
+  });
+
+  it('move tarefa notime concluída para Sem data', () => {
+    const task = baseTask({ completed: ['2026-06-10T12:00:00.000-03:00'] });
+    expect(taskMatchesDateFilter(task, 'nodate', REFERENCE)).toBe(true);
+    expect(taskMatchesDateFilter(task, 'today', REFERENCE)).toBe(false);
+  });
+
+  it('inclui tarefa trigger apenas em Sem data', () => {
+    const task = baseTask({ frequency: { kind: 'trigger', eventId: null } });
     expect(taskMatchesDateFilter(task, 'nodate', REFERENCE)).toBe(true);
     expect(taskMatchesDateFilter(task, 'today', REFERENCE)).toBe(false);
     expect(taskMatchesDateFilter(task, 'tomorrow', REFERENCE)).toBe(false);
     expect(taskMatchesDateFilter(task, 'thisWeek', REFERENCE)).toBe(false);
+  });
+
+  it('inclui tarefa semanal por contagem (sem dias) em Hoje, Amanhã e Esta semana', () => {
+    const task = baseTask({ frequency: { kind: 'weekly', mode: 'count', count: 3, days: [] } });
+    expect(taskMatchesDateFilter(task, 'today', REFERENCE)).toBe(true);
+    expect(taskMatchesDateFilter(task, 'tomorrow', REFERENCE)).toBe(true);
+    expect(taskMatchesDateFilter(task, 'thisWeek', REFERENCE)).toBe(true);
+    expect(taskMatchesDateFilter(task, 'nodate', REFERENCE)).toBe(false);
   });
 
   it('filtra once para Hoje e Amanhã', () => {
@@ -61,7 +83,10 @@ describe('taskMatchesDateFilter', () => {
   });
 
   it('filtra schedule multi-dia para Esta semana', () => {
+    // `trigger` não é "devida" por dia da semana, isolando o schedule como único
+    // sinal de data (evita que a recorrência case com o dia de hoje).
     const task = baseTask({
+      frequency: { kind: 'trigger', eventId: null },
       schedule: [{ dateTime: '2026-06-13T10:00:00.000-03:00', duration: 30 }],
     });
 
