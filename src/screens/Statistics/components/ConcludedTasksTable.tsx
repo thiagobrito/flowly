@@ -14,7 +14,7 @@ export default function ConcludedTasksTable({ tasks, isDark }: ConcludedTasksTab
 
   return (
     <View>
-      <View className="overflow-hidden rounded-2xl bg-white p-2">
+      <View className="overflow-hidden rounded-2xl bg-white p-2 dark:bg-white/10">
         <View className="flex-row items-center gap-2.5 px-3 py-2">
           <View className="size-9 items-center justify-center rounded-full bg-green-500/15">
             <Check size={18} color="#3b82f6" />

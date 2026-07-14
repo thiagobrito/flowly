@@ -195,7 +195,7 @@ export default function EnergyDayChart({ input, tasks, selectedDay, isDark }: En
   );
 
   return (
-    <View className="overflow-hidden rounded-2xl bg-white p-2">
+    <View className="overflow-hidden rounded-2xl bg-white p-2 dark:bg-white/10">
       {header}
 
       <View onLayout={(event) => setWidth(event.nativeEvent.layout.width)}>

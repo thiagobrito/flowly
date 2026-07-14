@@ -51,7 +51,7 @@ export default function ProgressOverview({ progress, daysRemaining, weeksComplet
         <Stat value={`${weeksCompleted} de ${totalWeeks}`} label="Semanas concluídas" />
       </View>
 
-      <View className="flex-1 items-center justify-center rounded-full bg-green-400/20 bg-zinc-100 p-2 text-center">
+      <View className="flex-1 items-center justify-center rounded-full bg-green-400/20 p-2 dark:bg-green-400/15">
         <Text className="text-lg font-bold text-zinc-900 dark:text-zinc-50">{points} pontos</Text>
       </View>
     </View>

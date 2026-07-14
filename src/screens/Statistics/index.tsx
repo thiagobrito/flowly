@@ -83,7 +83,7 @@ export default function Statistics() {
 
         <View className="mt-7 flex-row items-center justify-between">
           <View className="flex-1 gap-2">
-            <View className="min-w-full flex-1 rounded-2xl bg-white/40 px-4 py-2 pr-3">
+            <View className="min-w-full flex-1 rounded-2xl bg-white px-4 py-2 pr-3 dark:bg-white/10">
               <Text className="text-lg font-semibold text-zinc-700 dark:text-zinc-200">Tarefas concluídas</Text>
 
               <View className="flex-row items-center gap-2">
@@ -92,7 +92,7 @@ export default function Statistics() {
               </View>
             </View>
 
-            <View className="min-w-full flex-1 rounded-2xl bg-white/40 px-4 py-2 pr-3">
+            <View className="min-w-full flex-1 rounded-2xl bg-white px-4 py-2 pr-3 dark:bg-white/10">
               <Text className="text-lg font-semibold text-zinc-700 dark:text-zinc-200">Pontos de Energia</Text>
               <View className="flex-row items-center gap-2">
                 <BatteryFull size={24} color={isDark ? '#e4e4e7' : '#3b82f6'} />
@@ -100,7 +100,7 @@ export default function Statistics() {
               </View>
             </View>
 
-            <View className="min-w-full flex-1 rounded-2xl bg-white/40 px-4 py-2 pr-3">
+            <View className="min-w-full flex-1 rounded-2xl bg-white px-4 py-2 pr-3 dark:bg-white/10">
               <Text className="text-lg font-semibold text-zinc-700 dark:text-zinc-200">Pontos de Impacto</Text>
               <View className="flex-row items-center gap-2">
                 <HandFist size={24} color={isDark ? '#e4e4e7' : '#3b82f6'} />
