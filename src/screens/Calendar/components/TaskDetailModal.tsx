@@ -1,8 +1,9 @@
-import { Check, FileText, GoalIcon, TrendingUp, X, Zap } from 'lucide-react-native';
+import { FileText, GoalIcon, TrendingUp, X, Zap } from 'lucide-react-native';
 import type { ReactNode } from 'react';
 import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
 
-import type { Task } from '../../NewTask/data';
+import { SubtaskEditor } from '../../NewTask/components';
+import type { Subtask, Task } from '../../NewTask/data';
 import { describeFrequency, getFrequencyMeta, getLifeArea, LEVEL_LABELS } from '../../NewTask/data';
 import LevelDots from '../../Tasks/components/LevelDots';
 
@@ -11,32 +12,11 @@ type TaskDetailModalProps = {
   task: Task | null;
   isDark: boolean;
   onClose: () => void;
+  onToggleSubtask: (task: Task, subtaskId: string) => void;
+  onSaveSubtasks: (task: Task, nextSubtasks: Subtask[]) => void;
+  onEdit: (task: Task) => void;
+  onComplete: (task: Task) => void;
 };
-
-type CheckIconProps = {
-  done: boolean;
-  isDark: boolean;
-  accent: string;
-};
-
-function CheckIcon({ done, isDark, accent }: CheckIconProps) {
-  if (done) {
-    return (
-      <View className="size-5 items-center justify-center rounded-full" style={{ backgroundColor: accent }}>
-        <Check size={12} color="#ffffff" />
-      </View>
-    );
-  }
-
-  return (
-    <View
-      className="size-4 rounded-full border"
-      style={{
-        borderColor: isDark ? 'rgba(255,255,255,0.16)' : 'rgba(0,0,0,0.12)',
-      }}
-    />
-  );
-}
 
 type DetailRowProps = {
   label: string;
@@ -66,17 +46,17 @@ function frequencyLabel(task: Task): string {
   return getFrequencyMeta(task.frequency.kind)?.label ?? '—';
 }
 
-export default function TaskDetailModal({ visible, task, isDark, onClose }: TaskDetailModalProps) {
+export default function TaskDetailModal({ visible, task, isDark, onClose, onToggleSubtask, onSaveSubtasks, onEdit, onComplete }: TaskDetailModalProps) {
   if (!task) return null;
 
   const area = getLifeArea(task.goal.name);
   const accent = area?.accent ?? '#71717a';
   const AreaIcon = area?.Icon;
   const FreqIcon = getFrequencyMeta(task.frequency.kind)?.Icon;
-  const subtasks = task.subtasks ?? [];
   const mutedColor = isDark ? '#a1a1aa' : '#71717a';
   const panelBackground = isDark ? '#18181b' : '#fafafa';
-  const dividerColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
+  const secondaryButtonBg = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
+  const completeDisabled = !!task.done;
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -99,7 +79,7 @@ export default function TaskDetailModal({ visible, task, isDark, onClose }: Task
             </Pressable>
           </View>
 
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 8 }}>
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 8 }} keyboardShouldPersistTaps="handled">
             {task.description ? (
               <DetailRow label="Descrição" isDark={isDark}>
                 <View className="flex-row items-start">
@@ -153,26 +133,32 @@ export default function TaskDetailModal({ visible, task, isDark, onClose }: Task
               </View>
             </DetailRow>
 
-            {subtasks.length > 0 ? (
-              <DetailRow label="Sub-tarefas" isDark={isDark}>
-                <View className="rounded-2xl border px-3 py-1" style={{ borderColor: dividerColor }}>
-                  {subtasks.map((subtask) => {
-                    let subtaskColor = isDark ? '#e4e4e7' : '#3f3f46';
-                    if (subtask.done) subtaskColor = mutedColor;
-
-                    return (
-                      <View key={subtask.id} className="flex-row items-center py-2.5">
-                        <CheckIcon done={subtask.done} isDark={isDark} accent={accent} />
-                        <Text className="ml-3 flex-1 text-sm" style={{ color: subtaskColor, textDecorationLine: subtask.done ? 'line-through' : 'none' }}>
-                          {subtask.name}
-                        </Text>
-                      </View>
-                    );
-                  })}
-                </View>
-              </DetailRow>
-            ) : null}
+            <DetailRow label="Sub-tarefas" isDark={isDark}>
+              <SubtaskEditor value={task.subtasks ?? []} onChange={(next) => onSaveSubtasks(task, next)} onToggle={(subtask) => onToggleSubtask(task, subtask.id)} accent={accent} isDark={isDark} />
+            </DetailRow>
           </ScrollView>
+
+          <View className="mt-3 flex-row gap-3 border-t pt-4" style={{ borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }}>
+            <Pressable onPress={() => onEdit(task)} accessibilityRole="button" accessibilityLabel="Editar tarefa" className="flex-1 items-center justify-center rounded-2xl py-3.5 active:opacity-80" style={{ backgroundColor: secondaryButtonBg }}>
+              <Text className="text-sm font-semibold" style={{ color: isDark ? '#e4e4e7' : '#3f3f46' }}>
+                Editar
+              </Text>
+            </Pressable>
+
+            <Pressable
+              onPress={() => onComplete(task)}
+              disabled={completeDisabled}
+              accessibilityRole="button"
+              accessibilityLabel={completeDisabled ? 'Tarefa concluída' : 'Concluir tarefa'}
+              accessibilityState={{ disabled: completeDisabled }}
+              className="flex-1 items-center justify-center rounded-2xl py-3.5 active:opacity-80"
+              style={{ backgroundColor: completeDisabled ? secondaryButtonBg : accent, opacity: completeDisabled ? 0.7 : 1 }}
+            >
+              <Text className="text-sm font-semibold" style={{ color: completeDisabled ? mutedColor : '#ffffff' }}>
+                {completeDisabled ? 'Concluída' : 'Concluir tarefa'}
+              </Text>
+            </Pressable>
+          </View>
         </View>
       </View>
     </Modal>

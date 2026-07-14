@@ -12,7 +12,7 @@ import { queryKeys } from '@/lib/query';
 import { cancelTaskRemindersFor, syncTaskReminders } from '@/lib/taskReminders';
 
 import { useConfigPreferences } from '../Config/hooks/useConfigPreferences';
-import type { ScheduledSlot, Task } from '../NewTask/data';
+import type { ScheduledSlot, Subtask, Task } from '../NewTask/data';
 import { formatDuration, getLifeArea } from '../NewTask/data';
 import LevelDots from '../Tasks/components/LevelDots';
 import CalendarHeaderBar from './components/CalendarHeaderBar';
@@ -22,7 +22,7 @@ import UnscheduledTray from './components/UnscheduledTray';
 import type { CalendarTaskEvent } from './eventMapping';
 import { buildCalendarEvents, getTaskDurationMin } from './eventMapping';
 import { useDayEnergyLevels } from './hooks/useDayEnergyLevels';
-import { getTaskSlot, hasScheduleChanged, onceFrequencyFromISO, syncTaskScheduleToServer, syncTaskUnscheduleToServer } from './scheduleSync';
+import { getTaskSlot, hasScheduleChanged, onceFrequencyFromISO, syncTaskScheduleToServer, syncTaskSubtasksToServer, syncTaskUnscheduleToServer } from './scheduleSync';
 import { buildCalendarTheme } from './theme';
 
 type CalendarProps = {
@@ -118,6 +118,7 @@ export default function Calendar({ onEdit, onCreateAt }: CalendarProps) {
   const [visibleDate, setVisibleDate] = useState<string>(() => toLocalISOString());
   const [drag, setDrag] = useState<DragState | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [selectedStartISO, setSelectedStartISO] = useState<string | undefined>(undefined);
 
   const visibleDateRef = useRef(visibleDate);
   visibleDateRef.current = visibleDate;
@@ -376,6 +377,69 @@ export default function Calendar({ onEdit, onCreateAt }: CalendarProps) {
     [setCalendarTasks, refetchTasks, restoreTask],
   );
 
+  const toggleSubtask = useCallback(
+    async (task: Task, subtaskId: string) => {
+      const current = task.subtasks?.find((item) => item.id === subtaskId);
+      if (!current) return;
+
+      const nextDone = !current.done;
+      const snapshot = task;
+      setCalendarTasks((prev) =>
+        prev.map((item) => {
+          if (item.id !== task.id) return item;
+          return {
+            ...item,
+            subtasks: (item.subtasks ?? []).map((subtask) => (subtask.id === subtaskId ? { ...subtask, done: nextDone } : subtask)),
+          };
+        }),
+      );
+
+      try {
+        await api.post('/tasks/subtask', { taskId: task.id, subtaskId, done: nextDone });
+      } catch {
+        restoreTask(snapshot);
+      }
+    },
+    [setCalendarTasks, restoreTask],
+  );
+
+  const saveSubtasks = useCallback(
+    async (task: Task, nextSubtasks: Subtask[]) => {
+      const snapshot = task;
+      setCalendarTasks((prev) => prev.map((item) => (item.id === task.id ? { ...item, subtasks: nextSubtasks } : item)));
+
+      try {
+        await syncTaskSubtasksToServer(task, nextSubtasks);
+        refetchTasks();
+      } catch {
+        restoreTask(snapshot);
+      }
+    },
+    [setCalendarTasks, refetchTasks, restoreTask],
+  );
+
+  const closeTaskDetail = useCallback(() => {
+    setSelectedTask(null);
+    setSelectedStartISO(undefined);
+  }, []);
+
+  const handleModalEdit = useCallback(
+    (task: Task) => {
+      closeTaskDetail();
+      onEdit?.(task);
+    },
+    [closeTaskDetail, onEdit],
+  );
+
+  const handleModalComplete = useCallback(
+    (task: Task) => {
+      const completionISO = selectedStartISO ?? visibleDateRef.current;
+      closeTaskDetail();
+      markTaskAsDone(task, completionISO);
+    },
+    [closeTaskDetail, markTaskAsDone, selectedStartISO],
+  );
+
   const handleDragEnd = useCallback(
     (task: Task, x: number, y: number) => {
       const dropISO = resolveDropISO(x, y);
@@ -433,6 +497,7 @@ export default function Calendar({ onEdit, onCreateAt }: CalendarProps) {
       singlePressTimer.current = setTimeout(() => {
         singlePressTimer.current = null;
         lastPress.current = { id: '', ts: 0 };
+        setSelectedStartISO(event.start?.dateTime);
         setSelectedTask(task);
       }, DOUBLE_PRESS_MS);
     },
@@ -472,6 +537,7 @@ export default function Calendar({ onEdit, onCreateAt }: CalendarProps) {
   }
 
   const ghostAccent = drag ? (getLifeArea(drag.task.goal.name)?.accent ?? '#6366f1') : '#6366f1';
+  const modalTask = tasks.find((item) => item.id === selectedTask?.id) ?? selectedTask;
 
   return (
     <View ref={screenRootRef} className="flex-1" onLayout={syncCalendarBounds}>
@@ -543,7 +609,7 @@ export default function Calendar({ onEdit, onCreateAt }: CalendarProps) {
         </View>
       ) : null}
 
-      <TaskDetailModal visible={!!selectedTask} task={selectedTask} isDark={isDark} onClose={() => setSelectedTask(null)} />
+      <TaskDetailModal visible={!!selectedTask} task={modalTask} isDark={isDark} onClose={closeTaskDetail} onToggleSubtask={toggleSubtask} onSaveSubtasks={saveSubtasks} onEdit={handleModalEdit} onComplete={handleModalComplete} />
     </View>
   );
 }

@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react-native';
-import { Minus, Plus, Trash2 } from 'lucide-react-native';
+import { Check, Minus, Plus, Trash2 } from 'lucide-react-native';
 import { useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 
@@ -7,6 +7,25 @@ import type { Subtask } from './data';
 import { formatDuration, LEVEL_LABELS, WEEKDAYS } from './data';
 
 const LEVELS = [1, 2, 3, 4, 5] as const;
+
+function SubtaskCheckIcon({ done, isDark, accent }: { done: boolean; isDark: boolean; accent: string }) {
+  if (done) {
+    return (
+      <View className="size-5 items-center justify-center rounded-full" style={{ backgroundColor: accent }}>
+        <Check size={12} color="#ffffff" />
+      </View>
+    );
+  }
+
+  return (
+    <View
+      className="size-4 rounded-full border"
+      style={{
+        borderColor: isDark ? 'rgba(255,255,255,0.16)' : 'rgba(0,0,0,0.12)',
+      }}
+    />
+  );
+}
 
 type LevelScaleProps = {
   value: number;
@@ -361,9 +380,11 @@ type SubtaskEditorProps = {
   onChange: (subtasks: Subtask[]) => void;
   accent: string;
   isDark: boolean;
+  /** Quando presente, cada linha fica tocável para alternar concluída. */
+  onToggle?: (subtask: Subtask) => void;
 };
 
-export function SubtaskEditor({ value, onChange, accent, isDark }: SubtaskEditorProps) {
+export function SubtaskEditor({ value, onChange, accent, isDark, onToggle }: SubtaskEditorProps) {
   const [draft, setDraft] = useState('');
 
   const addSubtask = () => {
@@ -406,23 +427,41 @@ export function SubtaskEditor({ value, onChange, accent, isDark }: SubtaskEditor
         </Pressable>
       </View>
 
-      {value.map((item) => (
-        <View
-          key={item.id}
-          className="mt-2 flex-row items-center justify-between rounded-2xl border px-4 py-3"
-          style={{
-            borderColor: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)',
-            backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.5)',
-          }}
-        >
-          <Text className="flex-1 text-base text-zinc-800 dark:text-zinc-100" numberOfLines={1}>
-            {item.name}
-          </Text>
-          <Pressable onPress={() => removeSubtask(item.id)} accessibilityRole="button" accessibilityLabel={`Remover ${item.name}`} className="ml-3 active:opacity-70">
-            <Trash2 size={18} color="#ef4444" />
-          </Pressable>
-        </View>
-      ))}
+      {value.map((item) => {
+        let textColor = isDark ? '#e4e4e7' : '#3f3f46';
+        if (item.done && onToggle) textColor = isDark ? '#a1a1aa' : '#71717a';
+
+        const rowContent = (
+          <>
+            {onToggle ? <SubtaskCheckIcon done={item.done} isDark={isDark} accent={accent} /> : null}
+            <Text className={`flex-1 text-base ${onToggle ? 'ml-3' : ''} text-zinc-800 dark:text-zinc-100`} numberOfLines={1} style={onToggle ? { color: textColor, textDecorationLine: item.done ? 'line-through' : 'none' } : undefined}>
+              {item.name}
+            </Text>
+            <Pressable onPress={() => removeSubtask(item.id)} accessibilityRole="button" accessibilityLabel={`Remover ${item.name}`} className="ml-3 active:opacity-70" hitSlop={8}>
+              <Trash2 size={18} color="#ef4444" />
+            </Pressable>
+          </>
+        );
+
+        const rowStyle = {
+          borderColor: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)',
+          backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.5)',
+        };
+
+        if (onToggle) {
+          return (
+            <Pressable key={item.id} onPress={() => onToggle(item)} accessibilityRole="button" accessibilityState={{ checked: item.done }} className="mt-2 flex-row items-center rounded-2xl border px-4 py-3 active:opacity-70" style={rowStyle}>
+              {rowContent}
+            </Pressable>
+          );
+        }
+
+        return (
+          <View key={item.id} className="mt-2 flex-row items-center justify-between rounded-2xl border px-4 py-3" style={rowStyle}>
+            {rowContent}
+          </View>
+        );
+      })}
     </View>
   );
 }

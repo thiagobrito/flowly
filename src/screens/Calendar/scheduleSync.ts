@@ -1,7 +1,7 @@
 import { APP_TIME_ZONE, localDateKey } from '@/lib/date';
 import { api } from '@/lib/network';
 
-import type { FrequencyConfig, ScheduledSlot, Task } from '../NewTask/data';
+import type { FrequencyConfig, ScheduledSlot, Subtask, Task } from '../NewTask/data';
 import { getOnceStartISO, getTaskDurationMin } from './eventMapping';
 
 export function toLocalTimeHM(date: Date): string {
@@ -113,4 +113,20 @@ export async function syncTaskUnscheduleToServer(task: Task, dateKey: string): P
   }
 
   await syncRecurringTaskUnschedule(task, dateKey);
+}
+
+/** Persiste o array completo de sub-tarefas sem alterar frequência/agendamento. */
+export async function syncTaskSubtasksToServer(task: Task, nextSubtasks: Subtask[]): Promise<void> {
+  await api.put('/tasks', {
+    id: task.id,
+    isEditing: true,
+    name: task.name,
+    description: task.description,
+    energy: task.energy,
+    impact: task.impact,
+    area: task.area ?? task.goal?.name,
+    subtasks: nextSubtasks,
+    estimatedMinutes: task.estimatedMinutes,
+    frequency: task.frequency,
+  });
 }
