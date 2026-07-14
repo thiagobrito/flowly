@@ -204,8 +204,19 @@ export default function Calendar({ onEdit, onCreateAt }: CalendarProps) {
           </View>
 
           {showEnergyAndImpact ? (
-            <View className="-mt-1 flex w-[145px] flex-row items-center rounded-full bg-white/80 p-1">
-              <View className="flex-row items-center" style={{ marginRight: 18 }}>
+            <View
+              className="-mt-1 flex-row items-center"
+              style={{
+                alignSelf: 'flex-start',
+                borderRadius: 10,
+                borderWidth: 1,
+                borderColor: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)',
+                backgroundColor: isDark ? 'rgba(0,0,0,0.28)' : 'rgba(255,255,255,0.6)',
+                paddingHorizontal: 8,
+                paddingVertical: 4,
+              }}
+            >
+              <View className="flex-row items-center" style={{ marginRight: 14 }}>
                 <Zap size={13} color="#22c55e" style={{ marginRight: 6 }} />
                 <LevelDots value={task.energy || 0} accent="#22c55e" isDark={isDark} />
               </View>
