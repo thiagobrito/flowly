@@ -7,6 +7,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { configureNotifications, ensureAndroidChannel, setupNotificationHandler, useNotifications } from '@/lib/notifications';
 import { QueryProvider } from '@/lib/query';
+import { useThemePreference } from '@/lib/theme';
 import { useTaskReminders } from '@/screens/Config/hooks/useTaskReminders';
 
 setupNotificationHandler();
@@ -35,6 +36,7 @@ Sentry.init({
 export default Sentry.wrap(function Layout() {
   useNotifications();
   useTaskReminders();
+  useThemePreference();
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

@@ -4,6 +4,7 @@ import { Alert, Pressable, ScrollView, Text, useColorScheme, View } from 'react-
 import { useSession } from '@/lib/auth';
 import { api } from '@/lib/network';
 
+import AppearanceSection from './Appearance';
 import ConfigHeader from './components/ConfigHeader';
 import Goals from './Goals';
 import IntegrationSection from './Integration';
@@ -42,6 +43,7 @@ export default function Config({ onBack }: ConfigProps) {
       <ConfigHeader isDark={isDark} onBack={onBack} />
 
       <ScrollView className="mt-4 flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 110 }}>
+        <AppearanceSection isDark={isDark} />
         <NotificationsSection isDark={isDark} />
         <IntegrationSection isDark={isDark} />
         <LegalSection isDark={isDark} />
