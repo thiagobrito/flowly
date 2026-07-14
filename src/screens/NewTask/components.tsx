@@ -434,7 +434,7 @@ export function SubtaskEditor({ value, onChange, accent, isDark, onToggle }: Sub
         const rowContent = (
           <>
             {onToggle ? <SubtaskCheckIcon done={item.done} isDark={isDark} accent={accent} /> : null}
-            <Text className={`flex-1 text-base ${onToggle ? 'ml-3' : ''} text-zinc-800 dark:text-zinc-100`} numberOfLines={1} style={onToggle ? { color: textColor, textDecorationLine: item.done ? 'line-through' : 'none' } : undefined}>
+            <Text className={`flex-1 text-base leading-5 ${onToggle ? 'ml-3' : ''} text-zinc-800 dark:text-zinc-100`} style={onToggle ? { color: textColor, textDecorationLine: item.done ? 'line-through' : 'none' } : undefined}>
               {item.name}
             </Text>
             <Pressable onPress={() => removeSubtask(item.id)} accessibilityRole="button" accessibilityLabel={`Remover ${item.name}`} className="ml-3 active:opacity-70" hitSlop={8}>
@@ -450,14 +450,14 @@ export function SubtaskEditor({ value, onChange, accent, isDark, onToggle }: Sub
 
         if (onToggle) {
           return (
-            <Pressable key={item.id} onPress={() => onToggle(item)} accessibilityRole="button" accessibilityState={{ checked: item.done }} className="mt-2 flex-row items-center rounded-2xl border px-4 py-3 active:opacity-70" style={rowStyle}>
+            <Pressable key={item.id} onPress={() => onToggle(item)} accessibilityRole="button" accessibilityState={{ checked: item.done }} className="mt-2 flex-row items-start rounded-2xl border px-4 py-3 active:opacity-70" style={rowStyle}>
               {rowContent}
             </Pressable>
           );
         }
 
         return (
-          <View key={item.id} className="mt-2 flex-row items-center justify-between rounded-2xl border px-4 py-3" style={rowStyle}>
+          <View key={item.id} className="mt-2 flex-row items-start justify-between rounded-2xl border px-4 py-3" style={rowStyle}>
             {rowContent}
           </View>
         );

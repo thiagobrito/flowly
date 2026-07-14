@@ -275,9 +275,9 @@ export default function TaskCard({ highlight, task, selected, isDark, onComplete
                         if (subtask.done) subtaskColor = mutedColor;
 
                         return (
-                          <Pressable key={subtask.id} onPress={() => toggleSubtask(subtask)} accessibilityRole="button" accessibilityState={{ checked: subtask.done }} className="flex-row items-center py-2 active:opacity-70">
+                          <Pressable key={subtask.id} onPress={() => toggleSubtask(subtask)} accessibilityRole="button" accessibilityState={{ checked: subtask.done }} className="flex-row items-start py-2 active:opacity-70">
                             <CheckIcon isSelected={subtask.done} isDark={isDark} accent={accent} />
-                            <Text className="ml-3 flex-1 text-sm" style={{ color: subtaskColor, textDecorationLine: subtask.done ? 'line-through' : 'none' }}>
+                            <Text className="ml-3 flex-1 text-sm leading-5" style={{ color: subtaskColor, textDecorationLine: subtask.done ? 'line-through' : 'none' }}>
                               {subtask.name}
                             </Text>
                           </Pressable>
