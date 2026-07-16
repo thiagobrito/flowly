@@ -29,6 +29,9 @@ const SYNC_PATH = '/sleep-log';
 /** Mantém o lote enviado dentro da mesma janela do histórico coletado (14 noites). */
 const MAX_HISTORY_NIGHTS = 30;
 
+/** Duração mínima (horas) para tratar um registro como sono real (ver abaixo). */
+const MIN_SLEEP_HOURS = 1;
+
 type EnqueueFn = (method: 'POST' | 'PUT', path: string, payload: unknown) => void;
 
 /** Uma noite de sono medida pelo dispositivo, pronta para o servidor. */
@@ -58,11 +61,22 @@ const syncedSignatures = new Set<string>();
 let collectInFlight = false;
 
 /**
+ * Espelha `hasMeaningfulSleepData` do servidor: só enviamos noites com sinal
+ * real de sono. Descarta durações degeneradas (`sleepHours` < 1h) e noites sem
+ * horário de dormir, estágios (deep/REM), variabilidade nem duração útil (ex.:
+ * um dia de histórico sem horas). `wakeTime` sozinho não conta como sinal.
+ */
+function hasMeaningfulSleepData(night: MeasuredSleepNight): boolean {
+  if (typeof night.sleepHours === 'number' && night.sleepHours < MIN_SLEEP_HOURS) return false;
+  return night.bedTime != null || night.deepSleepMin != null || night.remSleepMin != null || night.sleepVariability != null || (typeof night.sleepHours === 'number' && night.sleepHours >= MIN_SLEEP_HOURS);
+}
+
+/**
  * Monta o lote de noites a enviar a partir das métricas coletadas. Exige que a
  * última noite tenha horário medido de dormir **e** acordar — respeita o
  * "disponíveis": sem dado medido, nada é enviado. O histórico (só `sleepHours`
  * por noite) entra como complemento; a última noite sobrepõe com os campos
- * completos.
+ * completos. Noites sem sinal real de sono são descartadas antes do envio.
  */
 function buildNights(metrics: HealthMetrics): MeasuredSleepNight[] {
   if (!metrics.bedTime || !metrics.wakeTime) return [];
@@ -86,7 +100,10 @@ function buildNights(metrics: HealthMetrics): MeasuredSleepNight[] {
     source,
   });
 
-  return [...nights.values()].sort((a, b) => a.date.localeCompare(b.date)).slice(-MAX_HISTORY_NIGHTS);
+  return [...nights.values()]
+    .filter(hasMeaningfulSleepData)
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .slice(-MAX_HISTORY_NIGHTS);
 }
 
 /**

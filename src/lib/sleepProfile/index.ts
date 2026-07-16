@@ -144,8 +144,14 @@ export function useSleepProfile() {
     if (!profile.loaded) return;
     if (hydrationAttempted) return;
     if (!getAuthToken()) return;
+    // Perfil local já preenchido: ele pode nunca ter chegado ao servidor (o PUT
+    // best-effort falhou e a fila de reenvio se perdeu, reinstalação/novo
+    // aparelho, ou dado anterior à existência do sync). Reconciliamos no sentido
+    // local → servidor uma vez por sessão (PUT idempotente) — sem isso o MCP e
+    // as estatísticas ficam sem o perfil mesmo com o app mostrando os horários.
     if (!isProfileEmpty(profileRef.current)) {
       hydrationAttempted = true;
+      syncProfile(profileRef.current);
       return;
     }
 
@@ -170,7 +176,7 @@ export function useSleepProfile() {
         // Falha de rede: libera para uma nova tentativa em outra montagem.
         hydrationAttempted = false;
       });
-  }, [profile.loaded, setProfile]);
+  }, [profile.loaded, setProfile, syncProfile]);
 
   return {
     profile,
