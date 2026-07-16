@@ -130,3 +130,19 @@ export async function syncTaskSubtasksToServer(task: Task, nextSubtasks: Subtask
     frequency: task.frequency,
   });
 }
+
+/** Persiste o tempo estimado da tarefa sem alterar frequência/agendamento. */
+export async function syncTaskEstimatedMinutesToServer(task: Task, estimatedMinutes: number): Promise<void> {
+  await api.put('/tasks', {
+    id: task.id,
+    isEditing: true,
+    name: task.name,
+    description: task.description,
+    energy: task.energy,
+    impact: task.impact,
+    area: task.area ?? task.goal?.name,
+    subtasks: task.subtasks,
+    estimatedMinutes,
+    frequency: task.frequency,
+  });
+}

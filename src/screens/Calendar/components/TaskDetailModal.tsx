@@ -2,7 +2,7 @@ import { FileText, GoalIcon, TrendingUp, X, Zap } from 'lucide-react-native';
 import type { ReactNode } from 'react';
 import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
 
-import { SubtaskEditor } from '../../NewTask/components';
+import { EstimatedTimePicker, SubtaskEditor } from '../../NewTask/components';
 import type { Subtask, Task } from '../../NewTask/data';
 import { describeFrequency, getFrequencyMeta, getLifeArea, LEVEL_LABELS } from '../../NewTask/data';
 import LevelDots from '../../Tasks/components/LevelDots';
@@ -11,11 +11,15 @@ type TaskDetailModalProps = {
   visible: boolean;
   task: Task | null;
   isDark: boolean;
+  durationMin: number;
   onClose: () => void;
   onToggleSubtask: (task: Task, subtaskId: string) => void;
   onSaveSubtasks: (task: Task, nextSubtasks: Subtask[]) => void;
+  onChangeDuration: (task: Task, durationMin: number) => void;
   onEdit: (task: Task) => void;
   onComplete: (task: Task) => void;
+  onRemoveFromDay?: (task: Task) => void;
+  onDelete: (task: Task) => void;
 };
 
 type DetailRowProps = {
@@ -46,7 +50,7 @@ function frequencyLabel(task: Task): string {
   return getFrequencyMeta(task.frequency.kind)?.label ?? '—';
 }
 
-export default function TaskDetailModal({ visible, task, isDark, onClose, onToggleSubtask, onSaveSubtasks, onEdit, onComplete }: TaskDetailModalProps) {
+export default function TaskDetailModal({ visible, task, isDark, durationMin, onClose, onToggleSubtask, onSaveSubtasks, onChangeDuration, onEdit, onComplete, onRemoveFromDay, onDelete }: TaskDetailModalProps) {
   if (!task) return null;
 
   const area = getLifeArea(task.goal.name);
@@ -57,6 +61,7 @@ export default function TaskDetailModal({ visible, task, isDark, onClose, onTogg
   const panelBackground = isDark ? '#18181b' : '#fafafa';
   const secondaryButtonBg = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
   const completeDisabled = !!task.done;
+  const destructiveBg = '#ef4444';
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -133,31 +138,72 @@ export default function TaskDetailModal({ visible, task, isDark, onClose, onTogg
               </View>
             </DetailRow>
 
+            <DetailRow label="Duração" isDark={isDark}>
+              <EstimatedTimePicker
+                value={durationMin}
+                onChange={(minutes) => {
+                  if (minutes == null) return;
+                  onChangeDuration(task, minutes);
+                }}
+                accent={accent}
+                isDark={isDark}
+              />
+            </DetailRow>
+
             <DetailRow label="Sub-tarefas" isDark={isDark}>
               <SubtaskEditor value={task.subtasks ?? []} onChange={(next) => onSaveSubtasks(task, next)} onToggle={(subtask) => onToggleSubtask(task, subtask.id)} accent={accent} isDark={isDark} />
             </DetailRow>
           </ScrollView>
 
-          <View className="mt-3 flex-row gap-3 border-t pt-4" style={{ borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }}>
-            <Pressable onPress={() => onEdit(task)} accessibilityRole="button" accessibilityLabel="Editar tarefa" className="flex-1 items-center justify-center rounded-2xl py-3.5 active:opacity-80" style={{ backgroundColor: secondaryButtonBg }}>
-              <Text className="text-sm font-semibold" style={{ color: isDark ? '#e4e4e7' : '#3f3f46' }}>
-                Editar
-              </Text>
-            </Pressable>
+          <View className="mt-3 gap-3 border-t pt-4" style={{ borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }}>
+            <View className="flex-row gap-3">
+              <Pressable onPress={() => onEdit(task)} accessibilityRole="button" accessibilityLabel="Editar tarefa" className="flex-1 items-center justify-center rounded-2xl py-3.5 active:opacity-80" style={{ backgroundColor: secondaryButtonBg }}>
+                <Text className="text-sm font-semibold" style={{ color: isDark ? '#e4e4e7' : '#3f3f46' }}>
+                  Editar
+                </Text>
+              </Pressable>
 
-            <Pressable
-              onPress={() => onComplete(task)}
-              disabled={completeDisabled}
-              accessibilityRole="button"
-              accessibilityLabel={completeDisabled ? 'Tarefa concluída' : 'Concluir tarefa'}
-              accessibilityState={{ disabled: completeDisabled }}
-              className="flex-1 items-center justify-center rounded-2xl py-3.5 active:opacity-80"
-              style={{ backgroundColor: completeDisabled ? secondaryButtonBg : accent, opacity: completeDisabled ? 0.7 : 1 }}
-            >
-              <Text className="text-sm font-semibold" style={{ color: completeDisabled ? mutedColor : '#ffffff' }}>
-                {completeDisabled ? 'Concluída' : 'Concluir tarefa'}
-              </Text>
-            </Pressable>
+              <Pressable
+                onPress={() => onComplete(task)}
+                disabled={completeDisabled}
+                accessibilityRole="button"
+                accessibilityLabel={completeDisabled ? 'Tarefa concluída' : 'Concluir tarefa'}
+                accessibilityState={{ disabled: completeDisabled }}
+                className="flex-1 items-center justify-center rounded-2xl py-3.5 active:opacity-80"
+                style={{ backgroundColor: completeDisabled ? secondaryButtonBg : accent, opacity: completeDisabled ? 0.7 : 1 }}
+              >
+                <Text className="text-sm font-semibold" style={{ color: completeDisabled ? mutedColor : '#ffffff' }}>
+                  {completeDisabled ? 'Concluída' : 'Concluir tarefa'}
+                </Text>
+              </Pressable>
+            </View>
+
+            <View className="flex-row gap-3">
+              <Pressable
+                onPress={() => onDelete(task)}
+                accessibilityRole="button"
+                accessibilityLabel="Deletar tarefa"
+                className="flex-1 items-center justify-center rounded-2xl border py-3.5 active:opacity-80"
+                style={{ borderColor: destructiveBg, backgroundColor: 'transparent' }}
+              >
+                <Text className="text-sm font-semibold" style={{ color: destructiveBg }}>
+                  Deletar
+                </Text>
+              </Pressable>
+              {onRemoveFromDay ? (
+                <Pressable
+                  onPress={() => onRemoveFromDay(task)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Remover do dia"
+                  className="flex-1 items-center justify-center rounded-2xl border py-3.5 active:opacity-80"
+                  style={{ borderColor: destructiveBg, backgroundColor: 'transparent' }}
+                >
+                  <Text className="text-sm font-semibold" style={{ color: destructiveBg }}>
+                    Remover do dia
+                  </Text>
+                </Pressable>
+              ) : null}
+            </View>
           </View>
         </View>
       </View>

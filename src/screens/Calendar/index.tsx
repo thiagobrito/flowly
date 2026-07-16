@@ -22,7 +22,7 @@ import UnscheduledTray from './components/UnscheduledTray';
 import type { CalendarTaskEvent } from './eventMapping';
 import { buildCalendarEvents, getTaskDurationMin } from './eventMapping';
 import { useDayEnergyLevels } from './hooks/useDayEnergyLevels';
-import { getTaskSlot, hasScheduleChanged, onceFrequencyFromISO, syncTaskScheduleToServer, syncTaskSubtasksToServer, syncTaskUnscheduleToServer } from './scheduleSync';
+import { getTaskSlot, hasScheduleChanged, onceFrequencyFromISO, syncTaskEstimatedMinutesToServer, syncTaskScheduleToServer, syncTaskSubtasksToServer, syncTaskUnscheduleToServer } from './scheduleSync';
 import { buildCalendarTheme } from './theme';
 
 type CalendarProps = {
@@ -442,6 +442,82 @@ export default function Calendar({ onEdit, onCreateAt }: CalendarProps) {
     [closeTaskDetail, markTaskAsDone, selectedStartISO],
   );
 
+  const handleModalRemoveFromDay = useCallback(
+    (task: Task) => {
+      const startISO = selectedStartISO;
+      if (!startISO) return;
+      const dateKey = localDateKey(new Date(startISO));
+      closeTaskDetail();
+      removeFromDayAndSyncTask(task, dateKey);
+    },
+    [closeTaskDetail, removeFromDayAndSyncTask, selectedStartISO],
+  );
+
+  const handleModalDelete = useCallback(
+    (task: Task) => {
+      closeTaskDetail();
+      Alert.alert('Deletar atividade', `Deseja remover "${task.name}"?`, [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Deletar',
+          style: 'destructive',
+          onPress: async () => {
+            const snapshot = task;
+            setCalendarTasks((prev) => prev.filter((item) => item.id !== task.id));
+            try {
+              await api.delete('/tasks', { params: { id: task.id } });
+              await cancelTaskRemindersFor(task.id);
+              refetchTasks();
+            } catch {
+              setCalendarTasks((prev) => (prev.some((item) => item.id === snapshot.id) ? prev : [...prev, snapshot]));
+              Alert.alert('Erro', 'Não foi possível deletar a atividade.');
+            }
+          },
+        },
+      ]);
+    },
+    [closeTaskDetail, refetchTasks, setCalendarTasks],
+  );
+
+  const handleModalDurationChange = useCallback(
+    async (task: Task, durationMin: number) => {
+      const startISO = selectedStartISO;
+      const snapshot = task;
+
+      setCalendarTasks((prev) =>
+        prev.map((item) => {
+          if (item.id !== task.id) return item;
+
+          const next: Task = { ...item, estimatedMinutes: durationMin };
+          if (startISO) {
+            const dateKey = localDateKey(new Date(startISO));
+            const previousSlot = getTaskSlot(item, dateKey);
+            const slot: ScheduledSlot = {
+              dateTime: previousSlot?.dateTime ?? startISO,
+              duration: durationMin,
+            };
+            next.schedule = [slot];
+          }
+          return next;
+        }),
+      );
+
+      try {
+        await syncTaskEstimatedMinutesToServer(task, durationMin);
+        if (startISO) {
+          await syncTaskScheduleToServer(task, startISO, durationMin);
+          const taskHint: Task =
+            task.frequency.kind === 'once' ? { ...task, estimatedMinutes: durationMin, frequency: onceFrequencyFromISO(startISO) } : { ...task, estimatedMinutes: durationMin, schedule: [{ dateTime: startISO, duration: durationMin }] };
+          await syncTaskReminders({ enabled: remindersEnabledRef.current, tasksHint: [taskHint] });
+        }
+        refetchTasks();
+      } catch {
+        restoreTask(snapshot);
+      }
+    },
+    [refetchTasks, restoreTask, selectedStartISO, setCalendarTasks],
+  );
+
   const handleDragEnd = useCallback(
     (task: Task, x: number, y: number) => {
       const dropISO = resolveDropISO(x, y);
@@ -540,6 +616,14 @@ export default function Calendar({ onEdit, onCreateAt }: CalendarProps) {
 
   const ghostAccent = drag ? (getLifeArea(drag.task.goal.name)?.accent ?? '#6366f1') : '#6366f1';
   const modalTask = tasks.find((item) => item.id === selectedTask?.id) ?? selectedTask;
+  const modalDurationMin = (() => {
+    if (!modalTask) return 30;
+    if (selectedStartISO) {
+      const slot = getTaskSlot(modalTask, localDateKey(new Date(selectedStartISO)));
+      if (slot) return slot.duration;
+    }
+    return getTaskDurationMin(modalTask);
+  })();
 
   return (
     <View ref={screenRootRef} className="flex-1" onLayout={syncCalendarBounds}>
@@ -612,7 +696,20 @@ export default function Calendar({ onEdit, onCreateAt }: CalendarProps) {
         </View>
       ) : null}
 
-      <TaskDetailModal visible={!!selectedTask} task={modalTask} isDark={isDark} onClose={closeTaskDetail} onToggleSubtask={toggleSubtask} onSaveSubtasks={saveSubtasks} onEdit={handleModalEdit} onComplete={handleModalComplete} />
+      <TaskDetailModal
+        visible={!!selectedTask}
+        task={modalTask}
+        isDark={isDark}
+        durationMin={modalDurationMin}
+        onClose={closeTaskDetail}
+        onToggleSubtask={toggleSubtask}
+        onSaveSubtasks={saveSubtasks}
+        onChangeDuration={handleModalDurationChange}
+        onEdit={handleModalEdit}
+        onComplete={handleModalComplete}
+        onRemoveFromDay={selectedStartISO ? handleModalRemoveFromDay : undefined}
+        onDelete={handleModalDelete}
+      />
     </View>
   );
 }
