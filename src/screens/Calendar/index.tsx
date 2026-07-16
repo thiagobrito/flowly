@@ -32,6 +32,8 @@ type CalendarProps = {
 
 const DOUBLE_PRESS_MS = 300;
 const DRAG_STEP_MIN = 15;
+/** Duração mínima de exibição de um evento, garantindo altura suficiente para o texto não ser cortado. */
+const MIN_EVENT_MINUTES = 45;
 /** Largura da coluna de horários (default `HOUR_WIDTH` do calendar-kit). */
 const HOUR_WIDTH = 80;
 /** Altura da barra de dias do calendar-kit (default 60) + borda inferior (1px). */
@@ -566,6 +568,7 @@ export default function Calendar({ onEdit, onCreateAt }: CalendarProps) {
           locale="pt"
           initialLocales={{ pt: PT_LOCALE }}
           events={events as CalendarTaskEvent[]}
+          minRegularEventMinutes={MIN_EVENT_MINUTES}
           useAllDayEvent={false}
           allowDragToEdit
           dragStep={DRAG_STEP_MIN}
