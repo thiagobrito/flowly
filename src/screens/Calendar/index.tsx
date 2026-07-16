@@ -483,20 +483,25 @@ export default function Calendar({ onEdit, onCreateAt }: CalendarProps) {
     async (task: Task, durationMin: number) => {
       const startISO = selectedStartISO;
       const snapshot = task;
+      const isOnce = task.frequency.kind === 'once';
 
       setCalendarTasks((prev) =>
         prev.map((item) => {
           if (item.id !== task.id) return item;
 
           const next: Task = { ...item, estimatedMinutes: durationMin };
-          if (startISO) {
+          // Em `once`, a duração é o estimatedMinutes (getTaskSlot usa getTaskDurationMin).
+          // Em recorrentes, atualiza só o slot do dia sem apagar os demais.
+          if (startISO && !isOnce) {
             const dateKey = localDateKey(new Date(startISO));
             const previousSlot = getTaskSlot(item, dateKey);
             const slot: ScheduledSlot = {
               dateTime: previousSlot?.dateTime ?? startISO,
               duration: durationMin,
             };
-            next.schedule = [slot];
+            const existing = Array.isArray(item.schedule) ? item.schedule : [];
+            const others = existing.filter((s) => Boolean(s?.dateTime) && localDateKey(new Date(s.dateTime)) !== dateKey);
+            next.schedule = [...others, slot];
           }
           return next;
         }),
@@ -504,10 +509,11 @@ export default function Calendar({ onEdit, onCreateAt }: CalendarProps) {
 
       try {
         await syncTaskEstimatedMinutesToServer(task, durationMin);
-        if (startISO) {
+        if (startISO && !isOnce) {
           await syncTaskScheduleToServer(task, startISO, durationMin);
-          const taskHint: Task =
-            task.frequency.kind === 'once' ? { ...task, estimatedMinutes: durationMin, frequency: onceFrequencyFromISO(startISO) } : { ...task, estimatedMinutes: durationMin, schedule: [{ dateTime: startISO, duration: durationMin }] };
+        }
+        if (startISO) {
+          const taskHint: Task = isOnce ? { ...task, estimatedMinutes: durationMin, frequency: onceFrequencyFromISO(startISO) } : { ...task, estimatedMinutes: durationMin, schedule: [{ dateTime: startISO, duration: durationMin }] };
           await syncTaskReminders({ enabled: remindersEnabledRef.current, tasksHint: [taskHint] });
         }
         refetchTasks();

@@ -60,6 +60,7 @@ export default function TaskDetailModal({ visible, task, isDark, durationMin, on
   const mutedColor = isDark ? '#a1a1aa' : '#71717a';
   const panelBackground = isDark ? '#18181b' : '#fafafa';
   const secondaryButtonBg = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
+  const editButtonBg = '#3b82f6';
   const completeDisabled = !!task.done;
   const destructiveBg = '#ef4444';
 
@@ -157,10 +158,8 @@ export default function TaskDetailModal({ visible, task, isDark, durationMin, on
 
           <View className="mt-3 gap-3 border-t pt-4" style={{ borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }}>
             <View className="flex-row gap-3">
-              <Pressable onPress={() => onEdit(task)} accessibilityRole="button" accessibilityLabel="Editar tarefa" className="flex-1 items-center justify-center rounded-2xl py-3.5 active:opacity-80" style={{ backgroundColor: secondaryButtonBg }}>
-                <Text className="text-sm font-semibold" style={{ color: isDark ? '#e4e4e7' : '#3f3f46' }}>
-                  Editar
-                </Text>
+              <Pressable onPress={() => onEdit(task)} accessibilityRole="button" accessibilityLabel="Editar tarefa" className="flex-1 items-center justify-center rounded-2xl py-3.5 active:opacity-80" style={{ backgroundColor: editButtonBg }}>
+                <Text className="text-sm font-semibold text-white">Editar</Text>
               </Pressable>
 
               <Pressable
@@ -169,7 +168,7 @@ export default function TaskDetailModal({ visible, task, isDark, durationMin, on
                 accessibilityRole="button"
                 accessibilityLabel={completeDisabled ? 'Tarefa concluída' : 'Concluir tarefa'}
                 accessibilityState={{ disabled: completeDisabled }}
-                className="flex-1 items-center justify-center rounded-2xl py-3.5 active:opacity-80"
+                className="flex-1 items-center justify-center rounded-2xl bg-green-500 py-3.5 active:opacity-80"
                 style={{ backgroundColor: completeDisabled ? secondaryButtonBg : accent, opacity: completeDisabled ? 0.7 : 1 }}
               >
                 <Text className="text-sm font-semibold" style={{ color: completeDisabled ? mutedColor : '#ffffff' }}>

@@ -49,7 +49,7 @@ export function hasScheduleChanged(previous: ScheduledSlot | null, startISO: str
   return prevStart !== nextStart || previous.duration !== durationMin;
 }
 
-async function syncOnceTaskSchedule(task: Task, startISO: string): Promise<void> {
+async function syncOnceTaskSchedule(task: Task, startISO: string, durationMin: number): Promise<void> {
   const date = localDateKey(new Date(startISO));
   const time = toLocalTimeHM(new Date(startISO));
 
@@ -63,7 +63,8 @@ async function syncOnceTaskSchedule(task: Task, startISO: string): Promise<void>
     // indefinido, o que quebrava o vínculo com a meta ao reagendar.
     area: task.area ?? task.goal?.name,
     subtasks: task.subtasks,
-    estimatedMinutes: task.estimatedMinutes,
+    // Para `once`, a duração do evento é o tempo estimado.
+    estimatedMinutes: durationMin,
     frequency: { kind: 'once', date, time },
   });
 }
@@ -80,7 +81,7 @@ async function syncRecurringTaskSchedule(task: Task, startISO: string, durationM
 /** Persiste no servidor o novo horário da tarefa para o dia do `startISO`. */
 export async function syncTaskScheduleToServer(task: Task, startISO: string, durationMin: number): Promise<void> {
   if (task.frequency.kind === 'once') {
-    await syncOnceTaskSchedule(task, startISO);
+    await syncOnceTaskSchedule(task, startISO, durationMin);
     return;
   }
 
