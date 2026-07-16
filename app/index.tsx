@@ -11,6 +11,7 @@ import { useSession } from '@/lib/auth';
 import { useFeatureFlags } from '@/lib/featureFlags';
 import { useOnboarding } from '@/lib/onboarding';
 import { usePendingSyncFlush } from '@/lib/pendingSync';
+import { useSleepLogSync } from '@/lib/sleepLog';
 import { useLocalTrial, useSubscription } from '@/lib/subscription';
 import Calendar from '@/screens/Calendar';
 import { onceFrequencyFromISO } from '@/screens/Calendar/scheduleSync';
@@ -78,6 +79,10 @@ function Home() {
   // assim que houver sessão — na montagem, na hidratação da fila e ao voltar
   // ao foreground.
   usePendingSyncFlush(isAuthenticated);
+
+  // Envia ao servidor o horário de sono medido pelo dispositivo (Apple Health /
+  // Health Connect) na abertura do app e a cada retorno ao foreground.
+  useSleepLogSync(isAuthenticated);
 
   // Inicia o trial local na primeira entrada na Home (pós-login + onboarding).
   useEffect(() => {
