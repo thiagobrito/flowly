@@ -16,7 +16,12 @@ import StatCard from './components/StatsCard';
 import { fetchProgress } from './data';
 import type { ProgressData } from './types';
 
-export default function Statistics() {
+type StatisticsProps = {
+  autoOpenSleep?: boolean;
+  onSleepPromptHandled?: () => void;
+};
+
+export default function Statistics({ autoOpenSleep, onSleepPromptHandled }: StatisticsProps = {}) {
   const isDark = useColorScheme() === 'dark';
   const queryClient = useQueryClient();
   const [refreshing, setRefreshing] = useState(false);
@@ -121,7 +126,7 @@ export default function Statistics() {
         </View>
 
         <View className="mt-7">
-          <SleepCard energyInfo={energyInfo} isDark={isDark} selectedDay={selectedDay} />
+          <SleepCard energyInfo={energyInfo} isDark={isDark} selectedDay={selectedDay} autoOpenEdit={autoOpenSleep} onAutoOpenHandled={onSleepPromptHandled} />
         </View>
 
         <View className="mt-7">

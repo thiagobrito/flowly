@@ -1,6 +1,6 @@
 import { Activity, BedDouble, Brain, Moon, MoonStar, Pencil, Sunrise, X } from 'lucide-react-native';
 import type { ComponentType } from 'react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, Text, View } from 'react-native';
 
 import TimeStepper from '@/components/TimeStepper';
@@ -89,10 +89,16 @@ function SleepTile({ Icon, label, value, isDark }: { Icon: ComponentType<{ size?
   );
 }
 
-export default function SleepCard({ energyInfo, isDark, selectedDay }: { energyInfo: UseEnergyScoreResult; isDark: boolean; selectedDay?: string }) {
+export default function SleepCard({ energyInfo, isDark, selectedDay, autoOpenEdit, onAutoOpenHandled }: { energyInfo: UseEnergyScoreResult; isDark: boolean; selectedDay?: string; autoOpenEdit?: boolean; onAutoOpenHandled?: () => void }) {
   const { metrics, energy, loading, error } = energyInfo;
-  const { setDayOverride } = useSleepProfile();
+  const { profile, setDayOverride, setUsualTimes } = useSleepProfile();
   const [editing, setEditing] = useState(false);
+
+  useEffect(() => {
+    if (!autoOpenEdit) return;
+    setEditing(true);
+    onAutoOpenHandled?.();
+  }, [autoOpenEdit, onAutoOpenHandled]);
 
   const cardShadow = {
     shadowColor: '#1e3a8a',
@@ -105,6 +111,9 @@ export default function SleepCard({ energyInfo, isDark, selectedDay }: { energyI
   const hasSleepData = metrics != null && (metrics.sleepHours != null || metrics.bedTime != null || metrics.wakeTime != null || metrics.deepSleepMin != null || metrics.remSleepMin != null || metrics.sleepVariability != null);
 
   const handleSave = (times: { wakeTime: string; bedTime: string }) => {
+    if (!profile.usualWakeTime && !profile.usualBedTime) {
+      setUsualTimes({ wakeTime: times.wakeTime, bedTime: times.bedTime });
+    }
     // Override da noite exibida (chave = dia do despertar), aplicado por cima
     // dos dados de saúde pelo `applySleepProfile`.
     const dayKey = localDateKey(selectedDay ? new Date(selectedDay) : new Date());

@@ -5,8 +5,8 @@ import { Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-nativ
 import { api } from '@/lib/network';
 import { isKnownLifeAreaId, LIFE_AREAS } from '@/screens/common';
 
-import type { Goal, GoalHealth, GoalMetric } from '../data';
-import { createEmptyHealth, createEmptyMetric, HEALTH_DOT_COLOR, HEALTH_LEVEL_CYCLE, nextMetricDirection } from '../data';
+import type { Goal, GoalHealth, GoalMetric, MetricUnitKind } from '../data';
+import { createEmptyHealth, createEmptyMetric, CURRENCY_OPTIONS, HEALTH_DOT_COLOR, HEALTH_LEVEL_CYCLE, nextMetricDirection, resolveMetricUnit, UNIT_KIND_OPTIONS, WEIGHT_OPTIONS } from '../data';
 
 type GoalEditorProps = {
   goal: Goal;
@@ -85,6 +85,21 @@ export default function GoalEditor({ goal, isNew, isDark, onCancel, onSave, onDe
         return { ...next, direction: nextMetricDirection(metric, patch) };
       }),
     }));
+
+  const setMetricUnitKind = (id: string, unitKind: MetricUnitKind) => {
+    const metric = draft.metrics.find((item) => item.id === id);
+    if (!metric) return;
+
+    if (unitKind === 'currency') {
+      updateMetric(id, { unitKind, currency: metric.currency ?? 'BRL', weightUnit: undefined, unit: '' });
+      return;
+    }
+    if (unitKind === 'weight') {
+      updateMetric(id, { unitKind, weightUnit: metric.weightUnit ?? 'kg', currency: undefined, unit: '' });
+      return;
+    }
+    updateMetric(id, { unitKind, currency: undefined, weightUnit: undefined, unit: '' });
+  };
   const addMetric = () => setDraft((prev) => ({ ...prev, metrics: [...prev.metrics, createEmptyMetric()] }));
   const removeMetric = (id: string) => setDraft((prev) => ({ ...prev, metrics: prev.metrics.filter((metric) => metric.id !== id) }));
 
@@ -283,8 +298,69 @@ export default function GoalEditor({ goal, isNew, isDark, onCancel, onSave, onDe
                 <NumberField label="Alvo" value={metric.target} onChange={(value) => updateMetric(metric.id, { target: value })} isDark={isDark} />
               </View>
               <View className="mt-2.5">
-                <FieldLabel>Unidade</FieldLabel>
-                <TextInput value={metric.unit} onChangeText={(unit) => updateMetric(metric.id, { unit })} placeholder="Ex.: %, kg, R$" placeholderTextColor={placeholderColor} className={textInputClass} style={inputStyle(isDark)} />
+                <FieldLabel>Unidade de medida</FieldLabel>
+                <View className="flex-row flex-wrap gap-2">
+                  {UNIT_KIND_OPTIONS.map((option) => {
+                    const resolved = resolveMetricUnit(metric);
+                    const selected = resolved.unitKind === option.value;
+                    return (
+                      <Pressable
+                        key={option.value}
+                        onPress={() => setMetricUnitKind(metric.id, option.value)}
+                        accessibilityRole="button"
+                        accessibilityState={{ selected }}
+                        className="rounded-full border px-3 py-2 active:opacity-80"
+                        style={{ borderColor: optionBorder(selected, ACCENT, isDark), backgroundColor: selected ? `${ACCENT}22` : 'transparent' }}
+                      >
+                        <Text className="text-sm font-medium" style={{ color: optionText(selected, ACCENT, isDark) }}>
+                          {option.label}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+                {resolveMetricUnit(metric).unitKind === 'currency' ? (
+                  <View className="mt-2 flex-row flex-wrap gap-2">
+                    {CURRENCY_OPTIONS.map((option) => {
+                      const selected = metric.currency === option.value || (!metric.currency && option.value === 'BRL');
+                      return (
+                        <Pressable
+                          key={option.value}
+                          onPress={() => updateMetric(metric.id, { currency: option.value, unitKind: 'currency' })}
+                          accessibilityRole="button"
+                          accessibilityState={{ selected }}
+                          className="rounded-full border px-3 py-2 active:opacity-80"
+                          style={{ borderColor: optionBorder(selected, ACCENT, isDark), backgroundColor: selected ? `${ACCENT}22` : 'transparent' }}
+                        >
+                          <Text className="text-sm font-medium" style={{ color: optionText(selected, ACCENT, isDark) }}>
+                            {option.label}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                ) : null}
+                {resolveMetricUnit(metric).unitKind === 'weight' ? (
+                  <View className="mt-2 flex-row flex-wrap gap-2">
+                    {WEIGHT_OPTIONS.map((option) => {
+                      const selected = metric.weightUnit === option.value || (!metric.weightUnit && option.value === 'kg');
+                      return (
+                        <Pressable
+                          key={option.value}
+                          onPress={() => updateMetric(metric.id, { weightUnit: option.value, unitKind: 'weight' })}
+                          accessibilityRole="button"
+                          accessibilityState={{ selected }}
+                          className="rounded-full border px-3 py-2 active:opacity-80"
+                          style={{ borderColor: optionBorder(selected, ACCENT, isDark), backgroundColor: selected ? `${ACCENT}22` : 'transparent' }}
+                        >
+                          <Text className="text-sm font-medium" style={{ color: optionText(selected, ACCENT, isDark) }}>
+                            {option.label}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                ) : null}
               </View>
             </View>
           ))}

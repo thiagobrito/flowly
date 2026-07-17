@@ -3,7 +3,7 @@ import { Text, View } from 'react-native';
 
 import ProgressBar from '@/screens/Config/Goals/components/ProgressBar';
 
-import { formatMetricValue, type GoalMetric, resolveMetricDirection } from '../data';
+import { formatMetricValue, type GoalMetric, resolveMetricDirection, resolveMetricUnit } from '../data';
 
 type MetricRowProps = {
   metric: GoalMetric;
@@ -37,7 +37,8 @@ function MetricSuccess({ message, isDark }: { message: string; isDark: boolean }
 }
 
 export default function MetricRow({ metric, isDark, accent }: MetricRowProps) {
-  const { current, target, unit } = metric;
+  const { current, target } = metric;
+  const unit = resolveMetricUnit(metric);
   const direction = resolveMetricDirection(metric);
   const gap = Math.abs(target - current);
 

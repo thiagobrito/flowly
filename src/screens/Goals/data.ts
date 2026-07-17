@@ -5,13 +5,43 @@ export type GoalTypeKind = 'primary' | 'secondary';
 export type ExecutionTrend = 'improving' | 'stable' | 'declining';
 export type HealthLevel = 'green' | 'yellow' | 'red';
 export type MetricDirection = 'increase' | 'decrease';
+export type MetricUnitKind = 'number' | 'currency' | 'weight';
+export type CurrencyCode = 'BRL' | 'USD' | 'EUR';
+export type WeightUnit = 'kg' | 'lb';
+
+export type ResolvedMetricUnit = {
+  unitKind: MetricUnitKind;
+  currency?: CurrencyCode;
+  weightUnit?: WeightUnit;
+};
+
+export const UNIT_KIND_OPTIONS = [
+  { value: 'number' as const, label: 'Número' },
+  { value: 'currency' as const, label: 'Dinheiro' },
+  { value: 'weight' as const, label: 'Peso' },
+];
+
+export const CURRENCY_OPTIONS = [
+  { value: 'BRL' as const, label: 'R$', locale: 'pt-BR' },
+  { value: 'USD' as const, label: '$', locale: 'en-US' },
+  { value: 'EUR' as const, label: '€', locale: 'de-DE' },
+];
+
+export const WEIGHT_OPTIONS = [
+  { value: 'kg' as const, label: 'Kg' },
+  { value: 'lb' as const, label: 'Lb' },
+];
 
 export type GoalMetric = {
   id: string;
   label: string;
   current: number;
   target: number;
+  /** @deprecated Legacy free-text unit; use unitKind/currency/weightUnit instead. */
   unit: string;
+  unitKind?: MetricUnitKind;
+  currency?: CurrencyCode;
+  weightUnit?: WeightUnit;
   direction?: MetricDirection;
 };
 
@@ -33,22 +63,53 @@ export function resolveMetricDirection(metric: Pick<GoalMetric, 'current' | 'tar
   return inferMetricDirection(metric.current, metric.target);
 }
 
-export function formatMetricValue(value: number, unit: string) {
-  if (!unit) return `${value}`;
-  if (unit === 'R$') return `${unit} ${value.toLocaleString('pt-BR')}`;
-  if (unit === '%') return `${value}%`;
-  return `${value} ${unit}`;
+function currencyOption(code: CurrencyCode) {
+  return CURRENCY_OPTIONS.find((option) => option.value === code) ?? CURRENCY_OPTIONS[0]!;
+}
+
+export function resolveMetricUnit(metric: Partial<Pick<GoalMetric, 'unit' | 'unitKind' | 'currency' | 'weightUnit'>>): ResolvedMetricUnit {
+  if (metric.unitKind === 'currency') {
+    return { unitKind: 'currency', currency: metric.currency ?? 'BRL' };
+  }
+  if (metric.unitKind === 'weight') {
+    return { unitKind: 'weight', weightUnit: metric.weightUnit ?? 'kg' };
+  }
+  if (metric.unitKind === 'number') {
+    return { unitKind: 'number' };
+  }
+
+  const legacy = (metric.unit ?? '').trim().toLowerCase();
+  if (legacy === 'r$') return { unitKind: 'currency', currency: 'BRL' };
+  if (legacy === 'kg') return { unitKind: 'weight', weightUnit: 'kg' };
+  if (legacy === 'lb') return { unitKind: 'weight', weightUnit: 'lb' };
+  return { unitKind: 'number' };
+}
+
+export function formatMetricValue(value: number, unit: ResolvedMetricUnit) {
+  if (unit.unitKind === 'currency') {
+    const option = currencyOption(unit.currency ?? 'BRL');
+    return `${option.label} ${value.toLocaleString(option.locale, { maximumFractionDigits: 2 })}`;
+  }
+  if (unit.unitKind === 'weight') {
+    const weightUnit = unit.weightUnit ?? 'kg';
+    return `${value} ${weightUnit}`;
+  }
+  return `${value}`;
 }
 
 function normalizeMetric(raw: Partial<GoalMetric> & Pick<GoalMetric, 'id' | 'label' | 'current' | 'target'>): GoalMetric {
   const current = raw.current ?? 0;
   const target = raw.target ?? 0;
+  const resolved = resolveMetricUnit(raw);
   return {
     id: raw.id,
     label: raw.label,
     current,
     target,
     unit: raw.unit ?? '',
+    unitKind: resolved.unitKind,
+    currency: resolved.currency,
+    weightUnit: resolved.weightUnit,
     direction: raw.direction ?? inferMetricDirection(current, target),
   };
 }
@@ -190,7 +251,7 @@ export function normalizeGoal(raw: Partial<Goal> & { area?: string; label?: stri
 }
 
 export function createEmptyMetric(): GoalMetric {
-  return { id: createGoalId(), label: '', current: 0, target: 0, unit: '', direction: 'increase' };
+  return { id: createGoalId(), label: '', current: 0, target: 0, unit: '', unitKind: 'number', direction: 'increase' };
 }
 
 export function createEmptyHealth(): GoalHealth {
