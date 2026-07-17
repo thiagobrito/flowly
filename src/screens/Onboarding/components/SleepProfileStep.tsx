@@ -6,7 +6,7 @@ import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 
 import TimeStepper from '@/components/TimeStepper';
 import { getHealthProvider } from '@/lib/energy';
-import { DEFAULT_BED_TIME, DEFAULT_WAKE_TIME, useSleepProfile } from '@/lib/sleepProfile';
+import { DEFAULT_BED_TIME, DEFAULT_WAKE_TIME, isoToTimeString, useSleepProfile } from '@/lib/sleepProfile';
 
 import type { SleepProfileStep as SleepProfileStepData } from '../data';
 import NavFooter from './NavFooter';
@@ -71,7 +71,13 @@ export default function SleepProfileStep({ step, isDark, onNext }: SleepProfileS
       const metrics = await provider.collect();
 
       // Valida se a saúde realmente trouxe os horários de dormir e acordar.
+      // Persiste como usuais para o gate da Home e como fallback de energia.
       if (metrics.wakeTime && metrics.bedTime) {
+        const wake = isoToTimeString(metrics.wakeTime);
+        const bed = isoToTimeString(metrics.bedTime);
+        if (wake && bed) {
+          setUsualTimes({ wakeTime: wake, bedTime: bed });
+        }
         setPhase('found');
         return;
       }

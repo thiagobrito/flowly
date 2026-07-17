@@ -11,7 +11,7 @@
  * Segue o padrão lib-fina + hook do projeto (`featureFlags/`, `pendingSync/`).
  */
 
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { api, getAuthToken } from '@/lib/network';
 import { usePendingSync } from '@/lib/pendingSync';
@@ -19,9 +19,10 @@ import type { PersistedRecord } from '@/lib/storage';
 import { usePersistedState } from '@/lib/storage';
 
 import type { SleepDayOverride, SleepProfileData } from './apply';
+import { isSleepProfileConfigured } from './apply';
 
 export type { SleepDayOverride, SleepProfileData } from './apply';
-export { applySleepProfile, minutesToTimeString, timeStringToMinutes } from './apply';
+export { applySleepProfile, isoToTimeString, isSleepProfileConfigured, minutesToTimeString, timeStringToMinutes } from './apply';
 
 export type SleepProfile = PersistedRecord &
   SleepProfileData & {
@@ -49,6 +50,20 @@ const SYNC_PATH = '/sleep-profile';
  * montagem posterior — já logada — tente de novo.
  */
 let hydrationAttempted = false;
+
+/**
+ * Hidratação remota (ou decisão de não buscá-la) já concluiu nesta sessão.
+ * Compartilhada entre instâncias do hook para o gate da Home não disparar
+ * antes do GET /sleep-profile popular o perfil local.
+ */
+let remoteHydrationSettled = false;
+const remoteHydrationListeners = new Set<() => void>();
+
+function markRemoteHydrationSettled(): void {
+  if (remoteHydrationSettled) return;
+  remoteHydrationSettled = true;
+  for (const listener of remoteHydrationListeners) listener();
+}
 
 function trimOverrides(overrides: Record<string, SleepDayOverride>): Record<string, SleepDayOverride> {
   const keys = Object.keys(overrides).sort();
@@ -79,9 +94,19 @@ function isProfileEmpty(profile: SleepProfileData): boolean {
 export function useSleepProfile() {
   const [profile, setProfile] = usePersistedState<SleepProfile>(EMPTY_PROFILE, PROFILE_KEY);
   const { enqueue } = usePendingSync();
+  const [remoteSettled, setRemoteSettled] = useState(remoteHydrationSettled);
 
   const profileRef = useRef(profile);
   profileRef.current = profile;
+
+  useEffect(() => {
+    const onSettle = (): void => setRemoteSettled(true);
+    remoteHydrationListeners.add(onSettle);
+    if (remoteHydrationSettled) setRemoteSettled(true);
+    return () => {
+      remoteHydrationListeners.delete(onSettle);
+    };
+  }, []);
 
   /**
    * Envia o perfil completo ao servidor (documento inteiro, escrita idempotente:
@@ -142,8 +167,16 @@ export function useSleepProfile() {
   // popula o estado local. Não sobrescreve dados locais já informados.
   useEffect(() => {
     if (!profile.loaded) return;
+    if (remoteHydrationSettled) return;
     if (hydrationAttempted) return;
-    if (!getAuthToken()) return;
+
+    // Sem sessão: o gate da Home só roda autenticado; aqui liberamos isReady
+    // com o que já veio do AsyncStorage.
+    if (!getAuthToken()) {
+      markRemoteHydrationSettled();
+      return;
+    }
+
     // Perfil local já preenchido: ele pode nunca ter chegado ao servidor (o PUT
     // best-effort falhou e a fila de reenvio se perdeu, reinstalação/novo
     // aparelho, ou dado anterior à existência do sync). Reconciliamos no sentido
@@ -152,6 +185,7 @@ export function useSleepProfile() {
     if (!isProfileEmpty(profileRef.current)) {
       hydrationAttempted = true;
       syncProfile(profileRef.current);
+      markRemoteHydrationSettled();
       return;
     }
 
@@ -175,12 +209,18 @@ export function useSleepProfile() {
       .catch(() => {
         // Falha de rede: libera para uma nova tentativa em outra montagem.
         hydrationAttempted = false;
+      })
+      .finally(() => {
+        markRemoteHydrationSettled();
       });
   }, [profile.loaded, setProfile, syncProfile]);
 
   return {
     profile,
     isHydrated: Boolean(profile.loaded),
+    /** Local hidratado e tentativa de sync remoto (GET) já concluída nesta sessão. */
+    isReady: Boolean(profile.loaded) && remoteSettled,
+    isConfigured: isSleepProfileConfigured(profile),
     setHasDevice,
     setUsualTimes,
     setDayOverride,

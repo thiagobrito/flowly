@@ -12,7 +12,7 @@ import { useFeatureFlags } from '@/lib/featureFlags';
 import { useOnboarding } from '@/lib/onboarding';
 import { usePendingSyncFlush } from '@/lib/pendingSync';
 import { useSleepLogSync } from '@/lib/sleepLog';
-import { useSleepProfile } from '@/lib/sleepProfile';
+import { isSleepProfileConfigured, useSleepProfile } from '@/lib/sleepProfile';
 import { useLocalTrial, useSubscription } from '@/lib/subscription';
 import Calendar from '@/screens/Calendar';
 import { onceFrequencyFromISO } from '@/screens/Calendar/scheduleSync';
@@ -72,7 +72,7 @@ function Home() {
   const sleepPrompted = useRef(false);
   const { isHydrated, isAuthenticated, signOut } = useSession();
   const { isHydrated: onboardingHydrated, completed: onboardingCompleted } = useOnboarding();
-  const { profile, isHydrated: sleepHydrated } = useSleepProfile();
+  const { profile, isHydrated: sleepHydrated, isReady: sleepReady } = useSleepProfile();
 
   // Gating premium: assinatura (backend + RevenueCat) ou trial local em vigor.
   // A duração do trial (7/14/21 dias) vem de feature flag.
@@ -98,17 +98,17 @@ function Home() {
     if (isAuthenticated && onboardingCompleted) startTrialIfNeeded();
   }, [isAuthenticated, onboardingCompleted, startTrialIfNeeded]);
 
-  // Sem horários usuais de sono: leva para Estatísticas e abre o modal do card de Sono.
+  // Sem perfil de sono configurado: leva para Estatísticas e abre o modal do card de Sono.
   useEffect(() => {
-    if (!isAuthenticated || !onboardingCompleted || !sleepHydrated || !subscriptionReady || !trialHydrated || isLocked) return;
-    if (profile.usualWakeTime || profile.usualBedTime) return;
+    if (!isAuthenticated || !onboardingCompleted || !sleepReady || !subscriptionReady || !trialHydrated || isLocked) return;
+    if (isSleepProfileConfigured(profile)) return;
     if (sleepPrompted.current) return;
 
     sleepPrompted.current = true;
     setShowConfig(false);
     setTab('progress');
     setAutoOpenSleep(true);
-  }, [isAuthenticated, onboardingCompleted, sleepHydrated, subscriptionReady, trialHydrated, isLocked, profile.usualWakeTime, profile.usualBedTime]);
+  }, [isAuthenticated, onboardingCompleted, sleepReady, subscriptionReady, trialHydrated, isLocked, profile]);
 
   const handleTabChange = (next: TabKey) => {
     if (next === 'new') {

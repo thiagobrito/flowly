@@ -111,7 +111,7 @@ export default function SleepCard({ energyInfo, isDark, selectedDay, autoOpenEdi
   const hasSleepData = metrics != null && (metrics.sleepHours != null || metrics.bedTime != null || metrics.wakeTime != null || metrics.deepSleepMin != null || metrics.remSleepMin != null || metrics.sleepVariability != null);
 
   const handleSave = (times: { wakeTime: string; bedTime: string }) => {
-    if (!profile.usualWakeTime && !profile.usualBedTime) {
+    if (!profile.usualWakeTime || !profile.usualBedTime) {
       setUsualTimes({ wakeTime: times.wakeTime, bedTime: times.bedTime });
     }
     // Override da noite exibida (chave = dia do despertar), aplicado por cima

@@ -1,6 +1,6 @@
 import type { HealthMetrics } from '@/lib/energy/types';
 
-import { applySleepProfile, minutesToTimeString, timeStringToMinutes } from './apply';
+import { applySleepProfile, isoToTimeString, isSleepProfileConfigured, minutesToTimeString, timeStringToMinutes } from './apply';
 
 const emptyMetrics = (nowIso: string): HealthMetrics => ({
   sleepHours: null,
@@ -46,6 +46,45 @@ describe('timeStringToMinutes / minutesToTimeString', () => {
     expect(minutesToTimeString(450)).toBe('07:30');
     expect(minutesToTimeString(-15)).toBe('23:45');
     expect(minutesToTimeString(24 * 60 + 30)).toBe('00:30');
+  });
+});
+
+describe('isSleepProfileConfigured', () => {
+  it('is true when hasDevice is true', () => {
+    expect(isSleepProfileConfigured({ hasDevice: true })).toBe(true);
+    expect(isSleepProfileConfigured({ hasDevice: true, usualWakeTime: null, usualBedTime: null })).toBe(true);
+  });
+
+  it('is true when both usual times are set', () => {
+    expect(isSleepProfileConfigured({ usualWakeTime: '07:00', usualBedTime: '23:00' })).toBe(true);
+    expect(isSleepProfileConfigured({ hasDevice: false, usualWakeTime: '07:00', usualBedTime: '23:00' })).toBe(true);
+  });
+
+  it('is false when only one usual time is set', () => {
+    expect(isSleepProfileConfigured({ usualWakeTime: '07:00' })).toBe(false);
+    expect(isSleepProfileConfigured({ usualBedTime: '23:00' })).toBe(false);
+    expect(isSleepProfileConfigured({ hasDevice: false, usualWakeTime: '07:00', usualBedTime: null })).toBe(false);
+  });
+
+  it('is false for empty or missing profile', () => {
+    expect(isSleepProfileConfigured(null)).toBe(false);
+    expect(isSleepProfileConfigured(undefined)).toBe(false);
+    expect(isSleepProfileConfigured({})).toBe(false);
+    expect(isSleepProfileConfigured({ hasDevice: false })).toBe(false);
+    expect(isSleepProfileConfigured({ hasDevice: null, usualWakeTime: '  ', usualBedTime: '23:00' })).toBe(false);
+  });
+});
+
+describe('isoToTimeString', () => {
+  it('extracts local HH:MM from a valid ISO', () => {
+    expect(isoToTimeString('2026-06-15T07:30:00.000-03:00')).toBe('07:30');
+    expect(isoToTimeString('2026-06-14T23:00:00.000-03:00')).toBe('23:00');
+  });
+
+  it('returns null for missing or invalid values', () => {
+    expect(isoToTimeString(null)).toBeNull();
+    expect(isoToTimeString(undefined)).toBeNull();
+    expect(isoToTimeString('not-a-date')).toBeNull();
   });
 });
 

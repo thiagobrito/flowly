@@ -46,6 +46,26 @@ export function minutesToTimeString(minutes: number): string {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
 
+/** Extrai "HH:MM" (hora local do aparelho) de um ISO, ou `null` se inválido. */
+export function isoToTimeString(iso: string | null | undefined): string | null {
+  if (!iso) return null;
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return null;
+  return minutesToTimeString(date.getHours() * 60 + date.getMinutes());
+}
+
+/**
+ * Perfil pronto para o app não pedir horários de novo: dispositivo de sono
+ * já configurado (Health) ou ambos os horários usuais preenchidos.
+ */
+export function isSleepProfileConfigured(profile: SleepProfileData | null | undefined): boolean {
+  if (!profile) return false;
+  if (profile.hasDevice === true) return true;
+  const wake = profile.usualWakeTime?.trim();
+  const bed = profile.usualBedTime?.trim();
+  return Boolean(wake && bed);
+}
+
 /** ISO (fuso do app) do dia civil de `dayRefIso` no horário `hhmm`, com deslocamento opcional de dias. */
 function isoAtTime(dayRefIso: string, hhmm: string, dayOffset = 0): string | null {
   const minutes = timeStringToMinutes(hhmm);
