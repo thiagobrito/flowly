@@ -91,7 +91,7 @@ function SleepTile({ Icon, label, value, isDark }: { Icon: ComponentType<{ size?
 
 export default function SleepCard({ energyInfo, isDark, selectedDay, autoOpenEdit, onAutoOpenHandled }: { energyInfo: UseEnergyScoreResult; isDark: boolean; selectedDay?: string; autoOpenEdit?: boolean; onAutoOpenHandled?: () => void }) {
   const { metrics, energy, loading, error } = energyInfo;
-  const { profile, setDayOverride, setUsualTimes } = useSleepProfile();
+  const { saveNightTimes } = useSleepProfile();
   const [editing, setEditing] = useState(false);
 
   useEffect(() => {
@@ -111,13 +111,10 @@ export default function SleepCard({ energyInfo, isDark, selectedDay, autoOpenEdi
   const hasSleepData = metrics != null && (metrics.sleepHours != null || metrics.bedTime != null || metrics.wakeTime != null || metrics.deepSleepMin != null || metrics.remSleepMin != null || metrics.sleepVariability != null);
 
   const handleSave = (times: { wakeTime: string; bedTime: string }) => {
-    if (!profile.usualWakeTime || !profile.usualBedTime) {
-      setUsualTimes({ wakeTime: times.wakeTime, bedTime: times.bedTime });
-    }
-    // Override da noite exibida (chave = dia do despertar), aplicado por cima
-    // dos dados de saúde pelo `applySleepProfile`.
+    // Override da noite + usuais (se faltarem) numa só escrita — evita corrida
+    // que apagava usualWakeTime/usualBedTime e reabria o modal no próximo boot.
     const dayKey = localDateKey(selectedDay ? new Date(selectedDay) : new Date());
-    setDayOverride(dayKey, times);
+    saveNightTimes(dayKey, times);
     setEditing(false);
   };
 

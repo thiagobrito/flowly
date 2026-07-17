@@ -1,6 +1,6 @@
 import type { HealthMetrics } from '@/lib/energy/types';
 
-import { applySleepProfile, isoToTimeString, isSleepProfileConfigured, minutesToTimeString, timeStringToMinutes } from './apply';
+import { applySleepProfile, healUsualTimesFromOverrides, isoToTimeString, isSleepProfileConfigured, latestCompleteOverride, mergeNightTimes, minutesToTimeString, type SleepDayOverride, timeStringToMinutes } from './apply';
 
 const emptyMetrics = (nowIso: string): HealthMetrics => ({
   sleepHours: null,
@@ -167,5 +167,84 @@ describe('applySleepProfile', () => {
     expect(result.hrvMs).toBe(55);
     expect(result.restingHeartRate).toBe(52);
     expect(result.deepSleepMin).toBe(80);
+  });
+});
+
+describe('latestCompleteOverride / healUsualTimesFromOverrides', () => {
+  it('picks the most recent override with both times', () => {
+    expect(
+      latestCompleteOverride({
+        '2026-06-10': { wakeTime: '07:00', bedTime: '23:00' },
+        '2026-06-14': { wakeTime: '08:00' },
+        '2026-06-15': { wakeTime: '06:30', bedTime: '22:45' },
+      }),
+    ).toEqual({ wakeTime: '06:30', bedTime: '22:45' });
+  });
+
+  it('returns null when no override is complete', () => {
+    expect(latestCompleteOverride({ '2026-06-15': { wakeTime: '07:00' } })).toBeNull();
+    expect(latestCompleteOverride({})).toBeNull();
+    expect(latestCompleteOverride(null)).toBeNull();
+  });
+
+  it('backfills missing usuals from the latest complete override', () => {
+    const healed = healUsualTimesFromOverrides({
+      usualWakeTime: null,
+      usualBedTime: null,
+      overrides: { '2026-06-15': { wakeTime: '07:15', bedTime: '23:30' } },
+    });
+
+    expect(healed.usualWakeTime).toBe('07:15');
+    expect(healed.usualBedTime).toBe('23:30');
+    expect(isSleepProfileConfigured(healed)).toBe(true);
+  });
+
+  it('fills only the missing usual field', () => {
+    const healed = healUsualTimesFromOverrides({
+      usualWakeTime: '07:00',
+      usualBedTime: null,
+      overrides: { '2026-06-15': { wakeTime: '08:00', bedTime: '23:00' } },
+    });
+
+    expect(healed.usualWakeTime).toBe('07:00');
+    expect(healed.usualBedTime).toBe('23:00');
+  });
+
+  it('returns the same object when usuals are already set', () => {
+    const profile = { usualWakeTime: '07:00', usualBedTime: '23:00', overrides: { '2026-06-15': { wakeTime: '08:00', bedTime: '00:00' } } };
+    expect(healUsualTimesFromOverrides(profile)).toBe(profile);
+  });
+});
+
+describe('mergeNightTimes', () => {
+  const identityTrim = <T extends Record<string, unknown>>(o: T) => o;
+
+  it('writes override and usuals in one pass when usuals are missing', () => {
+    const next = mergeNightTimes({ usualWakeTime: null, usualBedTime: null, overrides: {} as Record<string, SleepDayOverride> }, '2026-06-15', { wakeTime: '07:00', bedTime: '23:00' }, identityTrim);
+
+    expect(next.overrides?.['2026-06-15']).toEqual({ wakeTime: '07:00', bedTime: '23:00' });
+    expect(next.usualWakeTime).toBe('07:00');
+    expect(next.usualBedTime).toBe('23:00');
+    expect(isSleepProfileConfigured(next)).toBe(true);
+  });
+
+  it('keeps existing usuals when only updating the night override', () => {
+    const next = mergeNightTimes({ usualWakeTime: '07:00', usualBedTime: '23:00', overrides: {} as Record<string, SleepDayOverride> }, '2026-06-15', { wakeTime: '08:30', bedTime: '00:15' }, identityTrim);
+
+    expect(next.usualWakeTime).toBe('07:00');
+    expect(next.usualBedTime).toBe('23:00');
+    expect(next.overrides?.['2026-06-15']).toEqual({ wakeTime: '08:30', bedTime: '00:15' });
+  });
+
+  it('survives a sequential merge after an eager-ref style commit (no lost usuals)', () => {
+    // Simula o padrão commitProfile: cada escrita enxerga o resultado da anterior.
+    let profile = { usualWakeTime: null as string | null, usualBedTime: null as string | null, overrides: {} as Record<string, SleepDayOverride> };
+    profile = mergeNightTimes(profile, '2026-06-15', { wakeTime: '07:00', bedTime: '23:00' }, identityTrim);
+    profile = mergeNightTimes(profile, '2026-06-16', { wakeTime: '07:30', bedTime: '23:30' }, identityTrim);
+
+    expect(profile.usualWakeTime).toBe('07:00');
+    expect(profile.usualBedTime).toBe('23:00');
+    expect(profile.overrides['2026-06-15']).toEqual({ wakeTime: '07:00', bedTime: '23:00' });
+    expect(profile.overrides['2026-06-16']).toEqual({ wakeTime: '07:30', bedTime: '23:30' });
   });
 });

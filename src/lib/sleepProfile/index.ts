@@ -19,10 +19,10 @@ import type { PersistedRecord } from '@/lib/storage';
 import { usePersistedState } from '@/lib/storage';
 
 import type { SleepDayOverride, SleepProfileData } from './apply';
-import { isSleepProfileConfigured } from './apply';
+import { healUsualTimesFromOverrides, isSleepProfileConfigured, mergeNightTimes } from './apply';
 
 export type { SleepDayOverride, SleepProfileData } from './apply';
-export { applySleepProfile, isoToTimeString, isSleepProfileConfigured, minutesToTimeString, timeStringToMinutes } from './apply';
+export { applySleepProfile, healUsualTimesFromOverrides, isoToTimeString, isSleepProfileConfigured, latestCompleteOverride, mergeNightTimes, minutesToTimeString, timeStringToMinutes } from './apply';
 
 export type SleepProfile = PersistedRecord &
   SleepProfileData & {
@@ -125,41 +125,62 @@ export function useSleepProfile() {
     [enqueue],
   );
 
+  /**
+   * Aplica um updater, atualiza o ref na hora (antes do re-render) e sincroniza.
+   * Sem o update eager, duas mutações síncronas lêem o mesmo snapshot e a
+   * segunda sobrescreve a primeira.
+   */
+  const commitProfile = useCallback(
+    (updater: (current: SleepProfile) => SleepProfile) => {
+      const next = updater(profileRef.current);
+      profileRef.current = next;
+      setProfile(next);
+      syncProfile(next);
+      return next;
+    },
+    [setProfile, syncProfile],
+  );
+
   /** Registra se o usuário tem dispositivo que monitora sono. */
   const setHasDevice = useCallback(
     (hasDevice: boolean) => {
-      const next = { ...profileRef.current, hasDevice };
-      setProfile(next);
-      syncProfile(next);
+      commitProfile((current) => ({ ...current, hasDevice }));
     },
-    [setProfile, syncProfile],
+    [commitProfile],
   );
 
   /** Define os horários usuais ("HH:MM"). Passe `null` para limpar um campo. */
   const setUsualTimes = useCallback(
     (times: { wakeTime?: string | null; bedTime?: string | null }) => {
-      const { current } = profileRef;
-      const next = {
+      commitProfile((current) => ({
         ...current,
         usualWakeTime: times.wakeTime !== undefined ? times.wakeTime : current.usualWakeTime,
         usualBedTime: times.bedTime !== undefined ? times.bedTime : current.usualBedTime,
-      };
-      setProfile(next);
-      syncProfile(next);
+      }));
     },
-    [setProfile, syncProfile],
+    [commitProfile],
   );
 
   /** Registra a correção manual de uma noite (chave: `YYYY-MM-DD` do dia de acordar). */
   const setDayOverride = useCallback(
     (dayKey: string, override: SleepDayOverride) => {
-      const { current } = profileRef;
-      const overrides = trimOverrides({ ...(current.overrides ?? {}), [dayKey]: override });
-      const next = { ...current, overrides };
-      setProfile(next);
-      syncProfile(next);
+      commitProfile((current) => ({
+        ...current,
+        overrides: trimOverrides({ ...(current.overrides ?? {}), [dayKey]: override }),
+      }));
     },
-    [setProfile, syncProfile],
+    [commitProfile],
+  );
+
+  /**
+   * Salva horários da noite exibida e, se faltarem usuais, preenche ambos na
+   * mesma escrita (evita corrida setUsualTimes + setDayOverride).
+   */
+  const saveNightTimes = useCallback(
+    (dayKey: string, times: { wakeTime: string; bedTime: string }) => {
+      commitProfile((current) => mergeNightTimes(current, dayKey, times, trimOverrides));
+    },
+    [commitProfile],
   );
 
   // Hidratação inicial: em sessão autenticada e com o perfil local ainda vazio
@@ -173,6 +194,12 @@ export function useSleepProfile() {
     // Sem sessão: o gate da Home só roda autenticado; aqui liberamos isReady
     // com o que já veio do AsyncStorage.
     if (!getAuthToken()) {
+      // Cura perfil local corrompido (override sem usuais) antes de liberar o gate.
+      const healed = healUsualTimesFromOverrides(profileRef.current);
+      if (healed !== profileRef.current) {
+        profileRef.current = healed;
+        setProfile(healed);
+      }
       markRemoteHydrationSettled();
       return;
     }
@@ -184,7 +211,14 @@ export function useSleepProfile() {
     // as estatísticas ficam sem o perfil mesmo com o app mostrando os horários.
     if (!isProfileEmpty(profileRef.current)) {
       hydrationAttempted = true;
-      syncProfile(profileRef.current);
+      const healed = healUsualTimesFromOverrides(profileRef.current);
+      if (healed !== profileRef.current) {
+        profileRef.current = healed;
+        setProfile(healed);
+        syncProfile(healed);
+      } else {
+        syncProfile(profileRef.current);
+      }
       markRemoteHydrationSettled();
       return;
     }
@@ -197,13 +231,19 @@ export function useSleepProfile() {
         // Só popula se ainda estiver vazio (o usuário pode ter editado enquanto
         // o GET estava em voo) e o servidor tiver algo de fato.
         if (remote && !isProfileEmpty(remote) && isProfileEmpty(profileRef.current)) {
-          setProfile({
+          const healed = healUsualTimesFromOverrides({
             ...profileRef.current,
             hasDevice: remote.hasDevice ?? null,
             usualWakeTime: remote.usualWakeTime ?? null,
             usualBedTime: remote.usualBedTime ?? null,
             overrides: remote.overrides ?? {},
           });
+          profileRef.current = healed;
+          setProfile(healed);
+          // Se o heal preencheu usuais que faltavam no remoto, persiste de volta.
+          if (healed.usualWakeTime !== remote.usualWakeTime || healed.usualBedTime !== remote.usualBedTime) {
+            syncProfile(healed);
+          }
         }
       })
       .catch(() => {
@@ -224,5 +264,6 @@ export function useSleepProfile() {
     setHasDevice,
     setUsualTimes,
     setDayOverride,
+    saveNightTimes,
   };
 }

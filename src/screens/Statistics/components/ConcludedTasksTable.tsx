@@ -47,17 +47,19 @@ export default function ConcludedTasksTable({ tasks, isDark }: ConcludedTasksTab
           tasks.map((task, index) => {
             const area = getLifeArea(task?.goal?.name || task.area);
             const accent = area?.accent ?? '#71717a';
+            const areaLabel = area?.label ?? task.goal?.name ?? task.area ?? '—';
+            const taskName = task.name?.trim() || 'Tarefa';
 
             return (
               <View key={task.id || task.randomId || String(index)} className="flex-row items-center px-4 py-3" style={{ borderTopWidth: index === 0 ? 0 : 1, borderTopColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)' }}>
                 <Text className="flex-1 pr-2 text-sm font-medium text-zinc-900 dark:text-zinc-50" numberOfLines={1}>
-                  {task.name}
+                  {taskName}
                 </Text>
 
                 <View className="w-24 pr-2">
                   <View className="self-start rounded-full px-2 py-0.5" style={{ backgroundColor: `${accent}22` }}>
                     <Text className="text-xs font-semibold" style={{ color: accent }} numberOfLines={1}>
-                      {area?.label ?? task.goal.name}
+                      {areaLabel}
                     </Text>
                   </View>
                 </View>

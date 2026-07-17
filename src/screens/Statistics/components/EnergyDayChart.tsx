@@ -161,7 +161,7 @@ export default function EnergyDayChart({ input, tasks, selectedDay, isDark }: En
           .filter((date) => !Number.isNaN(date.getTime()) && isSameLocalDay(date, day))
           .map((date) => {
             const hour = date.getHours() + date.getMinutes() / 60;
-            return { title: task.name, hour, energy: energyAt(hour), completedAt: date };
+            return { title: task.name?.trim() || 'Tarefa', hour, energy: energyAt(hour), completedAt: date };
           }),
       )
       .sort((a, b) => a.hour - b.hour);

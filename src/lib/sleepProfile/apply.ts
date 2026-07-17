@@ -66,6 +66,53 @@ export function isSleepProfileConfigured(profile: SleepProfileData | null | unde
   return Boolean(wake && bed);
 }
 
+/** Override mais recente (chave `YYYY-MM-DD`) com ambos os horários preenchidos. */
+export function latestCompleteOverride(overrides: Record<string, SleepDayOverride> | null | undefined): SleepDayOverride | null {
+  if (!overrides) return null;
+  const keys = Object.keys(overrides).sort();
+  for (let i = keys.length - 1; i >= 0; i -= 1) {
+    const entry = overrides[keys[i]!];
+    const wake = entry?.wakeTime?.trim();
+    const bed = entry?.bedTime?.trim();
+    if (wake && bed) return { wakeTime: wake, bedTime: bed };
+  }
+  return null;
+}
+
+/**
+ * Recupera usuais perdidos (ex.: corrida ao salvar override) a partir do
+ * override diário mais recente com ambos os horários. Retorna o mesmo objeto
+ * se não houver o que curar.
+ */
+export function healUsualTimesFromOverrides<T extends SleepProfileData>(profile: T): T {
+  const wake = profile.usualWakeTime?.trim();
+  const bed = profile.usualBedTime?.trim();
+  if (wake && bed) return profile;
+
+  const recovered = latestCompleteOverride(profile.overrides);
+  if (!recovered) return profile;
+
+  return {
+    ...profile,
+    usualWakeTime: wake || recovered.wakeTime || null,
+    usualBedTime: bed || recovered.bedTime || null,
+  };
+}
+
+/**
+ * Mescla override do dia e, se faltarem usuais, preenche ambos numa só escrita
+ * — evita a corrida de `setUsualTimes` + `setDayOverride` síncronos.
+ */
+export function mergeNightTimes<T extends SleepProfileData>(profile: T, dayKey: string, times: { wakeTime: string; bedTime: string }, trimOverrides: (overrides: Record<string, SleepDayOverride>) => Record<string, SleepDayOverride>): T {
+  const overrides = trimOverrides({ ...(profile.overrides ?? {}), [dayKey]: times });
+  const needsUsual = !profile.usualWakeTime?.trim() || !profile.usualBedTime?.trim();
+  return {
+    ...profile,
+    overrides,
+    ...(needsUsual ? { usualWakeTime: times.wakeTime, usualBedTime: times.bedTime } : {}),
+  };
+}
+
 /** ISO (fuso do app) do dia civil de `dayRefIso` no horário `hhmm`, com deslocamento opcional de dias. */
 function isoAtTime(dayRefIso: string, hhmm: string, dayOffset = 0): string | null {
   const minutes = timeStringToMinutes(hhmm);

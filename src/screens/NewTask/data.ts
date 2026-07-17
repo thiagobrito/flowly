@@ -137,11 +137,13 @@ export type Task = {
 
 const MONTHS_SHORT = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'] as const;
 
-export function getLifeArea(id: string): LifeArea | undefined {
+export function getLifeArea(id: string | null | undefined): LifeArea | undefined {
+  if (id == null || String(id).trim() === '') return undefined;
+
   const found = LIFE_AREAS.find((area) => area.id === id);
   if (!found) return { id, label: id, Icon: GoalIcon, accent: '#22c55e' };
 
-  return LIFE_AREAS.find((area) => area.id === id);
+  return found;
 }
 
 export function getFrequencyMeta(kind: FrequencyId): Frequency | undefined {
