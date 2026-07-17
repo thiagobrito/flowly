@@ -41,6 +41,21 @@ describe('taskBelongsToGoal', () => {
     expect(taskBelongsToGoal({ goal: { id: 'g1', name: 'flowly' } }, goal)).toBe(true);
     expect(taskBelongsToGoal({ goal: { id: 'g2', name: 'health' } }, goal)).toBe(false);
   });
+
+  it('retorna false quando a tarefa não tem goal ou goal.name', () => {
+    expect(taskBelongsToGoal({ goal: undefined }, goal)).toBe(false);
+    expect(taskBelongsToGoal({ goal: null }, goal)).toBe(false);
+    expect(taskBelongsToGoal({ goal: { id: 'g1', name: '' } }, goal)).toBe(false);
+    expect(taskBelongsToGoal({ goal: { id: 'g1', name: '   ' } }, goal)).toBe(false);
+    expect(taskBelongsToGoal({ goal: { id: null, name: undefined } }, goal)).toBe(false);
+  });
+
+  it('filtra lista mista sem lançar quando há tarefas sem goal', () => {
+    const mixed: Array<{ goal?: Task['goal'] | null; id: string }> = [makeTask({ id: '1', name: 'Com meta', area: 'FLOWLY', goal: { id: goal.id, name: goal.name } }), { id: '2', goal: undefined }, { id: '3', goal: null }];
+
+    expect(() => mixed.filter((task) => taskBelongsToGoal(task, goal))).not.toThrow();
+    expect(mixed.filter((task) => taskBelongsToGoal(task, goal))).toHaveLength(1);
+  });
 });
 
 describe('getGoalMatchKeys', () => {
@@ -89,6 +104,12 @@ describe('aggregateCompletedTasks', () => {
   it('ignora tarefas sem conclusões', () => {
     const rows = aggregateCompletedTasks([makeTask({ name: 'Vazia', area: 'FLOWLY', completed: [] })]);
     expect(rows).toHaveLength(0);
+  });
+
+  it('usa fallback quando name está ausente', () => {
+    const rows = aggregateCompletedTasks([{ ...makeTask({ name: '', area: 'FLOWLY', completed: ['2026-06-01T10:00:00.000Z'] }), name: undefined as unknown as string }]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.name).toBe('Sem nome');
   });
 });
 

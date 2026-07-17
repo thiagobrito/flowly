@@ -14,8 +14,8 @@ const PAGE_SIZE = 5;
 
 export { PAGE_SIZE as GOAL_COMPLETED_TASKS_PAGE_SIZE };
 
-function normalizeKey(value: string): string {
-  return value.trim().toLowerCase();
+function normalizeKey(value: string | null | undefined): string {
+  return (value ?? '').trim().toLowerCase();
 }
 
 function normalizeTask(raw: Task & { _id?: string }): Task {
@@ -52,15 +52,25 @@ export function getGoalMatchKeys(goal: Goal): string[] {
   const area = GetLifeArea(goal.areaId);
   const keys = new Set<string>();
 
-  if (goal.areaId.trim()) keys.add(normalizeKey(goal.areaId));
-  if (area.label.trim()) keys.add(normalizeKey(area.label));
-  if (goal.name.trim()) keys.add(normalizeKey(goal.name));
+  const areaId = normalizeKey(goal.areaId);
+  const areaLabel = normalizeKey(area.label);
+  const name = normalizeKey(goal.name);
+
+  if (areaId) keys.add(areaId);
+  if (areaLabel) keys.add(areaLabel);
+  if (name) keys.add(name);
 
   return [...keys];
 }
 
-export function taskBelongsToGoal(task: Pick<Task, 'goal'>, goal: Goal): boolean {
-  const taskKey = normalizeKey(task.goal.name);
+/** Ref da meta na tarefa — a API pode omitir `goal` em documentos antigos. */
+type TaskGoalRef = { id?: string | null; name?: string | null } | null | undefined;
+
+export function taskBelongsToGoal(task: { goal?: TaskGoalRef }, goal: Goal): boolean {
+  const taskGoalName = task.goal?.name;
+  if (typeof taskGoalName !== 'string' || !taskGoalName.trim()) return false;
+
+  const taskKey = normalizeKey(taskGoalName);
   return getGoalMatchKeys(goal).some((key) => key === taskKey);
 }
 
@@ -71,7 +81,7 @@ export function aggregateCompletedTasks(tasks: Task[]): GoalCompletedTaskRow[] {
     const completions = task.completed ?? [];
     if (completions.length > 0) {
       const perCompletion = computeTaskCompletionScore(task);
-      const name = task.name.trim() || 'Sem nome';
+      const name = task.name?.trim() || 'Sem nome';
       const key = normalizeKey(name);
 
       const lastCompletedMs = completions.reduce((max, iso) => {
