@@ -35,6 +35,8 @@ export const WEIGHT_OPTIONS = [
 export type GoalMetric = {
   id: string;
   label: string;
+  /** Ponto de partida da métrica no ciclo. */
+  initial: number;
   current: number;
   target: number;
   /** @deprecated Legacy free-text unit; use unitKind/currency/weightUnit instead. */
@@ -45,22 +47,37 @@ export type GoalMetric = {
   direction?: MetricDirection;
 };
 
-export function inferMetricDirection(current: number, target: number): MetricDirection {
-  return target < current ? 'decrease' : 'increase';
+export function inferMetricDirection(start: number, target: number): MetricDirection {
+  return target < start ? 'decrease' : 'increase';
 }
 
-export function nextMetricDirection(prev: Pick<GoalMetric, 'current' | 'target' | 'direction'>, patch: Partial<Pick<GoalMetric, 'current' | 'target'>>): MetricDirection {
-  const current = patch.current ?? prev.current;
+export function nextMetricDirection(prev: Partial<Pick<GoalMetric, 'initial' | 'current' | 'target' | 'direction'>> & Pick<GoalMetric, 'current' | 'target'>, patch: Partial<Pick<GoalMetric, 'initial' | 'current' | 'target'>>): MetricDirection {
+  const initial = patch.initial ?? prev.initial ?? prev.current;
   const target = patch.target ?? prev.target;
-  if ('target' in patch || !prev.direction) {
-    return inferMetricDirection(current, target);
+  if ('target' in patch || 'initial' in patch || !prev.direction) {
+    return inferMetricDirection(initial, target);
   }
   return prev.direction;
 }
 
-export function resolveMetricDirection(metric: Pick<GoalMetric, 'current' | 'target' | 'direction'>): MetricDirection {
+export function resolveMetricDirection(metric: Pick<GoalMetric, 'initial' | 'current' | 'target' | 'direction'>): MetricDirection {
   if (metric.direction === 'increase' || metric.direction === 'decrease') return metric.direction;
-  return inferMetricDirection(metric.current, metric.target);
+  return inferMetricDirection(metric.initial ?? metric.current, metric.target);
+}
+
+/** Progresso 0–100 relativo ao ponto de partida (initial → target). */
+export function computeMetricProgress(metric: Pick<GoalMetric, 'initial' | 'current' | 'target' | 'direction'>): number {
+  const initial = metric.initial ?? metric.current ?? 0;
+  const { current, target } = metric;
+  const direction = resolveMetricDirection({ ...metric, initial });
+  const range = direction === 'decrease' ? initial - target : target - initial;
+
+  if (range === 0) {
+    return current === target ? 100 : 0;
+  }
+
+  const raw = direction === 'decrease' ? (initial - current) / range : (current - initial) / range;
+  return Math.min(100, Math.max(0, Math.round(raw * 100)));
 }
 
 function currencyOption(code: CurrencyCode) {
@@ -97,20 +114,22 @@ export function formatMetricValue(value: number, unit: ResolvedMetricUnit) {
   return `${value}`;
 }
 
-function normalizeMetric(raw: Partial<GoalMetric> & Pick<GoalMetric, 'id' | 'label' | 'current' | 'target'>): GoalMetric {
+function normalizeMetric(raw: Partial<GoalMetric> & Pick<GoalMetric, 'id' | 'label'>): GoalMetric {
   const current = raw.current ?? 0;
   const target = raw.target ?? 0;
+  const initial = raw.initial ?? current;
   const resolved = resolveMetricUnit(raw);
   return {
     id: raw.id,
     label: raw.label,
+    initial,
     current,
     target,
     unit: raw.unit ?? '',
     unitKind: resolved.unitKind,
     currency: resolved.currency,
     weightUnit: resolved.weightUnit,
-    direction: raw.direction ?? inferMetricDirection(current, target),
+    direction: raw.direction ?? inferMetricDirection(initial, target),
   };
 }
 
@@ -251,7 +270,7 @@ export function normalizeGoal(raw: Partial<Goal> & { area?: string; label?: stri
 }
 
 export function createEmptyMetric(): GoalMetric {
-  return { id: createGoalId(), label: '', current: 0, target: 0, unit: '', unitKind: 'number', direction: 'increase' };
+  return { id: createGoalId(), label: '', initial: 0, current: 0, target: 0, unit: '', unitKind: 'number', direction: 'increase' };
 }
 
 export function createEmptyHealth(): GoalHealth {
@@ -266,6 +285,7 @@ export function createEmptyHealth(): GoalHealth {
 export type GoalSetupMetric = {
   id: string;
   label: string;
+  initial: number;
   current: number;
   target: number;
   direction?: MetricDirection;
@@ -314,7 +334,7 @@ export const MOCK_GOAL_SETUP: GoalSetup = {
       purpose: 'Ter mais impacto e reconhecimento',
       impact: 'Melhorar qualidade de vida da família',
     },
-    metrics: [{ id: 'projects', label: 'Projetos entregues', current: 0, target: 5 }],
+    metrics: [{ id: 'projects', label: 'Projetos entregues', initial: 0, current: 0, target: 5 }],
   },
   secondaryGoals: [
     {
@@ -325,7 +345,7 @@ export const MOCK_GOAL_SETUP: GoalSetup = {
         purpose: 'Ter mais energia e disposição para a família e o trabalho',
         impact: 'Viver com mais saúde e bem-estar no longo prazo',
       },
-      metrics: [{ id: 'workouts', label: 'Treinos por semana', current: 2, target: 4 }],
+      metrics: [{ id: 'workouts', label: 'Treinos por semana', initial: 2, current: 2, target: 4 }],
     },
   ],
 };
@@ -349,9 +369,9 @@ export const MOCK_GOALS: Goal[] = [
     weeksCompleted: 7,
     totalWeeks: 12,
     metrics: [
-      { id: 'bodyfat', label: 'Gordura corporal', current: 17, target: 15, unit: '%', direction: 'decrease' },
-      { id: 'weight', label: 'Peso', current: 82, target: 78, unit: 'kg', direction: 'decrease' },
-      { id: 'training', label: 'Volume de treino', current: 4, target: 5, unit: 'x/sem', direction: 'increase' },
+      { id: 'bodyfat', label: 'Gordura corporal', initial: 22, current: 17, target: 15, unit: '%', direction: 'decrease' },
+      { id: 'weight', label: 'Peso', initial: 85, current: 82, target: 78, unit: 'kg', direction: 'decrease' },
+      { id: 'training', label: 'Volume de treino', initial: 2, current: 4, target: 5, unit: 'x/sem', direction: 'increase' },
     ],
     consistencyScore: 87,
     weeklyStreak: 5,
@@ -381,9 +401,9 @@ export const MOCK_GOALS: Goal[] = [
     weeksCompleted: 5,
     totalWeeks: 12,
     metrics: [
-      { id: 'customers', label: 'Clientes', current: 38, target: 100, unit: '' },
-      { id: 'mrr', label: 'MRR', current: 1200, target: 4000, unit: 'R$' },
-      { id: 'releases', label: 'Releases', current: 6, target: 12, unit: '' },
+      { id: 'customers', label: 'Clientes', initial: 0, current: 38, target: 100, unit: '' },
+      { id: 'mrr', label: 'MRR', initial: 0, current: 1200, target: 4000, unit: 'R$' },
+      { id: 'releases', label: 'Releases', initial: 0, current: 6, target: 12, unit: '' },
     ],
     consistencyScore: 72,
     weeklyStreak: 3,
@@ -440,14 +460,19 @@ export function goalSetupToGoals(setup: GoalSetup): Goal[] {
     rpm: { ...setup.mainGoal.rpm },
     totalWeeks,
     daysRemaining,
-    metrics: setup.mainGoal.metrics.map((metric) => ({
-      id: metric.id,
-      label: metric.label,
-      current: metric.current,
-      target: metric.target,
-      unit: '',
-      direction: metric.direction ?? inferMetricDirection(metric.current, metric.target),
-    })),
+    metrics: setup.mainGoal.metrics.map((metric) => {
+      const initial = metric.initial ?? metric.current;
+      const current = metric.current ?? initial;
+      return {
+        id: metric.id,
+        label: metric.label,
+        initial,
+        current,
+        target: metric.target,
+        unit: '',
+        direction: metric.direction ?? inferMetricDirection(initial, metric.target),
+      };
+    }),
   };
 
   const secondaries: Goal[] = setup.secondaryGoals.map((goal) => ({
@@ -460,14 +485,19 @@ export function goalSetupToGoals(setup: GoalSetup): Goal[] {
     rpm: { ...goal.rpm },
     totalWeeks,
     daysRemaining,
-    metrics: goal.metrics.map((metric) => ({
-      id: metric.id,
-      label: metric.label,
-      current: metric.current,
-      target: metric.target,
-      unit: '',
-      direction: metric.direction ?? inferMetricDirection(metric.current, metric.target),
-    })),
+    metrics: goal.metrics.map((metric) => {
+      const initial = metric.initial ?? metric.current;
+      const current = metric.current ?? initial;
+      return {
+        id: metric.id,
+        label: metric.label,
+        initial,
+        current,
+        target: metric.target,
+        unit: '',
+        direction: metric.direction ?? inferMetricDirection(initial, metric.target),
+      };
+    }),
   }));
 
   return [main, ...secondaries];
@@ -485,13 +515,18 @@ export function secondarySetupToGoal(secondary: SecondaryGoalSetup, context: Pic
     rpm: { ...secondary.rpm },
     totalWeeks: context.totalWeeks,
     daysRemaining: context.daysRemaining,
-    metrics: secondary.metrics.map((metric) => ({
-      id: metric.id,
-      label: metric.label,
-      current: metric.current,
-      target: metric.target,
-      unit: '',
-      direction: metric.direction ?? inferMetricDirection(metric.current, metric.target),
-    })),
+    metrics: secondary.metrics.map((metric) => {
+      const initial = metric.initial ?? metric.current;
+      const current = metric.current ?? initial;
+      return {
+        id: metric.id,
+        label: metric.label,
+        initial,
+        current,
+        target: metric.target,
+        unit: '',
+        direction: metric.direction ?? inferMetricDirection(initial, metric.target),
+      };
+    }),
   };
 }

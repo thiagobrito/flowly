@@ -77,7 +77,7 @@ export default function MetricsStep({ value, isDark, onChange }: MetricsStepProp
               </Pressable>
             </View>
             <View className="mt-2.5 flex-row gap-3">
-              <NumberField label="Valor atual" value={metric.current} isDark={isDark} onChange={(current) => update(metric.id, { current })} />
+              <NumberField label="Valor inicial" value={metric.initial ?? metric.current} isDark={isDark} onChange={(initial) => update(metric.id, { initial, current: initial })} />
               <NumberField label="Alvo" value={metric.target} isDark={isDark} onChange={(target) => update(metric.id, { target })} />
             </View>
           </View>

@@ -29,12 +29,13 @@ function RpmLine({ label, value }: { label: string; value: string }) {
 }
 
 function MetricSummary({ metric }: { metric: GoalSetupMetric }) {
-  const direction = metric.direction ?? inferMetricDirection(metric.current, metric.target);
+  const initial = metric.initial ?? metric.current;
+  const direction = metric.direction ?? inferMetricDirection(initial, metric.target);
   const isDecrease = direction === 'decrease';
 
   return (
     <Text className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">
-      {metric.current} → {metric.target}
+      {initial} → {metric.target}
       {isDecrease ? <Text className="text-xs font-normal text-zinc-500 dark:text-zinc-400"> (reduzir)</Text> : null}
     </Text>
   );

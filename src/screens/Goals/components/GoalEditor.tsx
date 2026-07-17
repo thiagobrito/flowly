@@ -49,11 +49,23 @@ function FieldLabel({ children }: { children: React.ReactNode }) {
   return <Text className="mb-1.5 text-sm font-medium text-zinc-700 dark:text-zinc-200">{children}</Text>;
 }
 
-function NumberField({ label, value, onChange, isDark, suffix }: { label: string; value: number; onChange: (value: number) => void; isDark: boolean; suffix?: string }) {
+function NumberField({ label, value, onChange, isDark, suffix, highlighted = false }: { label: string; value: number; onChange: (value: number) => void; isDark: boolean; suffix?: string; highlighted?: boolean }) {
+  const fieldStyle = highlighted
+    ? {
+        borderColor: ACCENT,
+        backgroundColor: isDark ? `${ACCENT}22` : `${ACCENT}14`,
+      }
+    : inputStyle(isDark);
+  let labelColor = '#3f3f46';
+  if (highlighted) labelColor = ACCENT;
+  else if (isDark) labelColor = '#e4e4e7';
+
   return (
     <View className="flex-1">
-      <FieldLabel>{label}</FieldLabel>
-      <View className="flex-row items-center rounded-xl border px-3" style={inputStyle(isDark)}>
+      <Text className="mb-1.5 text-sm font-medium" style={{ color: labelColor, fontWeight: highlighted ? '700' : '500' }}>
+        {label}
+      </Text>
+      <View className="flex-row items-center rounded-xl border px-3" style={fieldStyle}>
         <TextInput
           value={String(value)}
           onChangeText={(text) => {
@@ -63,6 +75,7 @@ function NumberField({ label, value, onChange, isDark, suffix }: { label: string
           keyboardType="numeric"
           placeholderTextColor={isDark ? '#71717a' : '#a1a1aa'}
           className="flex-1 py-2.5 text-[15px] text-zinc-900 dark:text-zinc-50"
+          style={highlighted ? { fontWeight: '700' } : undefined}
         />
         {suffix ? <Text className="ml-1 text-sm text-zinc-400 dark:text-zinc-500">{suffix}</Text> : null}
       </View>
@@ -294,7 +307,8 @@ export default function GoalEditor({ goal, isNew, isDark, onCancel, onSave, onDe
                 </Pressable>
               </View>
               <View className="mt-2.5 flex-row gap-3">
-                <NumberField label="Atual" value={metric.current} onChange={(value) => updateMetric(metric.id, { current: value })} isDark={isDark} />
+                <NumberField label="Inicial" value={metric.initial} onChange={(value) => updateMetric(metric.id, { initial: value })} isDark={isDark} />
+                <NumberField label="Atual" value={metric.current} onChange={(value) => updateMetric(metric.id, { current: value })} isDark={isDark} highlighted />
                 <NumberField label="Alvo" value={metric.target} onChange={(value) => updateMetric(metric.id, { target: value })} isDark={isDark} />
               </View>
               <View className="mt-2.5">

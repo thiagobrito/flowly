@@ -365,5 +365,5 @@ let metricCounter = 0;
 /** Cria uma métrica vazia para o passo de métricas. */
 export function createEmptyMetric() {
   metricCounter += 1;
-  return { id: `metric-${Date.now()}-${metricCounter}`, label: '', current: 0, target: 0 };
+  return { id: `metric-${Date.now()}-${metricCounter}`, label: '', initial: 0, current: 0, target: 0 };
 }
