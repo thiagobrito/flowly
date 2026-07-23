@@ -1,6 +1,6 @@
-import { FileText, GoalIcon, TrendingUp, X, Zap } from 'lucide-react-native';
-import type { ReactNode } from 'react';
-import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import { GoalIcon, Pencil, TrendingUp, X, Zap } from 'lucide-react-native';
+import { type ReactNode, useCallback, useEffect, useState } from 'react';
+import { Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 import { EstimatedTimePicker, SubtaskEditor } from '../../NewTask/components';
 import type { Subtask, Task } from '../../NewTask/data';
@@ -15,6 +15,7 @@ type TaskDetailModalProps = {
   onClose: () => void;
   onToggleSubtask: (task: Task, subtaskId: string) => void;
   onSaveSubtasks: (task: Task, nextSubtasks: Subtask[]) => void;
+  onSaveDetails: (task: Task, details: { name: string; description: string }) => void;
   onChangeDuration: (task: Task, durationMin: number) => void;
   onEdit: (task: Task) => void;
   onComplete: (task: Task) => void;
@@ -50,7 +51,46 @@ function frequencyLabel(task: Task): string {
   return getFrequencyMeta(task.frequency.kind)?.label ?? '—';
 }
 
-export default function TaskDetailModal({ visible, task, isDark, durationMin, onClose, onToggleSubtask, onSaveSubtasks, onChangeDuration, onEdit, onComplete, onRemoveFromDay, onDelete }: TaskDetailModalProps) {
+export default function TaskDetailModal({ visible, task, isDark, durationMin, onClose, onToggleSubtask, onSaveSubtasks, onSaveDetails, onChangeDuration, onEdit, onComplete, onRemoveFromDay, onDelete }: TaskDetailModalProps) {
+  const [nameDraft, setNameDraft] = useState('');
+  const [descriptionDraft, setDescriptionDraft] = useState('');
+  const [editingName, setEditingName] = useState(false);
+  const [editingDescription, setEditingDescription] = useState(false);
+
+  const taskId = task?.id;
+  const taskName = task?.name;
+  const taskDescription = task?.description;
+
+  useEffect(() => {
+    if (!visible || taskId == null) return;
+    setNameDraft(taskName ?? '');
+    setDescriptionDraft(taskDescription ?? '');
+    setEditingName(false);
+    setEditingDescription(false);
+  }, [visible, taskId, taskName, taskDescription]);
+
+  const commitDetails = useCallback(() => {
+    setEditingName(false);
+    setEditingDescription(false);
+
+    if (!task) return;
+
+    const nextName = nameDraft.trim();
+    const nextDescription = descriptionDraft.trim();
+    const currentDescription = (task.description ?? '').trim();
+
+    if (!nextName) {
+      setNameDraft(task.name);
+      return;
+    }
+
+    if (nextName === task.name && nextDescription === currentDescription) {
+      return;
+    }
+
+    onSaveDetails(task, { name: nextName, description: nextDescription });
+  }, [task, nameDraft, descriptionDraft, onSaveDetails]);
+
   if (!task) return null;
 
   const area = getLifeArea(task.goal.name);
@@ -63,6 +103,11 @@ export default function TaskDetailModal({ visible, task, isDark, durationMin, on
   const editButtonBg = '#3b82f6';
   const completeDisabled = !!task.done;
   const destructiveBg = '#ef4444';
+  const inputBorder = isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)';
+  const inputBackground = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)';
+  const descriptionColor = isDark ? '#e4e4e7' : '#3f3f46';
+  const primaryText = isDark ? '#fafafa' : '#18181b';
+  const placeholderColor = isDark ? '#71717a' : '#a1a1aa';
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -73,7 +118,47 @@ export default function TaskDetailModal({ visible, task, isDark, durationMin, on
           <View className="mb-4 h-1 w-10 self-center rounded-full" style={{ backgroundColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.15)' }} />
 
           <View className="mb-4 flex-row items-start justify-between">
-            <Text className="flex-1 pr-3 text-lg font-bold text-zinc-900 dark:text-zinc-50">{task.name}</Text>
+            <View className="flex-1 flex-row items-start pr-3">
+              {editingName ? (
+                <TextInput
+                  autoFocus
+                  value={nameDraft}
+                  onChangeText={setNameDraft}
+                  onEndEditing={commitDetails}
+                  onBlur={commitDetails}
+                  multiline
+                  textAlignVertical="top"
+                  placeholder="Nome da tarefa"
+                  placeholderTextColor={placeholderColor}
+                  accessibilityLabel="Nome da tarefa"
+                  className="flex-1 text-lg font-bold"
+                  style={{
+                    color: primaryText,
+                    borderWidth: 1,
+                    borderColor: inputBorder,
+                    borderRadius: 12,
+                    backgroundColor: inputBackground,
+                    paddingHorizontal: 12,
+                    paddingVertical: 8,
+                  }}
+                />
+              ) : (
+                <>
+                  <Pressable
+                    onPress={() => setEditingName(true)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Editar nome da tarefa"
+                    className="mr-2 size-8 items-center justify-center rounded-full active:opacity-70"
+                    style={{ backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)' }}
+                  >
+                    <Pencil size={14} color={accent} />
+                  </Pressable>
+                  <Pressable className="flex-1 pt-1" onPress={() => setEditingName(true)} accessibilityRole="button" accessibilityLabel="Editar nome da tarefa">
+                    <Text className="text-lg font-bold text-zinc-900 dark:text-zinc-50">{task.name}</Text>
+                  </Pressable>
+                </>
+              )}
+            </View>
             <Pressable
               onPress={onClose}
               accessibilityRole="button"
@@ -86,16 +171,49 @@ export default function TaskDetailModal({ visible, task, isDark, durationMin, on
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 8 }} keyboardShouldPersistTaps="handled">
-            {task.description ? (
-              <DetailRow label="Descrição" isDark={isDark}>
+            <DetailRow label="Descrição" isDark={isDark}>
+              {editingDescription ? (
+                <TextInput
+                  autoFocus
+                  value={descriptionDraft}
+                  onChangeText={setDescriptionDraft}
+                  onEndEditing={commitDetails}
+                  onBlur={commitDetails}
+                  placeholder="Adicione detalhes ou anotações (opcional)"
+                  placeholderTextColor={placeholderColor}
+                  multiline
+                  textAlignVertical="top"
+                  accessibilityLabel="Descrição da tarefa"
+                  className="min-h-[88px] text-sm"
+                  style={{
+                    color: isDark ? '#e4e4e7' : '#3f3f46',
+                    borderWidth: 1,
+                    borderColor: inputBorder,
+                    borderRadius: 12,
+                    backgroundColor: inputBackground,
+                    paddingHorizontal: 12,
+                    paddingVertical: 10,
+                  }}
+                />
+              ) : (
                 <View className="flex-row items-start">
-                  <FileText size={16} color={mutedColor} style={{ marginRight: 8, marginTop: 2 }} />
-                  <Text className="flex-1 text-sm" style={{ color: isDark ? '#e4e4e7' : '#3f3f46' }}>
-                    {task.description}
-                  </Text>
+                  <Pressable
+                    onPress={() => setEditingDescription(true)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Editar descrição da tarefa"
+                    className="mr-2 size-8 items-center justify-center rounded-full active:opacity-70"
+                    style={{ backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)' }}
+                  >
+                    <Pencil size={14} color={accent} />
+                  </Pressable>
+                  <Pressable className="flex-1" onPress={() => setEditingDescription(true)} accessibilityRole="button" accessibilityLabel="Editar descrição da tarefa">
+                    <Text className="flex-1 pt-1.5 text-sm" style={{ color: task.description ? descriptionColor : mutedColor }}>
+                      {task.description || 'Adicionar descrição'}
+                    </Text>
+                  </Pressable>
                 </View>
-              </DetailRow>
-            ) : null}
+              )}
+            </DetailRow>
 
             <DetailRow label="Energia gasta" isDark={isDark}>
               <View className="flex-row items-center">

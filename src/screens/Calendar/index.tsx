@@ -22,7 +22,7 @@ import UnscheduledTray from './components/UnscheduledTray';
 import type { CalendarTaskEvent } from './eventMapping';
 import { buildCalendarEvents, getTaskDurationMin } from './eventMapping';
 import { useDayEnergyLevels } from './hooks/useDayEnergyLevels';
-import { getTaskSlot, hasScheduleChanged, onceFrequencyFromISO, syncTaskEstimatedMinutesToServer, syncTaskScheduleToServer, syncTaskSubtasksToServer, syncTaskUnscheduleToServer } from './scheduleSync';
+import { getTaskSlot, hasScheduleChanged, onceFrequencyFromISO, syncTaskDetailsToServer, syncTaskEstimatedMinutesToServer, syncTaskScheduleToServer, syncTaskSubtasksToServer, syncTaskUnscheduleToServer } from './scheduleSync';
 import { buildCalendarTheme } from './theme';
 
 type CalendarProps = {
@@ -420,6 +420,21 @@ export default function Calendar({ onEdit, onCreateAt }: CalendarProps) {
     [setCalendarTasks, refetchTasks, restoreTask],
   );
 
+  const saveTaskDetails = useCallback(
+    async (task: Task, details: { name: string; description: string }) => {
+      const snapshot = task;
+      setCalendarTasks((prev) => prev.map((item) => (item.id === task.id ? { ...item, name: details.name, description: details.description } : item)));
+
+      try {
+        await syncTaskDetailsToServer(task, details);
+        refetchTasks();
+      } catch {
+        restoreTask(snapshot);
+      }
+    },
+    [setCalendarTasks, refetchTasks, restoreTask],
+  );
+
   const closeTaskDetail = useCallback(() => {
     setSelectedTask(null);
     setSelectedStartISO(undefined);
@@ -710,6 +725,7 @@ export default function Calendar({ onEdit, onCreateAt }: CalendarProps) {
         onClose={closeTaskDetail}
         onToggleSubtask={toggleSubtask}
         onSaveSubtasks={saveSubtasks}
+        onSaveDetails={saveTaskDetails}
         onChangeDuration={handleModalDurationChange}
         onEdit={handleModalEdit}
         onComplete={handleModalComplete}

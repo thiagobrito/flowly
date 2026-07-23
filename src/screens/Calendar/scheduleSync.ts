@@ -132,6 +132,22 @@ export async function syncTaskSubtasksToServer(task: Task, nextSubtasks: Subtask
   });
 }
 
+/** Persiste nome e descrição sem alterar frequência/agendamento. */
+export async function syncTaskDetailsToServer(task: Task, details: { name: string; description: string }): Promise<void> {
+  await api.put('/tasks', {
+    id: task.id,
+    isEditing: true,
+    name: details.name,
+    description: details.description,
+    energy: task.energy,
+    impact: task.impact,
+    area: task.area ?? task.goal?.name,
+    subtasks: task.subtasks,
+    estimatedMinutes: task.estimatedMinutes,
+    frequency: task.frequency,
+  });
+}
+
 /** Persiste o tempo estimado da tarefa sem alterar frequência/agendamento. */
 export async function syncTaskEstimatedMinutesToServer(task: Task, estimatedMinutes: number): Promise<void> {
   await api.put('/tasks', {
