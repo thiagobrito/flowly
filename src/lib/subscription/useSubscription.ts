@@ -1,10 +1,12 @@
 /**
  * Hook de assinatura.
  *
- * Combina o status do backend (`GET /subscription`) com o entitlement do
- * RevenueCat, mantém um cache local (`usePersistedState`) e expõe flags de
- * acesso (`isPremium`, `isTrialing`, `trialDaysLeft`). O trial de 7 dias é
- * controlado pelo backend — aqui apenas lemos e exibimos.
+ * O banco é a autoridade sobre o modo de funcionamento do app: `GET /subscription`
+ * devolve trial/assinatura e este hook só reflete o resultado, mantendo um cache
+ * local (`usePersistedState`) para funcionar offline. O cache tem prazo de
+ * validade (`OFFLINE_GRACE_DAYS`) — sem falar com o servidor por mais que isso,
+ * ele deixa de conceder acesso. O entitlement do RevenueCat entra como rede de
+ * segurança para quem acabou de comprar e o banco ainda não sabe.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -14,10 +16,13 @@ import { usePersistedState } from '@/lib/storage';
 
 import { buildPaymentPayload, fetchSubscription, notifyPayment } from './api';
 import { addCustomerInfoListener, getCustomerInfo, hasProEntitlement } from './client';
-import type { SubscriptionCache } from './types';
+import type { SubscriptionCache, SubscriptionStatusValue } from './types';
 
 const SUBSCRIPTION_KEY = 'subscription_v1';
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+/** Por quantos dias um cache sem sincronizar ainda concede acesso. */
+const OFFLINE_GRACE_DAYS = 7;
 
 const EMPTY: SubscriptionCache = {
   status: 'none',
@@ -25,18 +30,40 @@ const EMPTY: SubscriptionCache = {
   trialEndsAt: null,
   currentPeriodEnd: null,
   plan: null,
+  syncedAt: null,
 };
 
-function computeTrialDaysLeft(trialEndsAt: string | null | undefined): number {
-  if (!trialEndsAt) return 0;
-  const end = new Date(trialEndsAt).getTime();
-  if (Number.isNaN(end)) return 0;
-  return Math.max(0, Math.ceil((end - Date.now()) / MS_PER_DAY));
+function toTimestamp(iso: string | null | undefined): number | null {
+  if (!iso) return null;
+  const parsed = new Date(iso).getTime();
+  return Number.isNaN(parsed) ? null : parsed;
+}
+
+function daysLeftUntil(iso: string | null | undefined, now: number): number {
+  const end = toTimestamp(iso);
+  if (end === null) return 0;
+  return Math.max(0, Math.ceil((end - now) / MS_PER_DAY));
+}
+
+/**
+ * Reavalia o cache contra o relógio atual — mesma regra do `resolveStatus` do
+ * backend. Sem isso um cache gravado como `trial` continuaria liberando o app
+ * depois do trial ter vencido, enquanto o usuário estivesse offline.
+ */
+function resolveCachedAccess(cache: SubscriptionCache, now: number): { status: SubscriptionStatusValue; isPremium: boolean } {
+  const periodEnd = toTimestamp(cache.currentPeriodEnd);
+  const trialEnd = toTimestamp(cache.trialEndsAt);
+
+  if (periodEnd !== null && periodEnd > now) return { status: 'active', isPremium: true };
+  if (trialEnd !== null && trialEnd > now) return { status: 'trial', isPremium: true };
+  if (periodEnd !== null || trialEnd !== null) return { status: 'expired', isPremium: false };
+
+  return { status: cache.status ?? 'none', isPremium: Boolean(cache.isPremium) };
 }
 
 export function useSubscription() {
   const [cache, setCache] = usePersistedState<SubscriptionCache>(EMPTY, SUBSCRIPTION_KEY);
-  const [hasSynced, setHasSynced] = useState(false);
+  const [storeActive, setStoreActive] = useState(false);
   const [loading, setLoading] = useState(false);
 
   // Mantém o último valor do cache acessível sem recriar `refresh`.
@@ -48,17 +75,34 @@ export function useSubscription() {
   const refresh = useCallback(async () => {
     setLoading(true);
     const [remoteRes, infoRes] = await Promise.allSettled([fetchSubscription(), getCustomerInfo()]);
-    const rcActive = infoRes.status === 'fulfilled' ? hasProEntitlement(infoRes.value) : false;
-    const base = remoteRes.status === 'fulfilled' ? remoteRes.value : cacheRef.current;
 
-    setCache({
-      status: base.status ?? 'none',
-      isPremium: Boolean(base.isPremium) || rcActive,
-      trialEndsAt: base.trialEndsAt ?? null,
-      currentPeriodEnd: base.currentPeriodEnd ?? null,
-      plan: base.plan ?? null,
-    });
-    setHasSynced(true);
+    const info = infoRes.status === 'fulfilled' ? infoRes.value : null;
+    const entitlementActive = hasProEntitlement(info);
+    setStoreActive(entitlementActive);
+
+    // Falha de rede não mexe no cache nem em `syncedAt`: é exatamente o que faz
+    // a carência offline correr.
+    if (remoteRes.status === 'fulfilled' && remoteRes.value) {
+      const remote = remoteRes.value;
+
+      setCache({
+        status: remote.status ?? 'none',
+        isPremium: Boolean(remote.isPremium),
+        trialEndsAt: remote.trialEndsAt ?? null,
+        currentPeriodEnd: remote.currentPeriodEnd ?? null,
+        plan: remote.plan ?? null,
+        syncedAt: new Date().toISOString(),
+      });
+
+      // A loja já liberou o acesso mas o banco ainda não sabe (webhook atrasado
+      // ou compra feita offline): empurra a compra para o servidor. O próximo
+      // refresh reconcilia — não re-sincronizamos aqui para não criar laço.
+      if (entitlementActive && !remote.isPremium && info) {
+        const payload = buildPaymentPayload(info);
+        if (payload) notifyPayment(payload).catch(() => undefined);
+      }
+    }
+
     setLoading(false);
   }, [setCache]);
 
@@ -85,18 +129,30 @@ export function useSubscription() {
     [refresh],
   );
 
-  const trialDaysLeft = useMemo(() => computeTrialDaysLeft(cache.trialEndsAt), [cache.trialEndsAt]);
-  const isTrialing = cache.status === 'trial' && trialDaysLeft > 0;
-  const isPremium = Boolean(cache.isPremium) || isTrialing;
+  const access = useMemo(() => {
+    const now = Date.now();
+    const syncedAt = toTimestamp(cache.syncedAt);
+    const withinGrace = syncedAt !== null && now - syncedAt <= OFFLINE_GRACE_DAYS * MS_PER_DAY;
+    const cached = resolveCachedAccess(cache, now);
+
+    return {
+      status: cached.status,
+      isPremium: (withinGrace && cached.isPremium) || storeActive,
+      isTrialing: withinGrace && cached.status === 'trial',
+      trialDaysLeft: daysLeftUntil(cache.trialEndsAt, now),
+      /** Nunca sincronizou: melhor liberar o app do que bloquear sem saber. */
+      hasServerAnswer: syncedAt !== null,
+    };
+  }, [cache, storeActive]);
 
   return {
     status: cache,
-    isPremium,
-    isTrialing,
-    trialDaysLeft,
+    isPremium: access.isPremium,
+    isTrialing: access.isTrialing,
+    trialDaysLeft: access.trialDaysLeft,
     loading,
-    /** `true` após hidratar o cache e completar a primeira sincronização. */
-    isReady: Boolean(cache.loaded) && hasSynced,
+    /** `true` após hidratar o cache e ter alguma resposta do servidor (mesmo antiga). */
+    isReady: Boolean(cache.loaded) && access.hasServerAnswer,
     refresh,
     confirmPurchase,
   };

@@ -8,12 +8,11 @@ import type { TabKey } from '@/components/BottomTabBar';
 import BottomTabBar from '@/components/BottomTabBar';
 import VoiceMicButton from '@/components/VoiceMicButton';
 import { useSession } from '@/lib/auth';
-import { useFeatureFlags } from '@/lib/featureFlags';
 import { useOnboarding } from '@/lib/onboarding';
 import { usePendingSyncFlush } from '@/lib/pendingSync';
 import { useSleepLogSync } from '@/lib/sleepLog';
 import { isSleepProfileConfigured, useSleepProfile } from '@/lib/sleepProfile';
-import { useLocalTrial, useSubscription } from '@/lib/subscription';
+import { useSubscription } from '@/lib/subscription';
 import Calendar from '@/screens/Calendar';
 import { onceFrequencyFromISO } from '@/screens/Calendar/scheduleSync';
 import Config from '@/screens/Config';
@@ -74,11 +73,9 @@ function Home() {
   const { isHydrated: onboardingHydrated, completed: onboardingCompleted } = useOnboarding();
   const { profile, isHydrated: sleepHydrated, isReady: sleepReady } = useSleepProfile();
 
-  // Gating premium: assinatura (backend + RevenueCat) ou trial local em vigor.
-  // A duração do trial (7/14/21 dias) vem de feature flag.
-  const { trialDays } = useFeatureFlags();
+  // Gating premium: o banco decide (trial em curso ou assinatura ativa) e o hook
+  // apenas reflete, com cache local para os momentos sem rede.
   const { isReady: subscriptionReady, isPremium } = useSubscription();
-  const { isHydrated: trialHydrated, isExpired: trialExpired, startIfNeeded: startTrialIfNeeded } = useLocalTrial(trialDays);
   const [paywallVisible, setPaywallVisible] = useState(true);
 
   // Reenvia escritas que falharam por rede (metas/atividades do onboarding etc.)
@@ -90,17 +87,14 @@ function Home() {
   // Health Connect) na abertura do app e a cada retorno ao foreground.
   useSleepLogSync(isAuthenticated);
 
-  // Trial expirado e sem assinatura ativa: bloqueia o app no paywall.
-  const isLocked = subscriptionReady && trialHydrated && !isPremium && trialExpired;
-
-  // Inicia o trial local na primeira entrada na Home (pós-login + onboarding).
-  useEffect(() => {
-    if (isAuthenticated && onboardingCompleted) startTrialIfNeeded();
-  }, [isAuthenticated, onboardingCompleted, startTrialIfNeeded]);
+  // Trial expirado e sem assinatura ativa: bloqueia o app no paywall. Enquanto
+  // não houver resposta do servidor (`isReady`), o app abre normalmente — não
+  // trancamos ninguém por falta de informação.
+  const isLocked = subscriptionReady && !isPremium;
 
   // Sem perfil de sono configurado: leva para Estatísticas e abre o modal do card de Sono.
   useEffect(() => {
-    if (!isAuthenticated || !onboardingCompleted || !sleepReady || !subscriptionReady || !trialHydrated || isLocked) return;
+    if (!isAuthenticated || !onboardingCompleted || !sleepReady || !subscriptionReady || isLocked) return;
     if (isSleepProfileConfigured(profile)) return;
     if (sleepPrompted.current) return;
 
@@ -108,7 +102,7 @@ function Home() {
     setShowConfig(false);
     setTab('progress');
     setAutoOpenSleep(true);
-  }, [isAuthenticated, onboardingCompleted, sleepReady, subscriptionReady, trialHydrated, isLocked, profile]);
+  }, [isAuthenticated, onboardingCompleted, sleepReady, subscriptionReady, isLocked, profile]);
 
   const handleTabChange = (next: TabKey) => {
     if (next === 'new') {

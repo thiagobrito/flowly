@@ -6,6 +6,7 @@ import { ActivityIndicator, Alert, Platform, Pressable, ScrollView, Text, useCol
 import { INTRO_ELIGIBILITY_STATUS, type PurchasesOffering, type PurchasesPackage } from 'react-native-purchases';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { useFeatureFlags } from '@/lib/featureFlags';
 import type { SubscriptionPlanId } from '@/lib/subscription';
 import { checkIntroEligibility, describeIntroOffer, getCurrentOffering, initPurchases, isNativePurchasesAvailable, isPurchasesSupported, purchasePackage, restorePurchases, SUBSCRIPTION_PLANS, useSubscription } from '@/lib/subscription';
 
@@ -42,6 +43,7 @@ function isTrialEligible(status: INTRO_ELIGIBILITY_STATUS | undefined): boolean 
 export default function Subscription({ onClose, onDevBypass }: SubscriptionProps) {
   const isDark = useColorScheme() === 'dark';
   const { confirmPurchase } = useSubscription();
+  const { trialDays } = useFeatureFlags();
   const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlanId>('flowly_yearly');
   const [busy, setBusy] = useState(false);
   const [offering, setOffering] = useState<PurchasesOffering | null>(null);
@@ -203,7 +205,8 @@ export default function Subscription({ onClose, onDevBypass }: SubscriptionProps
             </Text>
           </View>
 
-          <TrialTimeline isDark={isDark} hasFreeTrial={showFreeTrial} trialDays={introInfo?.periodDays ?? 7} />
+          {/* A oferta da loja manda; sem ela, cai na duração divulgada pelo servidor. */}
+          <TrialTimeline isDark={isDark} hasFreeTrial={showFreeTrial} trialDays={introInfo?.periodDays ?? trialDays} />
         </ScrollView>
 
         <View className="px-6 pb-2 pt-3">

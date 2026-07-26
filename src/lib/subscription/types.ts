@@ -20,8 +20,16 @@ export type SubscriptionStatus = {
   plan?: SubscriptionPlanId | null;
 };
 
-/** Shape persistido em AsyncStorage (cache local do status). */
-export type SubscriptionCache = PersistedRecord & SubscriptionStatus;
+/**
+ * Shape persistido em AsyncStorage (cache local do status).
+ *
+ * `syncedAt` é o ISO da última resposta bem-sucedida do backend — é ele que
+ * define por quanto tempo o cache ainda vale offline.
+ */
+export type SubscriptionCache = PersistedRecord &
+  SubscriptionStatus & {
+    syncedAt?: string | null;
+  };
 
 /** Corpo enviado ao backend após uma compra bem-sucedida. */
 export type PaymentPayload = {

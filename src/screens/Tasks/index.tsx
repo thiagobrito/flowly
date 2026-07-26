@@ -5,11 +5,10 @@ import { ActivityIndicator, Alert, AppState, Modal, Platform, Pressable, Refresh
 
 import { localDateKey, startOfLocalDay, toLocalISOString } from '@/lib/date';
 import { computeEnergyAtMoment, flowlyInputFromMetrics, getHealthProvider } from '@/lib/energy';
-import { useFeatureFlags } from '@/lib/featureFlags';
 import { api } from '@/lib/network';
 import { queryKeys } from '@/lib/query';
 import { applySleepProfile, useSleepProfile } from '@/lib/sleepProfile';
-import { useLocalTrial, useSubscription } from '@/lib/subscription';
+import { useSubscription } from '@/lib/subscription';
 
 import { useNotificationTest } from '../Config/hooks/useNotificationTest';
 import NotificationTestModal from '../Config/NotificationTestModal';
@@ -118,10 +117,9 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
   sleepProfileRef.current = sleepProfile;
 
   // Trial/assinatura: permite assinar a qualquer momento (dia 0 inclusive).
-  const { trialDays } = useFeatureFlags();
-  const { isPremium } = useSubscription();
-  const { isActive: trialActive, daysLeft: trialDaysLeft } = useLocalTrial(trialDays);
-  const showTrialBanner = !isPremium && trialActive;
+  // Os dias restantes vêm do banco, via `GET /subscription`.
+  const { isTrialing, trialDaysLeft } = useSubscription();
+  const showTrialBanner = isTrialing;
 
   const allTasks = useMemo(() => [...visibleTasks, ...concludedTasks], [visibleTasks, concludedTasks]);
 
