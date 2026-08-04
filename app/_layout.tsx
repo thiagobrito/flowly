@@ -7,6 +7,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { configureNotifications, ensureAndroidChannel, setupNotificationHandler, useNotifications } from '@/lib/notifications';
 import { QueryProvider } from '@/lib/query';
+import { initTelemetry } from '@/lib/telemetry';
 import { useThemePreference } from '@/lib/theme';
 import { useTaskReminders } from '@/screens/Config/hooks/useTaskReminders';
 
@@ -18,6 +19,9 @@ configureNotifications({
   },
 });
 ensureAndroidChannel().catch(() => undefined);
+
+// Telemetria do funil (primeira abertura → compra). Não bloqueia o boot.
+initTelemetry().catch(() => undefined);
 
 Sentry.init({
   dsn: 'https://a2476257c2a1c6711c1f36d720aa3342@o1297145.ingest.us.sentry.io/4511544158715904',

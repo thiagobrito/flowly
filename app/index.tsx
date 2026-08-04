@@ -20,7 +20,7 @@ import Goals from '@/screens/Goals';
 import NewTask from '@/screens/NewTask';
 import type { FrequencyConfig, Task } from '@/screens/NewTask/data';
 import Statistics from '@/screens/Statistics';
-import Subscription from '@/screens/Subscription';
+import PaywallFunnel from '@/screens/Subscription/funnel/PaywallFunnel';
 import TrialEnded from '@/screens/Subscription/TrialEnded';
 import Tasks from '@/screens/Tasks/index';
 import VoiceAssistant, { type VoiceTaskDraft } from '@/screens/VoiceAssistant';
@@ -76,7 +76,9 @@ function Home() {
   // Gating premium: o banco decide (trial em curso ou assinatura ativa) e o hook
   // apenas reflete, com cache local para os momentos sem rede.
   const { isReady: subscriptionReady, isPremium } = useSubscription();
-  const [paywallVisible, setPaywallVisible] = useState(true);
+  // Recusou todas as ofertas do funil: mostra o bloqueio até pedir os planos de
+  // novo. Só vive em memória — reabrir o app recomeça o funil no preço cheio.
+  const [funnelExhausted, setFunnelExhausted] = useState(false);
 
   // Reenvia escritas que falharam por rede (metas/atividades do onboarding etc.)
   // assim que houver sessão — na montagem, na hidratação da fila e ao voltar
@@ -172,7 +174,7 @@ function Home() {
     return (
       <View className="flex-1 bg-white dark:bg-black">
         <Background isDark={isDark} />
-        {paywallVisible ? <Subscription onClose={() => setPaywallVisible(false)} /> : <TrialEnded isDark={isDark} onSeePlans={() => setPaywallVisible(true)} onLogout={handleLogout} />}
+        {funnelExhausted ? <TrialEnded isDark={isDark} onSeePlans={() => setFunnelExhausted(false)} onLogout={handleLogout} /> : <PaywallFunnel onPurchased={() => setFunnelExhausted(false)} onExhausted={() => setFunnelExhausted(true)} />}
       </View>
     );
   }

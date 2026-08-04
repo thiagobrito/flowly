@@ -43,7 +43,8 @@
  *
  * - `initPurchases`, `loginUser`, `logoutUser` — ciclo de vida do SDK
  * - `useSubscription` — hook de estado + ações
- * - `getCustomerInfo`, `getCurrentOffering`, `purchasePackage`, `restorePurchases`
+ * - `getCustomerInfo`, `getCurrentOffering`, `getOffering`, `purchasePackage`, `restorePurchases`
+ * - `OFFER_FUNNEL`, `getOfferStep` — passos do funil de ofertas (preço cheio → descontos)
  * - `hasProEntitlement`, `isPurchasesSupported`
  * - `fetchSubscription`, `notifyPayment`, `buildPaymentPayload`
  * - `SUBSCRIPTION_PLANS`, `ENTITLEMENT_ID`, `RC_API_KEY`, `resolvePlanId`
@@ -55,6 +56,8 @@ export {
   checkIntroEligibility,
   getCurrentOffering,
   getCustomerInfo,
+  getOffering,
+  hasOffering,
   hasProEntitlement,
   initPurchases,
   isNativePurchasesAvailable,
@@ -65,6 +68,9 @@ export {
   purchasePackage,
   restorePurchases,
 } from './client';
+export type { IntroOfferInfo } from './config';
 export { describeIntroOffer, ENTITLEMENT_ID, RC_API_KEY, resolvePlanId, SUBSCRIPTION_PLANS } from './config';
+export type { OfferStep, OfferStepId } from './offers';
+export { getOfferStep, OFFER_FUNNEL, OFFER_FUNNEL_LENGTH } from './offers';
 export type { PaymentPayload, SubscriptionCache, SubscriptionPlan, SubscriptionPlanId, SubscriptionStatus, SubscriptionStatusValue } from './types';
 export { useSubscription } from './useSubscription';

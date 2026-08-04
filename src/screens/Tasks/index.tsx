@@ -397,7 +397,7 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
       <NotificationTestModal visible={testModalVisible} isDark={isDark} onClose={() => setTestModalVisible(false)} onShowNow={showNow} onShowIn30Seconds={showIn30Seconds} />
 
       <Modal visible={subscriptionVisible} animationType="slide" presentationStyle="fullScreen" onRequestClose={() => setSubscriptionVisible(false)}>
-        <Subscription onClose={() => setSubscriptionVisible(false)} />
+        <Subscription source="trial_banner" onClose={() => setSubscriptionVisible(false)} />
       </Modal>
     </View>
   );

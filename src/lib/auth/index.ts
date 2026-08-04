@@ -26,6 +26,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { api, HttpError, isNetworkError, setAuthToken, setAuthTokenProvider } from '@/lib/network';
 import { getPersistedSnapshot, usePersistedState } from '@/lib/storage';
 import { loginUser, logoutUser } from '@/lib/subscription';
+import type { TelemetryEventName } from '@/lib/telemetry';
+import { track } from '@/lib/telemetry';
 
 import type { AuthResponse, AuthResult, Credentials, Session } from './types';
 
@@ -56,6 +58,15 @@ function toFriendlyMessage(error: unknown): string {
   return 'Algo deu errado. Tente novamente.';
 }
 
+/** Motivo da falha em forma agregável (a mensagem exibida fica na UI). */
+function toFailureReason(error: unknown): string {
+  if (error instanceof HttpError) return `http_${error.status}`;
+  if (isNetworkError(error)) return 'network';
+  return 'unknown';
+}
+
+type AuthTelemetry = { succeeded: TelemetryEventName; failed: TelemetryEventName };
+
 /**
  * Hook de sessão. Várias telas podem usá-lo simultaneamente — o estado é
  * compartilhado pela chave de storage, então login/logout refletem em todas.
@@ -69,7 +80,7 @@ export function useSession() {
   }, [session.loaded, session.token]);
 
   const authenticate = useCallback(
-    async (path: string, credentials: Credentials): Promise<AuthResult> => {
+    async (path: string, credentials: Credentials, events: AuthTelemetry): Promise<AuthResult> => {
       setPending(true);
       try {
         const data = await api.post<AuthResponse>(path, credentials);
@@ -78,8 +89,10 @@ export function useSession() {
         setSession({ token: data.token, email });
         // Vincula as compras ao usuário no RevenueCat (não bloqueia o login).
         loginUser(email).catch(() => undefined);
+        track(events.succeeded);
         return { ok: true };
       } catch (error) {
+        track(events.failed, { reason: toFailureReason(error) });
         return { ok: false, error: toFriendlyMessage(error) };
       } finally {
         setPending(false);
@@ -88,11 +101,12 @@ export function useSession() {
     [setSession],
   );
 
-  const signIn = useCallback((credentials: Credentials) => authenticate('/auth/login', credentials), [authenticate]);
+  const signIn = useCallback((credentials: Credentials) => authenticate('/auth/login', credentials, { succeeded: 'login_succeeded', failed: 'login_failed' }), [authenticate]);
 
   const signUp = useCallback(
     async (credentials: Credentials): Promise<AuthResult> => {
-      const registered = await authenticate('/auth/register', credentials);
+      track('signup_started');
+      const registered = await authenticate('/auth/register', credentials, { succeeded: 'signup_succeeded', failed: 'signup_failed' });
       if (!registered.ok) return registered;
 
       // Se o cadastro não autenticou (endpoint não retornou token), faz login
@@ -100,7 +114,7 @@ export function useSession() {
       // sem precisar logar manualmente.
       const { token } = getPersistedSnapshot(EMPTY_SESSION, SESSION_KEY);
       if (token) return registered;
-      return authenticate('/auth/login', credentials);
+      return authenticate('/auth/login', credentials, { succeeded: 'login_succeeded', failed: 'login_failed' });
     },
     [authenticate],
   );

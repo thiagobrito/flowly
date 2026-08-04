@@ -1,93 +1,50 @@
-import * as Sentry from '@sentry/react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { X } from 'lucide-react-native';
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Platform, Pressable, ScrollView, Text, useColorScheme, View } from 'react-native';
-import { INTRO_ELIGIBILITY_STATUS, type PurchasesOffering, type PurchasesPackage } from 'react-native-purchases';
+import { ActivityIndicator, Pressable, ScrollView, Text, useColorScheme, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useFeatureFlags } from '@/lib/featureFlags';
 import type { SubscriptionPlanId } from '@/lib/subscription';
-import { checkIntroEligibility, describeIntroOffer, getCurrentOffering, initPurchases, isNativePurchasesAvailable, isPurchasesSupported, purchasePackage, restorePurchases, SUBSCRIPTION_PLANS, useSubscription } from '@/lib/subscription';
+import { SUBSCRIPTION_PLANS } from '@/lib/subscription';
+import { track } from '@/lib/telemetry';
 
 import IllustrationHeader from './components/IllustrationHeader';
 import LegalLinks from './components/LegalLinks';
 import PlanToggle from './components/PlanToggle';
 import TrialTimeline from './components/TrialTimeline';
+import { usePurchaseFlow } from './usePurchaseFlow';
 
 type SubscriptionProps = {
   onClose: () => void;
   onDevBypass?: () => void;
+  /** De onde a tela foi aberta, para separar os números na telemetria. */
+  source?: string;
 };
-
-function formatMonthlyEquivalent(yearlyAmount: number): string {
-  return (yearlyAmount / 12).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
 
 function Background({ isDark }: { isDark: boolean }) {
   return <LinearGradient colors={isDark ? ['#0b1220', '#070b14', '#000000'] : ['#cfe3f5', '#eaf1f8', '#f7f8fa']} locations={[0, 0.45, 1]} style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 }} />;
 }
 
-/** iOS resolve a elegibilidade real; Android sempre retorna UNKNOWN e a loja
- *  já aplica o trial apenas a quem é elegível — por isso aceitamos exibir a
- *  oferta no Android quando o produto tem trial. No iOS só anunciamos "grátis"
- *  com status ELIGIBLE explícito (UNKNOWN → mostra preço cheio). */
-function isTrialEligible(status: INTRO_ELIGIBILITY_STATUS | undefined): boolean {
-  if (status === INTRO_ELIGIBILITY_STATUS.INTRO_ELIGIBILITY_STATUS_ELIGIBLE) return true;
-  if (Platform.OS === 'android') {
-    return status === undefined || status === INTRO_ELIGIBILITY_STATUS.INTRO_ELIGIBILITY_STATUS_UNKNOWN;
-  }
-  return false;
-}
-
-export default function Subscription({ onClose, onDevBypass }: SubscriptionProps) {
+export default function Subscription({ onClose, onDevBypass, source = 'onboarding' }: SubscriptionProps) {
   const isDark = useColorScheme() === 'dark';
-  const { confirmPurchase } = useSubscription();
   const { trialDays } = useFeatureFlags();
   const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlanId>('flowly_yearly');
-  const [busy, setBusy] = useState(false);
-  const [offering, setOffering] = useState<PurchasesOffering | null>(null);
-  const [eligibility, setEligibility] = useState<Record<string, INTRO_ELIGIBILITY_STATUS>>({});
+  const { busy, introFor, showsFreeTrialFor, perMonthLabelFor, priceLabelFor, purchase, restore } = usePurchaseFlow({ onDevBypass, source });
 
   useEffect(() => {
-    initPurchases();
-
-    let active = true;
-    (async () => {
-      try {
-        const current = await getCurrentOffering();
-        if (!active) return;
-        setOffering(current);
-
-        const productIds = current?.availablePackages.map((item) => item.product.identifier) ?? [];
-        const elig = await checkIntroEligibility(productIds);
-        if (active) setEligibility(elig);
-      } catch (error) {
-        Sentry.captureException(error);
-      }
-    })();
-
-    return () => {
-      active = false;
-    };
-  }, []);
+    track('paywall_viewed', { step_id: 'default', source });
+  }, [source]);
 
   const yearly = SUBSCRIPTION_PLANS.flowly_yearly;
   const monthly = SUBSCRIPTION_PLANS.flowly_montly;
 
-  const findPackage = (planId: SubscriptionPlanId): PurchasesPackage | null => {
-    const { productId } = SUBSCRIPTION_PLANS[planId];
-    return offering?.availablePackages.find((item) => item.product.identifier === productId) ?? null;
-  };
+  const introInfo = introFor(selectedPlan);
+  const showFreeTrial = showsFreeTrialFor(selectedPlan);
 
-  const selectedPkg = findPackage(selectedPlan);
-  const introInfo = describeIntroOffer(selectedPkg?.product.introPrice);
-  const showFreeTrial = Boolean(introInfo?.isFree) && isTrialEligible(eligibility[SUBSCRIPTION_PLANS[selectedPlan].productId]);
-
-  // Preço exibido: prioriza o valor real da loja; cai no label parametrizado.
-  const yearlyPriceLabel = findPackage('flowly_yearly')?.product.priceString ?? yearly.priceLabel;
-  const monthlyPriceLabel = findPackage('flowly_montly')?.product.priceString ?? monthly.priceLabel;
-  const yearlyPerMonth = findPackage('flowly_yearly')?.product.pricePerMonthString ?? `R$ ${formatMonthlyEquivalent(yearly.amount)}`;
+  const yearlyPriceLabel = priceLabelFor('flowly_yearly');
+  const monthlyPriceLabel = priceLabelFor('flowly_montly');
+  const yearlyPerMonth = perMonthLabelFor('flowly_yearly');
 
   const pricingSubtitle = useMemo(() => {
     const trialPrefix = showFreeTrial && introInfo ? `Primeiros ${introInfo.label} grátis, depois ` : '';
@@ -108,66 +65,13 @@ export default function Subscription({ onClose, onDevBypass }: SubscriptionProps
   const headerTitle = showFreeTrial ? 'Como o teste funciona' : 'Desbloqueie o Flowly Premium';
 
   const handleSubscribe = async () => {
-    if (!isPurchasesSupported()) {
-      Alert.alert('Indisponível', 'As assinaturas só estão disponíveis no app iOS/Android.');
-      return;
-    }
-
-    if (!isNativePurchasesAvailable()) {
-      if (onDevBypass) {
-        onDevBypass();
-        return;
-      }
-      Alert.alert('Indisponível', 'Recompile o app para incluir o RevenueCat: npm run ios');
-      return;
-    }
-
-    setBusy(true);
-    try {
-      const { productId } = SUBSCRIPTION_PLANS[selectedPlan];
-      let pkg = selectedPkg;
-      if (!pkg) {
-        const current = await getCurrentOffering();
-        pkg = current?.availablePackages.find((item) => item.product.identifier === productId) ?? null;
-      }
-
-      if (!pkg) {
-        Alert.alert('Plano indisponível', 'Este plano não está configurado no RevenueCat.');
-        return;
-      }
-
-      const info = await purchasePackage(pkg);
-      await confirmPurchase(info);
-      onClose();
-    } catch (error: unknown) {
-      if (error && typeof error === 'object' && 'userCancelled' in error && (error as { userCancelled?: boolean }).userCancelled) {
-        return;
-      }
-      Sentry.captureException(error);
-      Alert.alert('Erro', 'Não foi possível concluir a assinatura.');
-    } finally {
-      setBusy(false);
-    }
+    const outcome = await purchase(selectedPlan);
+    if (outcome.status === 'success') onClose();
   };
 
   const handleRestore = async () => {
-    if (!isPurchasesSupported() || !isNativePurchasesAvailable()) return;
-
-    setBusy(true);
-    try {
-      const info = await restorePurchases();
-      if (info) {
-        await confirmPurchase(info);
-        onClose();
-        return;
-      }
-      Alert.alert('Nada encontrado', 'Nenhuma compra anterior para restaurar.');
-    } catch (error) {
-      Sentry.captureException(error);
-      Alert.alert('Erro', 'Falha ao restaurar compras.');
-    } finally {
-      setBusy(false);
-    }
+    const outcome = await restore();
+    if (outcome.status === 'success') onClose();
   };
 
   const titleColor = isDark ? '#fafafa' : '#18181b';

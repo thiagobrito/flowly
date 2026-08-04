@@ -48,18 +48,26 @@ export class TimeoutError extends NetworkError {
   /** Tempo limite que foi excedido, em ms. */
   readonly timeout: number;
 
+  /** URL que originou o erro. */
+  readonly url: string;
+
   constructor(timeout: number, url: string) {
     super(`Requisição excedeu o timeout de ${timeout}ms em ${url}`);
     this.name = 'TimeoutError';
     this.timeout = timeout;
+    this.url = url;
   }
 }
 
 /** Falha de conectividade (sem rede, DNS, CORS, etc.) — a requisição não completou. */
 export class ConnectionError extends NetworkError {
+  /** URL que originou o erro. */
+  readonly url: string;
+
   constructor(url: string, options?: { cause?: unknown }) {
     super(`Falha de conexão em ${url}`, options);
     this.name = 'ConnectionError';
+    this.url = url;
   }
 }
 

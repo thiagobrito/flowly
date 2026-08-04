@@ -13,6 +13,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CustomerInfo } from 'react-native-purchases';
 
 import { usePersistedState } from '@/lib/storage';
+import { track } from '@/lib/telemetry';
 
 import { buildPaymentPayload, fetchSubscription, notifyPayment } from './api';
 import { addCustomerInfoListener, getCustomerInfo, hasProEntitlement } from './client';
@@ -101,6 +102,10 @@ export function useSubscription() {
         const payload = buildPaymentPayload(info);
         if (payload) notifyPayment(payload).catch(() => undefined);
       }
+    } else {
+      // Sem resposta do servidor o app decide o acesso pelo cache: saber com que
+      // frequência isso acontece explica bloqueios e liberações indevidas.
+      track('subscription_sync_failed');
     }
 
     setLoading(false);

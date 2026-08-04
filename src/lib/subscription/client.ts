@@ -92,6 +92,24 @@ export async function getCurrentOffering(): Promise<PurchasesOffering | null> {
   return offerings.current ?? null;
 }
 
+/**
+ * Offering específico (funil de ofertas). Cai no offering atual quando o
+ * identificador ainda não existe no dashboard — assim o funil continua
+ * vendável mesmo antes das ofertas com desconto serem publicadas.
+ */
+export async function getOffering(identifier: string): Promise<PurchasesOffering | null> {
+  if (!configured || !isPurchasesSupported()) return null;
+  const offerings = await Purchases.getOfferings();
+  return offerings.all[identifier] ?? offerings.current ?? null;
+}
+
+/** `true` quando o identificador existe de fato no dashboard do RevenueCat. */
+export async function hasOffering(identifier: string): Promise<boolean> {
+  if (!configured || !isPurchasesSupported()) return false;
+  const offerings = await Purchases.getOfferings();
+  return Boolean(offerings.all[identifier]);
+}
+
 /** Efetua a compra de um package. Lança em caso de erro/cancelamento. */
 export async function purchasePackage(pkg: PurchasesPackage): Promise<CustomerInfo> {
   const { customerInfo } = await Purchases.purchasePackage(pkg);

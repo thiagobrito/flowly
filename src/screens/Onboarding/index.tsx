@@ -8,6 +8,7 @@ import { api } from '@/lib/network';
 import { useOnboarding } from '@/lib/onboarding';
 import type { PersistedRecord } from '@/lib/storage';
 import { usePersistedState } from '@/lib/storage';
+import { track } from '@/lib/telemetry';
 import type { GoalSetup } from '@/screens/Goals/data';
 import NewGoals from '@/screens/NewGoals';
 import NewTask from '@/screens/NewTask';
@@ -90,6 +91,13 @@ export default function Onboarding({ isDark, onComplete }: OnboardingProps) {
   const step = steps[Math.min(index, steps.length - 1)];
   const isLast = index >= steps.length - 1;
 
+  // Cada passo exibido é um degrau do funil de ativação: é o que revela onde as
+  // pessoas param antes de chegar ao paywall.
+  useEffect(() => {
+    if (!step) return;
+    track('onboarding_step_viewed', { step: step.kind, index });
+  }, [step, index]);
+
   const goBack = useCallback(() => {
     setProgress({ ...progress, index: Math.max(0, index - 1) });
   }, [setProgress, progress, index]);
@@ -97,12 +105,18 @@ export default function Onboarding({ isDark, onComplete }: OnboardingProps) {
   const goNext = useCallback(() => {
     if (isLast) {
       // Fluxo concluído: descarta o progresso salvo para um eventual novo cadastro.
+      track('onboarding_completed');
       setProgress({ ...EMPTY_PROGRESS });
       onComplete();
       return;
     }
     setProgress({ ...progress, index: Math.min(steps.length - 1, index + 1) });
   }, [isLast, steps.length, onComplete, setProgress, progress, index]);
+
+  const skipStep = useCallback(() => {
+    if (step) track('onboarding_step_skipped', { step: step.kind });
+    goNext();
+  }, [goNext, step]);
 
   const handlePaywallClose = useCallback(() => {
     setShowPaywall(false);
@@ -139,7 +153,7 @@ export default function Onboarding({ isDark, onComplete }: OnboardingProps) {
       case 'quote':
         return <QuoteStep step={step} isDark={isDark} onNext={goNext} />;
       case 'goals':
-        return <GoalsStep step={step} isDark={isDark} onOpenGoals={() => setShowGoals(true)} onSkip={goNext} />;
+        return <GoalsStep step={step} isDark={isDark} onOpenGoals={() => setShowGoals(true)} onSkip={skipStep} />;
       case 'activities':
         return <ActivitiesStep step={step} isDark={isDark} goalName={goalName} activities={activities} onAddActivity={() => setShowActivities(true)} onNext={goNext} />;
       case 'notifications':
@@ -149,13 +163,13 @@ export default function Onboarding({ isDark, onComplete }: OnboardingProps) {
       case 'sleepProfile':
         return <SleepProfileStep step={step} isDark={isDark} onNext={goNext} />;
       case 'payment':
-        return <PaymentStep step={step} isDark={isDark} onOpenPaywall={() => setShowPaywall(true)} onSkip={goNext} />;
+        return <PaymentStep step={step} isDark={isDark} onOpenPaywall={() => setShowPaywall(true)} onSkip={skipStep} />;
       case 'completed':
         return <CompletedStep step={step} isDark={isDark} onFinish={goNext} />;
       default:
         return null;
     }
-  }, [step, isDark, language, setLanguage, goNext, goalName, activities]);
+  }, [step, isDark, language, setLanguage, goNext, skipStep, goalName, activities]);
 
   // Aguarda a hidratação do progresso salvo para não piscar o passo inicial
   // antes de restaurar o ponto em que o usuário parou.
