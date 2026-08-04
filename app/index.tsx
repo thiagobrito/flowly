@@ -5,7 +5,7 @@ import { ActivityIndicator, Alert, useColorScheme, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { TabKey } from '@/components/BottomTabBar';
-import BottomTabBar from '@/components/BottomTabBar';
+import BottomTabBar, { PREMIUM_TABS } from '@/components/BottomTabBar';
 import VoiceMicButton from '@/components/VoiceMicButton';
 import { useSession } from '@/lib/auth';
 import { useOnboarding } from '@/lib/onboarding';
@@ -13,6 +13,7 @@ import { usePendingSyncFlush } from '@/lib/pendingSync';
 import { useSleepLogSync } from '@/lib/sleepLog';
 import { isSleepProfileConfigured, useSleepProfile } from '@/lib/sleepProfile';
 import { useSubscription } from '@/lib/subscription';
+import { track } from '@/lib/telemetry';
 import Calendar from '@/screens/Calendar';
 import { onceFrequencyFromISO } from '@/screens/Calendar/scheduleSync';
 import Config from '@/screens/Config';
@@ -21,7 +22,6 @@ import NewTask from '@/screens/NewTask';
 import type { FrequencyConfig, Task } from '@/screens/NewTask/data';
 import Statistics from '@/screens/Statistics';
 import PaywallFunnel from '@/screens/Subscription/funnel/PaywallFunnel';
-import TrialEnded from '@/screens/Subscription/TrialEnded';
 import Tasks from '@/screens/Tasks/index';
 import VoiceAssistant, { type VoiceTaskDraft } from '@/screens/VoiceAssistant';
 
@@ -76,9 +76,11 @@ function Home() {
   // Gating premium: o banco decide (trial em curso ou assinatura ativa) e o hook
   // apenas reflete, com cache local para os momentos sem rede.
   const { isReady: subscriptionReady, isPremium } = useSubscription();
-  // Recusou todas as ofertas do funil: mostra o bloqueio até pedir os planos de
-  // novo. Só vive em memória — reabrir o app recomeça o funil no preço cheio.
-  const [funnelExhausted, setFunnelExhausted] = useState(false);
+  // Funil aberto no gate (ou reaberto ao tocar numa tab bloqueada). Só em
+  // memória — reabrir o app recomeça no preço cheio.
+  const [paywallOpen, setPaywallOpen] = useState(true);
+  // Passo atual do funil, elevado para retomar de onde parou ao reabrir.
+  const [funnelStep, setFunnelStep] = useState(0);
 
   // Reenvia escritas que falharam por rede (metas/atividades do onboarding etc.)
   // assim que houver sessão — na montagem, na hidratação da fila e ao voltar
@@ -89,9 +91,9 @@ function Home() {
   // Health Connect) na abertura do app e a cada retorno ao foreground.
   useSleepLogSync(isAuthenticated);
 
-  // Trial expirado e sem assinatura ativa: bloqueia o app no paywall. Enquanto
-  // não houver resposta do servidor (`isReady`), o app abre normalmente — não
-  // trancamos ninguém por falta de informação.
+  // Trial expirado e sem assinatura ativa: modo limitado (home + nova atividade).
+  // Enquanto não houver resposta do servidor (`isReady`), o app abre normalmente —
+  // não trancamos ninguém por falta de informação.
   const isLocked = subscriptionReady && !isPremium;
 
   // Sem perfil de sono configurado: leva para Estatísticas e abre o modal do card de Sono.
@@ -106,7 +108,24 @@ function Home() {
     setAutoOpenSleep(true);
   }, [isAuthenticated, onboardingCompleted, sleepReady, subscriptionReady, isLocked, profile]);
 
+  // Se o usuário ficou numa tab premium e o acesso acabou, volta para a Home.
+  useEffect(() => {
+    if (!isLocked) return;
+    if ((PREMIUM_TABS as readonly string[]).includes(tab)) {
+      setTab('home');
+    }
+  }, [isLocked, tab]);
+
+  const openPaywall = (reason: string) => {
+    track('locked_feature_tapped', { feature: reason });
+    setPaywallOpen(true);
+  };
+
   const handleTabChange = (next: TabKey) => {
+    if (isLocked && (PREMIUM_TABS as readonly string[]).includes(next)) {
+      openPaywall(next);
+      return;
+    }
     if (next === 'new') {
       setEditingTask(null);
       setNewTaskDraft(null);
@@ -130,7 +149,8 @@ function Home() {
     const target = newTaskDraft?.returnTab ?? 'home';
     setEditingTask(null);
     setNewTaskDraft(null);
-    setTab(target);
+    // Em modo limitado, não volta para uma tab premium (ex.: calendário).
+    setTab(isLocked && (PREMIUM_TABS as readonly string[]).includes(target) ? 'home' : target);
   };
 
   // Rascunho ditado no assistente de voz → abre o formulário pré-preenchido.
@@ -170,11 +190,19 @@ function Home() {
     ]);
   };
 
-  if (isLocked) {
+  if (isLocked && paywallOpen) {
     return (
-      <View className="flex-1 bg-white dark:bg-black">
-        <Background isDark={isDark} />
-        {funnelExhausted ? <TrialEnded isDark={isDark} onSeePlans={() => setFunnelExhausted(false)} onLogout={handleLogout} /> : <PaywallFunnel onPurchased={() => setFunnelExhausted(false)} onExhausted={() => setFunnelExhausted(true)} />}
+      <View className="flex-1 bg-black">
+        <Background isDark />
+        <PaywallFunnel
+          initialStepIndex={funnelStep}
+          onStepChange={setFunnelStep}
+          onPurchased={() => {
+            setPaywallOpen(false);
+            setFunnelStep(0);
+          }}
+          onExhausted={() => setPaywallOpen(false)}
+        />
       </View>
     );
   }
@@ -202,8 +230,8 @@ function Home() {
             />
           )}
 
-          {!showConfig ? <VoiceMicButton onActivate={() => setVoiceVisible(true)} /> : null}
-          {!showConfig ? <BottomTabBar active={tab} onChange={handleTabChange} /> : null}
+          {!showConfig ? <VoiceMicButton onActivate={() => (isLocked ? openPaywall('voice') : setVoiceVisible(true))} /> : null}
+          {!showConfig ? <BottomTabBar active={tab} onChange={handleTabChange} lockedTabs={isLocked ? PREMIUM_TABS : []} /> : null}
         </View>
       </SafeAreaView>
 

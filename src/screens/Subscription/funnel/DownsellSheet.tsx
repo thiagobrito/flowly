@@ -1,7 +1,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { Flame, X } from 'lucide-react-native';
 import { useEffect } from 'react';
-import { ActivityIndicator, Pressable, Text, useColorScheme, View } from 'react-native';
+import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -27,7 +27,8 @@ const ANIM_DURATION = 260;
  * tela inteira do gate — evita empilhar modais nativos.
  */
 export default function DownsellSheet({ step, flow, basePriceLabel, onSubscribe, onDismiss }: DownsellSheetProps) {
-  const isDark = useColorScheme() === 'dark';
+  // Paywall sempre em dark — independente do tema do sistema.
+  const isDark = true;
   const progress = useSharedValue(0);
 
   useEffect(() => {
@@ -42,11 +43,12 @@ export default function DownsellSheet({ step, flow, basePriceLabel, onSubscribe,
   const priceLabel = flow.priceLabelFor(step.plan);
   const perMonthLabel = flow.perMonthLabelFor(step.plan);
   const showStrikethrough = Boolean(basePriceLabel) && basePriceLabel !== priceLabel;
+  const ctaDisabled = flow.busy || !flow.offeringReady;
 
-  const sheetBg = isDark ? '#171326' : '#ffffff';
-  const titleColor = isDark ? '#fafafa' : '#18181b';
-  const subtitleColor = isDark ? '#d4d4d8' : '#52525b';
-  const mutedColor = isDark ? '#a1a1aa' : '#71717a';
+  const sheetBg = '#171326';
+  const titleColor = '#fafafa';
+  const subtitleColor = '#d4d4d8';
+  const mutedColor = '#a1a1aa';
 
   return (
     <View className="flex-1 justify-end" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}>
@@ -55,25 +57,19 @@ export default function DownsellSheet({ step, flow, basePriceLabel, onSubscribe,
       <Animated.View style={[sheetStyle, { backgroundColor: sheetBg, borderTopLeftRadius: 28, borderTopRightRadius: 28 }]}>
         <SafeAreaView edges={['bottom']}>
           <View className="px-6 pb-4 pt-5">
-            <View className="mb-5 h-1 w-10 self-center rounded-full" style={{ backgroundColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.12)' }} />
+            <View className="mb-5 h-1 w-10 self-center rounded-full" style={{ backgroundColor: 'rgba(255,255,255,0.2)' }} />
 
             <View className="flex-row items-center justify-between">
               {step.countdownSeconds ? <Countdown seconds={step.countdownSeconds} isDark={isDark} onExpire={onDismiss} /> : <View />}
 
-              <Pressable
-                onPress={onDismiss}
-                accessibilityRole="button"
-                accessibilityLabel="Fechar"
-                className="size-9 items-center justify-center rounded-full active:opacity-70"
-                style={{ backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)' }}
-              >
+              <Pressable onPress={onDismiss} accessibilityRole="button" accessibilityLabel="Fechar" className="size-9 items-center justify-center rounded-full active:opacity-70" style={{ backgroundColor: 'rgba(255,255,255,0.1)' }}>
                 <X size={18} color={mutedColor} />
               </Pressable>
             </View>
 
             <View className="mt-5 flex-row items-center justify-center">
-              <View className="size-12 items-center justify-center rounded-full" style={{ backgroundColor: 'rgba(249,115,22,0.15)' }}>
-                <Flame size={24} color="#f97316" />
+              <View className="size-12 items-center justify-center rounded-full" style={{ backgroundColor: 'rgba(99,102,241,0.15)' }}>
+                <Flame size={24} color="#6366f1" />
               </View>
               <Text className="ml-3 text-4xl font-extrabold" style={{ color: titleColor }}>
                 {step.discountLabel}
@@ -87,7 +83,7 @@ export default function DownsellSheet({ step, flow, basePriceLabel, onSubscribe,
               {step.subtitle}
             </Text>
 
-            <View className="mt-5 flex-row items-center justify-between rounded-2xl border px-4 py-3" style={{ borderColor: '#f97316' }}>
+            <View className="mt-5 flex-row items-center justify-between rounded-2xl border px-4 py-3" style={{ borderColor: '#6366f1' }}>
               <Text className="text-xs font-bold tracking-wide" style={{ color: mutedColor }}>
                 12 MESES
               </Text>
@@ -107,9 +103,9 @@ export default function DownsellSheet({ step, flow, basePriceLabel, onSubscribe,
               </View>
             </View>
 
-            <Pressable onPress={() => onSubscribe(step.plan)} disabled={flow.busy} accessibilityRole="button" className="mt-5 active:opacity-90" style={{ opacity: flow.busy ? 0.7 : 1 }}>
-              <LinearGradient colors={['#f97316', '#ea580c']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ height: 52, borderRadius: 999, alignItems: 'center', justifyContent: 'center' }}>
-                {flow.busy ? <ActivityIndicator color="#ffffff" /> : <Text className="text-base font-bold uppercase text-white">{step.ctaLabel}</Text>}
+            <Pressable onPress={() => onSubscribe(step.plan)} disabled={ctaDisabled} accessibilityRole="button" className="mt-5 active:opacity-90" style={{ opacity: ctaDisabled ? 0.7 : 1 }}>
+              <LinearGradient colors={['#3b82f6', '#6366f1']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ height: 52, borderRadius: 999, alignItems: 'center', justifyContent: 'center' }}>
+                {flow.busy || !flow.offeringReady ? <ActivityIndicator color="#ffffff" /> : <Text className="text-base font-bold uppercase text-white">{step.ctaLabel}</Text>}
               </LinearGradient>
             </Pressable>
 

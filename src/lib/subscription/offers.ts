@@ -1,14 +1,17 @@
 /**
  * Funil de ofertas do paywall.
  *
- * Descreve, de forma declarativa, os passos exibidos a quem não tem acesso:
- * preço cheio → desconto intermediário → oferta final. Cada passo aponta para
- * um Offering distinto no RevenueCat; os preços reais sempre vêm da loja, os
- * rótulos aqui são só apresentação.
+ * Preços comerciais (anual):
+ * - default:      R$ 199,90  → productId `flowly_yearly`
+ * - downsell:     R$ 159,92  (−20%) → productId `flowly_yearly_20`
+ * - last_chance:  R$ 79,96   (−60%) → productId `flowly_yearly_60`
  *
- * Os identificadores de Offering são parametrizáveis por env para permitir
- * testar variações sem novo build de código (as vars `EXPO_PUBLIC_*` são
- * inlinadas pelo Expo, por isso a leitura precisa ser literal).
+ * Cada passo aponta para um Offering no RevenueCat (`default`, `downsell`,
+ * `last_chance`). O preço cobrado e exibido vem da App Store / Play via o
+ * package do Offering; os rótulos abaixo são só apresentação e fallback.
+ * Guia de setup: `mobile/docs/revenuecat-offerings-funnel.md`.
+ *
+ * Identificadores de Offering parametrizáveis por env (`EXPO_PUBLIC_*`).
  */
 
 import type { SubscriptionPlanId } from './plans';
@@ -19,6 +22,11 @@ export type OfferStep = {
   id: OfferStepId;
   /** Offering no RevenueCat de onde saem os packages deste passo. */
   offeringId: string;
+  /**
+   * Product ID na App Store / Play deste passo. Precisa conter `year`/`annual`/
+   * `anual` para `resolvePlanId` e para o backend aceitar o pagamento.
+   */
+  productId: string;
   layout: 'full' | 'sheet';
   /** Plano destacado. Os passos de desconto só vendem o anual. */
   plan: SubscriptionPlanId;
@@ -28,6 +36,10 @@ export type OfferStep = {
   badge?: string;
   /** Rótulo do desconto (ex.: "20% OFF"). Ausente no passo de preço cheio. */
   discountLabel?: string;
+  /** Fallback de preço quando a loja ainda não devolveu o package. */
+  fallbackPriceLabel: string;
+  /** Valor numérico do passo (para equivalente mensal sem package da loja). */
+  fallbackAmount: number;
   /** Duração da contagem regressiva. Ausente = sem urgência no passo. */
   countdownSeconds?: number;
   /** Só o primeiro passo deixa escolher entre anual e mensal. */
@@ -48,11 +60,14 @@ export const OFFER_FUNNEL: [OfferStep, ...OfferStep[]] = [
   {
     id: 'default',
     offeringId: OFFERING_DEFAULT,
+    productId: 'flowly_yearly',
     layout: 'full',
     plan: 'flowly_yearly',
     title: 'Desbloqueie o Flowly Premium',
     subtitle: 'Metas, calendário, estatísticas e assistente de voz sem limites.',
     badge: 'MAIS POPULAR',
+    fallbackPriceLabel: 'R$ 199,90',
+    fallbackAmount: 199.9,
     showPlanToggle: true,
     ctaLabel: 'Assinar agora',
     dismissLabel: 'Agora não',
@@ -60,11 +75,14 @@ export const OFFER_FUNNEL: [OfferStep, ...OfferStep[]] = [
   {
     id: 'downsell',
     offeringId: OFFERING_DOWNSELL,
+    productId: 'flowly_yearly_20',
     layout: 'sheet',
     plan: 'flowly_yearly',
     title: 'Só hoje no plano anual',
     subtitle: 'Um desconto para você começar sem pesar no bolso.',
     discountLabel: '20% OFF',
+    fallbackPriceLabel: 'R$ 159,92',
+    fallbackAmount: 159.92,
     countdownSeconds: 10 * MINUTE,
     showPlanToggle: false,
     ctaLabel: 'Quero o desconto',
@@ -73,11 +91,14 @@ export const OFFER_FUNNEL: [OfferStep, ...OfferStep[]] = [
   {
     id: 'last_chance',
     offeringId: OFFERING_LAST_CHANCE,
+    productId: 'flowly_yearly_60',
     layout: 'full',
     plan: 'flowly_yearly',
     title: 'Nossa melhor oferta',
     subtitle: 'Sua última chance de garantir o plano anual pelo menor preço disponível.',
-    discountLabel: 'MENOR PREÇO',
+    discountLabel: '60% OFF',
+    fallbackPriceLabel: 'R$ 79,96',
+    fallbackAmount: 79.96,
     countdownSeconds: 2 * MINUTE,
     showPlanToggle: false,
     ctaLabel: 'Garantir oferta',

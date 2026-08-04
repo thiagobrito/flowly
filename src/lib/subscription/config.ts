@@ -37,7 +37,8 @@ export const ENTITLEMENT_ID = 'Flowly Pro';
  */
 export const SUBSCRIPTION_PLANS: Record<SubscriptionPlanId, SubscriptionPlan> = {
   flowly_montly: { id: 'flowly_montly', productId: 'flowly_montly', priceLabel: 'R$ 19,90', amount: 19.9, period: 'month', title: 'Mensal' },
-  flowly_yearly: { id: 'flowly_yearly', productId: 'flowly_yearly', priceLabel: 'R$ 197,00', amount: 197, period: 'year', title: 'Anual' },
+  // Preço cheio do funil (passo 1). Descontos 20% / 60% são SKUs separados nas lojas.
+  flowly_yearly: { id: 'flowly_yearly', productId: 'flowly_yearly', priceLabel: 'R$ 199,90', amount: 199.9, period: 'year', title: 'Anual' },
 };
 
 /** Descrição normalizada da oferta introdutória (trial) de um produto. */

@@ -28,6 +28,12 @@ export type RestoreOutcome = { status: 'success' } | { status: 'empty' } | { sta
 type PurchaseFlowOptions = {
   /** Offering do funil. Ausente = offering atual do dashboard. */
   offeringId?: string;
+  /** Product ID preferido deste passo (ex.: `flowly_yearly_20`). */
+  preferredProductId?: string;
+  /** Preço de fallback quando a loja ainda não devolveu o package. */
+  fallbackPriceLabel?: string;
+  /** Valor numérico do passo, usado no equivalente mensal sem package da loja. */
+  fallbackAmount?: number;
   /** Passo do funil, usado na telemetria de checkout. */
   stepId?: string;
   /** De onde o paywall foi aberto (`gate`, `onboarding`, ...). */
@@ -73,16 +79,46 @@ function matchesPeriod(productId: string, period: 'month' | 'year'): boolean {
   return id.includes('mont') || id.includes('month') || id.includes('mensal');
 }
 
-export function usePurchaseFlow({ offeringId, stepId = 'default', source = 'gate', onDevBypass }: PurchaseFlowOptions = {}) {
+/**
+ * Resolve o package do plano no offering atual.
+ *
+ * Quando há `preferredProductId` do mesmo período do plano (SKU do passo do
+ * funil), a busca é estrita: se o SKU não estiver no offering, retorna `null`
+ * em vez de cair no preço cheio. Assim o fallback de preço do passo aparece e
+ * a compra nunca cobra um valor diferente do anunciado.
+ */
+function resolvePackage(packages: PurchasesPackage[], planId: SubscriptionPlanId, preferredProductId?: string): PurchasesPackage | null {
+  const { productId, period } = SUBSCRIPTION_PLANS[planId];
+
+  if (preferredProductId && matchesPeriod(preferredProductId, period)) {
+    return packages.find((item) => item.product.identifier === preferredProductId) ?? null;
+  }
+
+  const exact = packages.find((item) => item.product.identifier === productId);
+  if (exact) return exact;
+
+  return packages.find((item) => matchesPeriod(item.product.identifier, period)) ?? null;
+}
+
+export function usePurchaseFlow({ offeringId, preferredProductId, fallbackPriceLabel, fallbackAmount, stepId = 'default', source = 'gate', onDevBypass }: PurchaseFlowOptions = {}) {
   const { confirmPurchase } = useSubscription();
   const [offering, setOffering] = useState<PurchasesOffering | null>(null);
   const [eligibility, setEligibility] = useState<Record<string, INTRO_ELIGIBILITY_STATUS>>({});
   const [busy, setBusy] = useState(false);
+  /** `false` enquanto o offering pedido ainda não terminou de carregar. */
+  const [offeringReady, setOfferingReady] = useState(false);
   /** `false` quando o identificador pedido não existe no dashboard (caiu no fallback). */
   const [offeringResolved, setOfferingResolved] = useState(true);
 
   useEffect(() => {
     initPurchases();
+
+    // Limpa o offering anterior antes de buscar o novo — evita que a UI e a
+    // compra usem packages do passo anterior no instante da troca.
+    setOffering(null);
+    setEligibility({});
+    setOfferingReady(false);
+    setOfferingResolved(true);
 
     let active = true;
     (async () => {
@@ -93,6 +129,7 @@ export function usePurchaseFlow({ offeringId, stepId = 'default', source = 'gate
         const resolved = !offeringId || current?.identifier === offeringId;
         setOffering(current);
         setOfferingResolved(resolved);
+        setOfferingReady(true);
 
         // Offering pedido não existe no dashboard: a oferta caiu no fallback e
         // alguém precisa publicá-la. Sem esse evento a falha é invisível.
@@ -103,6 +140,7 @@ export function usePurchaseFlow({ offeringId, stepId = 'default', source = 'gate
         if (active) setEligibility(elig);
       } catch (error) {
         Sentry.captureException(error);
+        if (active) setOfferingReady(true);
       }
     })();
 
@@ -113,30 +151,24 @@ export function usePurchaseFlow({ offeringId, stepId = 'default', source = 'gate
 
   const findPackage = useCallback(
     (planId: SubscriptionPlanId): PurchasesPackage | null => {
-      const { productId } = SUBSCRIPTION_PLANS[planId];
       const packages = offering?.availablePackages ?? [];
-      // Um offering de desconto tem SKU próprio: casa pelo id exato e, na falta
-      // dele, pelo período do plano (o offering só traz variações do mesmo).
-      const exact = packages.find((item) => item.product.identifier === productId);
-      if (exact) return exact;
-
-      const { period } = SUBSCRIPTION_PLANS[planId];
-      return packages.find((item) => matchesPeriod(item.product.identifier, period)) ?? null;
+      return resolvePackage(packages, planId, preferredProductId);
     },
-    [offering],
+    [offering, preferredProductId],
   );
 
-  /** Preço cheio da loja com fallback para o rótulo parametrizado. */
-  const priceLabelFor = useCallback((planId: SubscriptionPlanId): string => findPackage(planId)?.product.priceString ?? SUBSCRIPTION_PLANS[planId].priceLabel, [findPackage]);
+  /** Preço da loja; senão, o fallback do passo do funil ou o rótulo do plano. */
+  const priceLabelFor = useCallback((planId: SubscriptionPlanId): string => findPackage(planId)?.product.priceString ?? fallbackPriceLabel ?? SUBSCRIPTION_PLANS[planId].priceLabel, [fallbackPriceLabel, findPackage]);
 
   const perMonthLabelFor = useCallback(
     (planId: SubscriptionPlanId): string => {
       const pkg = findPackage(planId);
       if (pkg?.product.pricePerMonthString) return pkg.product.pricePerMonthString;
       const { amount, period } = SUBSCRIPTION_PLANS[planId];
-      return `R$ ${period === 'year' ? formatMonthlyEquivalent(amount) : amount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      const value = fallbackAmount ?? amount;
+      return `R$ ${period === 'year' ? formatMonthlyEquivalent(value) : value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     },
-    [findPackage],
+    [fallbackAmount, findPackage],
   );
 
   const introFor = useCallback((planId: SubscriptionPlanId): IntroOfferInfo | null => describeIntroOffer(findPackage(planId)?.product.introPrice), [findPackage]);
@@ -178,8 +210,8 @@ export function usePurchaseFlow({ offeringId, stepId = 'default', source = 'gate
           // Offering pode não ter carregado ainda: tenta uma última resolução.
           const current = offeringId ? await getOffering(offeringId) : await getCurrentOffering();
           setOffering(current);
-          const { productId } = SUBSCRIPTION_PLANS[planId];
-          pkg = current?.availablePackages.find((item) => item.product.identifier === productId) ?? current?.availablePackages[0] ?? null;
+          const packages = current?.availablePackages ?? [];
+          pkg = resolvePackage(packages, planId, preferredProductId);
         }
 
         if (!pkg) {
@@ -205,7 +237,7 @@ export function usePurchaseFlow({ offeringId, stepId = 'default', source = 'gate
         setBusy(false);
       }
     },
-    [confirmPurchase, findPackage, offeringId, onDevBypass, source, stepId],
+    [confirmPurchase, findPackage, offeringId, onDevBypass, preferredProductId, source, stepId],
   );
 
   const restore = useCallback(async (): Promise<RestoreOutcome> => {
@@ -233,6 +265,7 @@ export function usePurchaseFlow({ offeringId, stepId = 'default', source = 'gate
   return useMemo(
     () => ({
       offering,
+      offeringReady,
       offeringResolved,
       busy,
       findPackage,
@@ -243,7 +276,7 @@ export function usePurchaseFlow({ offeringId, stepId = 'default', source = 'gate
       purchase,
       restore,
     }),
-    [busy, findPackage, introFor, offering, offeringResolved, perMonthLabelFor, priceLabelFor, purchase, restore, showsFreeTrialFor],
+    [busy, findPackage, introFor, offering, offeringReady, offeringResolved, perMonthLabelFor, priceLabelFor, purchase, restore, showsFreeTrialFor],
   );
 }
 

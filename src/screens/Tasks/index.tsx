@@ -118,8 +118,9 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
 
   // Trial/assinatura: permite assinar a qualquer momento (dia 0 inclusive).
   // Os dias restantes vêm do banco, via `GET /subscription`.
-  const { isTrialing, trialDaysLeft } = useSubscription();
+  const { isPremium, isTrialing, trialDaysLeft } = useSubscription();
   const showTrialBanner = isTrialing;
+  const showLockedBanner = !isPremium && !isTrialing;
 
   const allTasks = useMemo(() => [...visibleTasks, ...concludedTasks], [visibleTasks, concludedTasks]);
 
@@ -350,6 +351,22 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
           </Text>
           <Text className="text-sm font-semibold" style={{ color: '#6366f1' }}>
             Assinar
+          </Text>
+        </Pressable>
+      ) : null}
+
+      {showLockedBanner ? (
+        <Pressable
+          onPress={() => setSubscriptionVisible(true)}
+          accessibilityRole="button"
+          accessibilityLabel="Desbloquear recursos Premium"
+          className="mt-3 flex-row items-center rounded-2xl border px-4 py-3 active:opacity-80"
+          style={{ borderColor: isDark ? 'rgba(99,102,241,0.35)' : 'rgba(99,102,241,0.25)', backgroundColor: isDark ? 'rgba(99,102,241,0.12)' : 'rgba(99,102,241,0.08)' }}
+        >
+          <Crown size={16} color="#6366f1" />
+          <Text className="ml-2 flex-1 text-sm text-zinc-700 dark:text-zinc-200">Calendário, metas e gráficos estão bloqueados</Text>
+          <Text className="text-sm font-semibold" style={{ color: '#6366f1' }}>
+            Desbloquear
           </Text>
         </Pressable>
       ) : null}

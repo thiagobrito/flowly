@@ -30,6 +30,7 @@ export const TELEMETRY_EVENTS = [
   'purchase_failed',
   'restore_failed',
   'funnel_exhausted',
+  'locked_feature_tapped',
 
   // Falhas de infraestrutura
   'offering_missing',

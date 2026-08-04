@@ -1,7 +1,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { X } from 'lucide-react-native';
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, Text, useColorScheme, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useFeatureFlags } from '@/lib/featureFlags';
@@ -22,12 +22,13 @@ type SubscriptionProps = {
   source?: string;
 };
 
-function Background({ isDark }: { isDark: boolean }) {
-  return <LinearGradient colors={isDark ? ['#0b1220', '#070b14', '#000000'] : ['#cfe3f5', '#eaf1f8', '#f7f8fa']} locations={[0, 0.45, 1]} style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 }} />;
+function Background() {
+  return <LinearGradient colors={['#0b1220', '#070b14', '#000000']} locations={[0, 0.45, 1]} style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 }} />;
 }
 
 export default function Subscription({ onClose, onDevBypass, source = 'onboarding' }: SubscriptionProps) {
-  const isDark = useColorScheme() === 'dark';
+  // Paywall sempre em dark — independente do tema do sistema.
+  const isDark = true;
   const { trialDays } = useFeatureFlags();
   const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlanId>('flowly_yearly');
   const { busy, introFor, showsFreeTrialFor, perMonthLabelFor, priceLabelFor, purchase, restore } = usePurchaseFlow({ onDevBypass, source });
@@ -74,13 +75,13 @@ export default function Subscription({ onClose, onDevBypass, source = 'onboardin
     if (outcome.status === 'success') onClose();
   };
 
-  const titleColor = isDark ? '#fafafa' : '#18181b';
-  const subtitleColor = isDark ? '#d4d4d8' : '#52525b';
-  const mutedColor = isDark ? '#71717a' : '#a1a1aa';
+  const titleColor = '#fafafa';
+  const subtitleColor = '#d4d4d8';
+  const mutedColor = '#71717a';
 
   return (
-    <View className="flex-1 bg-white dark:bg-black">
-      <Background isDark={isDark} />
+    <View className="flex-1 bg-black">
+      <Background />
 
       <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
         <View className="absolute right-4 top-14 z-10">

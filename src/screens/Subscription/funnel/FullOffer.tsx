@@ -1,13 +1,12 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { Check, X } from 'lucide-react-native';
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, Text, useColorScheme, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useFeatureFlags } from '@/lib/featureFlags';
 import type { OfferStep, SubscriptionPlanId } from '@/lib/subscription';
 
-import IllustrationHeader from '../components/IllustrationHeader';
 import LegalLinks from '../components/LegalLinks';
 import PlanToggle from '../components/PlanToggle';
 import TrialTimeline from '../components/TrialTimeline';
@@ -25,13 +24,14 @@ type FullOfferProps = {
   onRestore: () => void;
 };
 
-function Background({ isDark }: { isDark: boolean }) {
-  return <LinearGradient colors={isDark ? ['#0b1220', '#070b14', '#000000'] : ['#cfe3f5', '#eaf1f8', '#f7f8fa']} locations={[0, 0.45, 1]} style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 }} />;
+function Background() {
+  return <LinearGradient colors={['#0b1220', '#070b14', '#000000']} locations={[0, 0.45, 1]} style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 }} />;
 }
 
 /** Oferta em tela cheia: primeiro contato (preço cheio) e oferta final. */
 export default function FullOffer({ step, flow, basePriceLabel, onSubscribe, onDismiss, onRestore }: FullOfferProps) {
-  const isDark = useColorScheme() === 'dark';
+  // Paywall sempre em dark — independente do tema do sistema.
+  const isDark = true;
   const { trialDays } = useFeatureFlags();
   const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlanId>(step.plan);
 
@@ -43,15 +43,17 @@ export default function FullOffer({ step, flow, basePriceLabel, onSubscribe, onD
   const isDiscounted = Boolean(step.discountLabel);
   /** Só faz sentido riscar um preço diferente do que está sendo cobrado. */
   const showStrikethrough = isDiscounted && Boolean(basePriceLabel) && basePriceLabel !== priceLabel;
+  const ctaDisabled = flow.busy || !flow.offeringReady;
 
-  const titleColor = isDark ? '#fafafa' : '#18181b';
-  const subtitleColor = isDark ? '#d4d4d8' : '#52525b';
-  const mutedColor = isDark ? '#71717a' : '#a1a1aa';
-  const cardBg = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.75)';
-  const cardBorder = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)';
+  const titleColor = '#fafafa';
+  const subtitleColor = '#d4d4d8';
+  const mutedColor = '#71717a';
+  const cardBg = 'rgba(255,255,255,0.05)';
+  const cardBorder = 'rgba(255,255,255,0.1)';
 
   const ctaLabel = showFreeTrial ? 'Começar teste grátis' : step.ctaLabel;
   const periodLabel = plan === 'flowly_yearly' ? 'ano' : 'mês';
+  const showPerMonth = plan === 'flowly_yearly';
 
   let pricingCaption: string;
   if (showFreeTrial && intro) {
@@ -61,8 +63,8 @@ export default function FullOffer({ step, flow, basePriceLabel, onSubscribe, onD
   }
 
   return (
-    <View className="flex-1 bg-white dark:bg-black">
-      <Background isDark={isDark} />
+    <View className="flex-1 bg-black">
+      <Background />
 
       <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
         <View className="absolute right-4 top-14 z-10">
@@ -72,11 +74,9 @@ export default function FullOffer({ step, flow, basePriceLabel, onSubscribe, onD
         </View>
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
-          <IllustrationHeader />
-
           <View className="px-6 pt-6">
             {step.badge ? (
-              <View className="mb-3 self-center rounded-full px-3 py-1" style={{ backgroundColor: isDiscounted ? '#f97316' : '#6366f1' }}>
+              <View className="mb-3 self-center rounded-full px-3 py-1" style={{ backgroundColor: '#6366f1' }}>
                 <Text className="text-[11px] font-bold tracking-wide text-white">{step.badge}</Text>
               </View>
             ) : null}
@@ -105,8 +105,8 @@ export default function FullOffer({ step, flow, basePriceLabel, onSubscribe, onD
 
             <View className="mt-6 items-center">
               {step.discountLabel ? (
-                <View className="mb-2 rounded-full px-3 py-1" style={{ backgroundColor: 'rgba(249,115,22,0.15)' }}>
-                  <Text className="text-sm font-bold" style={{ color: '#f97316' }}>
+                <View className="mb-2 rounded-full px-3 py-1" style={{ backgroundColor: 'rgba(99,102,241,0.15)' }}>
+                  <Text className="text-sm font-bold" style={{ color: '#6366f1' }}>
                     {step.discountLabel}
                   </Text>
                 </View>
@@ -123,9 +123,11 @@ export default function FullOffer({ step, flow, basePriceLabel, onSubscribe, onD
                 </Text>
               </View>
 
-              <Text className="mt-1 text-sm" style={{ color: subtitleColor }}>
-                {perMonthLabel}/mês
-              </Text>
+              {showPerMonth ? (
+                <Text className="mt-1 text-sm" style={{ color: subtitleColor }}>
+                  {perMonthLabel}/mês
+                </Text>
+              ) : null}
             </View>
 
             {isDiscounted ? (
@@ -149,15 +151,15 @@ export default function FullOffer({ step, flow, basePriceLabel, onSubscribe, onD
         </ScrollView>
 
         <View className="px-6 pb-2 pt-3">
-          <Pressable onPress={onRestore} disabled={flow.busy} accessibilityRole="button" className="mb-3 active:opacity-70">
+          <Pressable onPress={onRestore} disabled={ctaDisabled} accessibilityRole="button" className="mb-3 active:opacity-70">
             <Text className="text-center text-sm" style={{ color: mutedColor }}>
               Restaurar compra
             </Text>
           </Pressable>
 
-          <Pressable onPress={() => onSubscribe(plan)} disabled={flow.busy} accessibilityRole="button" className="active:opacity-90" style={{ opacity: flow.busy ? 0.7 : 1 }}>
+          <Pressable onPress={() => onSubscribe(plan)} disabled={ctaDisabled} accessibilityRole="button" className="active:opacity-90" style={{ opacity: ctaDisabled ? 0.7 : 1 }}>
             <LinearGradient
-              colors={isDiscounted ? ['#f97316', '#ea580c'] : ['#3b82f6', '#6366f1']}
+              colors={['#3b82f6', '#6366f1']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={{
@@ -165,14 +167,14 @@ export default function FullOffer({ step, flow, basePriceLabel, onSubscribe, onD
                 borderRadius: 999,
                 alignItems: 'center',
                 justifyContent: 'center',
-                shadowColor: isDiscounted ? '#f97316' : '#6366f1',
+                shadowColor: '#6366f1',
                 shadowOffset: { width: 0, height: 6 },
                 shadowOpacity: 0.35,
                 shadowRadius: 14,
                 elevation: 8,
               }}
             >
-              {flow.busy ? <ActivityIndicator color="#ffffff" /> : <Text className="text-base font-semibold text-white">{ctaLabel}</Text>}
+              {flow.busy || !flow.offeringReady ? <ActivityIndicator color="#ffffff" /> : <Text className="text-base font-semibold text-white">{ctaLabel}</Text>}
             </LinearGradient>
           </Pressable>
 

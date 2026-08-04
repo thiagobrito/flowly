@@ -3,8 +3,8 @@
  *
  * Encadeia os passos de `OFFER_FUNNEL`: quem recusa uma oferta recebe a
  * seguinte, com desconto maior. Esgotados os passos, o funil avisa o gate para
- * mostrar o bloqueio. O progresso vive só em memória — reabrir o app recomeça
- * do preço cheio.
+ * liberar o app em modo limitado. O progresso pode ser controlado pelo pai
+ * (`initialStepIndex` / `onStepChange`) para retomar de onde parou.
  */
 
 import { useCallback, useEffect, useState } from 'react';
@@ -23,27 +23,42 @@ type PaywallFunnelProps = {
   onPurchased: () => void;
   /** Todas as ofertas foram recusadas. */
   onExhausted: () => void;
+  /** Índice inicial do funil (controlado pelo pai para retomar o passo). */
+  initialStepIndex?: number;
+  /** Notifica o pai quando o passo muda. */
+  onStepChange?: (index: number) => void;
   /** Libera o app em builds de desenvolvimento sem módulo nativo. */
   onDevBypass?: () => void;
 };
 
 const FIRST_STEP = OFFER_FUNNEL[0];
 
-export default function PaywallFunnel({ onPurchased, onExhausted, onDevBypass }: PaywallFunnelProps) {
-  const [stepIndex, setStepIndex] = useState(0);
+export default function PaywallFunnel({ onPurchased, onExhausted, initialStepIndex = 0, onStepChange, onDevBypass }: PaywallFunnelProps) {
+  const [stepIndex, setStepIndex] = useState(() => Math.min(Math.max(initialStepIndex, 0), OFFER_FUNNEL_LENGTH - 1));
   const step = getOfferStep(stepIndex) ?? FIRST_STEP;
 
-  // Duas leituras do RevenueCat: a oferta do passo atual e a de preço cheio,
-  // que serve de referência para o "de/por". O SDK cacheia os offerings, então
-  // não há chamada extra à loja.
-  const baseFlow = usePurchaseFlow({ offeringId: FIRST_STEP.offeringId });
-  const flow = usePurchaseFlow({ offeringId: step.offeringId, stepId: step.id, source: 'gate', onDevBypass });
+  // Oferta do passo atual. O "de/por" usa o rótulo comercial do passo 1
+  // (`fallbackPriceLabel`), não o priceString da loja — em sandbox/USD a loja
+  // devolve valores como `$99.99` e o riscado fica errado para o mercado BR.
+  const flow = usePurchaseFlow({
+    offeringId: step.offeringId,
+    preferredProductId: step.productId,
+    fallbackPriceLabel: step.fallbackPriceLabel,
+    fallbackAmount: step.fallbackAmount,
+    stepId: step.id,
+    source: 'gate',
+    onDevBypass,
+  });
 
-  const basePriceLabel = baseFlow.findPackage('flowly_yearly') ? baseFlow.priceLabelFor('flowly_yearly') : null;
+  const basePriceLabel = FIRST_STEP.fallbackPriceLabel;
 
   useEffect(() => {
     track('paywall_viewed', { step_id: step.id, offering_id: step.offeringId, source: 'gate' });
   }, [step.id, step.offeringId]);
+
+  useEffect(() => {
+    onStepChange?.(stepIndex);
+  }, [onStepChange, stepIndex]);
 
   const advance = useCallback(() => {
     track('paywall_dismissed', { step_id: step.id });
