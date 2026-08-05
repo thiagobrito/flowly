@@ -4,6 +4,8 @@ import { ScrollView, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
 
+import { ENERGY } from '@/lib/theme';
+
 import type { Task } from '../../NewTask/data';
 import { formatDuration, getLifeArea } from '../../NewTask/data';
 import LevelDots from '../../Tasks/components/LevelDots';
@@ -70,8 +72,8 @@ function TaskChip({
             </Text>
           </View>
           <View className="flex flex-row">
-            <Zap size={13} color="#22c55e" style={{ marginRight: 6 }} />
-            <LevelDots value={task.energy || 0} accent="#22c55e" isDark={isDark} />
+            <Zap size={13} color={ENERGY.high} style={{ marginRight: 6 }} />
+            <LevelDots value={task.energy || 0} accent={ENERGY.high} isDark={isDark} />
           </View>
           <View className="flex flex-row">
             <TrendingUp size={13} color="#3b82f6" style={{ marginRight: 6 }} />

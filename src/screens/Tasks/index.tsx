@@ -1,23 +1,32 @@
 import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Crown, GoalIcon } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, AppState, Modal, Platform, Pressable, RefreshControl, ScrollView, Text, useColorScheme, View } from 'react-native';
+import { ActivityIndicator, Alert, AppState, Platform, Pressable, RefreshControl, ScrollView, Text, useColorScheme, View } from 'react-native';
 
+import ModalScreen from '@/components/ModalScreen';
+import PeakEnergyCard from '@/components/PeakEnergyCard';
+import { buildCandidates, buildMobileDayCurve, type CoachInsight, loadDismissedForToday, LOW_SLEEP_HOURS, MAX_RECOMMENDATIONS, quantizeNow, saveDismissedForToday, useAiCoachSuggestions } from '@/lib/coach';
 import { localDateKey, startOfLocalDay, toLocalISOString } from '@/lib/date';
-import { computeEnergyAtMoment, flowlyInputFromMetrics, getHealthProvider } from '@/lib/energy';
+import { computeEnergyAtMoment, type FlowlyEngineInput, flowlyInputFromMetrics, getHealthProvider } from '@/lib/energy';
+import { applyEnergyMode, type EnergyMode, type EngineEnergy, filterTasksForMode, loadEnergyModeForToday, saveEnergyModeForToday } from '@/lib/energyMode';
 import { api } from '@/lib/network';
 import { queryKeys } from '@/lib/query';
 import { applySleepProfile, useSleepProfile } from '@/lib/sleepProfile';
 import { useSubscription } from '@/lib/subscription';
+import { track } from '@/lib/telemetry';
 
+import { syncTaskScheduleToServer } from '../Calendar/scheduleSync';
 import { useNotificationTest } from '../Config/hooks/useNotificationTest';
 import NotificationTestModal from '../Config/NotificationTestModal';
 import type { Task } from '../NewTask/data';
 import { getLifeArea } from '../NewTask/data';
 import Subscription from '../Subscription';
+import CoachSuggestions from './components/CoachSuggestions';
+import EnergyModeSheet from './components/EnergyModeSheet';
 import type { FilterArea } from './components/FilterDrawer';
 import FilterDrawer from './components/FilterDrawer';
 import Header from './components/Header';
+import RushedEmptyState from './components/RushedEmptyState';
 import TaskCard from './components/TaskCard';
 import { moveTask, removeTaskFromLists, type TasksData } from './taskCache';
 import { DATE_FILTERS, type DateFilterId, getTomorrowDate, getWeekDates, taskMatchesDateFilter } from './taskDateFilter';
@@ -70,13 +79,41 @@ async function fetchDayTasks(dateISO: string): Promise<Task[]> {
   return OrganizeTasks(combined);
 }
 
+/**
+ * Identidade dos campos do input que mudam a curva de energia. Serve para
+ * descartar coletas que devolvem um objeto novo com o mesmo conteúdo.
+ */
+function energyInputFingerprint(input: FlowlyEngineInput | null): string {
+  if (!input) return 'none';
+
+  const history = (input.sleepHistory ?? []).map((night) => `${night.date}:${night.sleepHours}`).join(',');
+  return [input.wakeTime, input.bedTime, input.lastNightSleepHours, input.sleepNeedHours, input.hrvMs, input.restingHeartRate, history].join('|');
+}
+
 export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
   const isDark = useColorScheme() === 'dark';
   const queryClient = useQueryClient();
   const [refreshing, setRefreshing] = useState(false);
   const [energyScore, setEnergyScore] = useState<number>(0);
+  const [engineScore, setEngineScore] = useState<number>(0);
   const [energyLevel, setEnergyLevel] = useState<number>(0);
   const [energyReady, setEnergyReady] = useState<boolean>(false);
+  const [energyMode, setEnergyMode] = useState<EnergyMode>('ideal');
+  const [energyModeOpen, setEnergyModeOpen] = useState(false);
+  const [energyInput, setEnergyInput] = useState<FlowlyEngineInput | null>(null);
+  const [lastNightSleepHours, setLastNightSleepHours] = useState<number | null>(null);
+  const [dismissedInsights, setDismissedInsights] = useState<string[]>([]);
+  // `now` quantizado em slots de 15 min: em `new Date()` cru, o slot mais cedo
+  // possível anda a cada segundo e as sugestões trocam de horário sozinhas.
+  const [nowSlot, setNowSlot] = useState(() => quantizeNow(new Date()));
+  const [applyingInsightId, setApplyingInsightId] = useState<string | null>(null);
+  const energyModeRef = useRef<EnergyMode>('ideal');
+  energyModeRef.current = energyMode;
+  // Par (score, nível) do motor no último refresh. Guardado em ref para que a
+  // escolha de modo use o valor do instante da escolha, não um render antigo.
+  const engineRef = useRef<EngineEnergy>({ score: 0, level: 0 });
+  const hoursAwakeRef = useRef(0);
+  const hasHealthDataRef = useRef(false);
 
   // A chave inclui o dia e o nível de energia (arredondado, para não recriar
   // uma entrada de cache a cada micro-variação da coleta de 60s).
@@ -134,7 +171,11 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
   // está ativo, e compartilham o cache `tasksCalendar` com o Calendário.
   const tomorrowDate = useMemo(() => getTomorrowDate(startOfLocalDay(dateKey)), [dateKey]);
   const tomorrowKey = localDateKey(tomorrowDate);
-  const wantTomorrow = filterOpen || selectedDateFilter === 'tomorrow';
+  // A regra de dívida de sono agenda para amanhã, então precisa da agenda de
+  // amanhã para não sugerir um horário já ocupado. Fora desse caso, a busca
+  // continua sob demanda.
+  const sleepDebtActive = lastNightSleepHours != null && lastNightSleepHours < LOW_SLEEP_HOURS;
+  const wantTomorrow = filterOpen || selectedDateFilter === 'tomorrow' || sleepDebtActive;
 
   const tomorrowQuery = useQuery<Task[]>({
     queryKey: queryKeys.tasksCalendar(tomorrowKey),
@@ -215,13 +256,24 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
   );
 
   const filteredVisible = useMemo(() => {
-    if (selectedDateFilter === 'tomorrow') return tomorrowTasks.filter(matchesArea);
-    if (selectedDateFilter === 'thisWeek') return week.tasks.filter(matchesArea);
-    if (selectedDateFilter === 'nodate') return allUserTasks.filter((task) => taskMatchesDateFilter(task, 'nodate') && matchesArea(task));
-    return applyFilters(visibleTasks);
-  }, [selectedDateFilter, tomorrowTasks, week.tasks, allUserTasks, matchesArea, visibleTasks, applyFilters]);
+    let list: Task[];
+    if (selectedDateFilter === 'tomorrow') list = tomorrowTasks.filter(matchesArea);
+    else if (selectedDateFilter === 'thisWeek') list = week.tasks.filter(matchesArea);
+    else if (selectedDateFilter === 'nodate') list = allUserTasks.filter((task) => taskMatchesDateFilter(task, 'nodate') && matchesArea(task));
+    else list = applyFilters(visibleTasks);
+    return filterTasksForMode(list, energyMode);
+  }, [selectedDateFilter, tomorrowTasks, week.tasks, allUserTasks, matchesArea, visibleTasks, applyFilters, energyMode]);
 
-  const filteredConcluded = useMemo(() => (isFutureFilter ? [] : applyFilters(concludedTasks)), [isFutureFilter, concludedTasks, applyFilters]);
+  // Concluídas ficam fora do filtro de modo: Rushed serve para decidir o que
+  // fazer agora, e esconder o que já foi feito apaga o progresso do dia.
+  const filteredConcluded = useMemo(() => {
+    if (isFutureFilter) return [];
+    return applyFilters(concludedTasks);
+  }, [isFutureFilter, concludedTasks, applyFilters]);
+
+  // Rushed pode esvaziar a lista legitimamente (nada curto e de alto impacto).
+  // Sem aviso, a tela vazia parece falha de carregamento.
+  const rushedHidAll = energyMode === 'rushed' && filteredVisible.length === 0 && applyFilters(visibleTasks).length > 0;
 
   // Enquanto o filtro futuro selecionado ainda busca, evita mostrar vazio.
   const futureLoading = (selectedDateFilter === 'tomorrow' && tomorrowQuery.isLoading) || (selectedDateFilter === 'thisWeek' && week.isLoading);
@@ -282,11 +334,138 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
     const metrics = applySleepProfile(collected, sleepProfileRef.current);
     const input = flowlyInputFromMetrics(metrics, 8);
     const result = computeEnergyAtMoment(input, toLocalISOString());
-    setEnergyScore(result.doubleEnergyScore);
-    setEnergyLevel(result.doubleEnergyLevel);
+    const engine: EngineEnergy = { score: result.doubleEnergyScore, level: result.doubleEnergyLevel };
+    const effective = applyEnergyMode(energyModeRef.current, engine);
+    engineRef.current = engine;
+    hoursAwakeRef.current = result.components.hoursAwake;
+    // Wearable/health real: HRV ou horas de sono vindas do coletor (não só do perfil).
+    hasHealthDataRef.current = Boolean(collected.hrvMs != null || collected.sleepHours != null);
+    // A coleta roda a cada 60s e devolve um objeto novo mesmo quando nada
+    // mudou. Trocar a referência reconstrói a curva e recalcula as sugestões,
+    // que é a causa de elas "variarem sozinhas" na tela.
+    setEnergyInput((previous) => (energyInputFingerprint(previous) === energyInputFingerprint(input) ? previous : input));
+    setLastNightSleepHours(metrics.sleepHours ?? input.lastNightSleepHours ?? null);
+    setEngineScore(engine.score);
+    setEnergyScore(effective.score);
+    setEnergyLevel(effective.level);
     setEnergyReady(true);
     return result;
   }, []);
+
+  // Candidatas determinísticas: são elas que definem o que é acionável. A IA
+  // apenas escolhe entre estas e reescreve o texto.
+  const coachCandidates = useMemo(() => {
+    if (!energyReady) return [] as CoachInsight[];
+
+    const candidates = buildCandidates({
+      dateKey,
+      now: nowSlot,
+      tasks: visibleTasks,
+      concluded: concludedTasks,
+      curve: buildMobileDayCurve(energyInput, dateKey),
+      lastNightSleepHours,
+      tomorrowTasks,
+      tomorrowCurve: buildMobileDayCurve(energyInput, tomorrowKey),
+    });
+
+    return candidates.filter((insight) => !dismissedInsights.includes(insight.id));
+  }, [energyReady, energyInput, dateKey, nowSlot, visibleTasks, concludedTasks, lastNightSleepHours, dismissedInsights, tomorrowTasks, tomorrowKey]);
+
+  const aiContext = useMemo(() => ({ energyScore, lastNightSleepHours }), [energyScore, lastNightSleepHours]);
+  const rankedInsights = useAiCoachSuggestions(dateKey, coachCandidates, aiContext);
+  // Sem IA disponível o hook devolve as candidatas na ordem determinística, então
+  // o corte aqui é o mesmo que `buildRecommendations` faria.
+  const coachInsights = useMemo(() => rankedInsights.slice(0, MAX_RECOMMENDATIONS), [rankedInsights]);
+
+  // Uma impressão por conjunto de sugestões, para medir aplicação sem inflar o
+  // denominador a cada re-render da lista.
+  const shownSignature = coachInsights.map((insight) => insight.id).join(',');
+  const lastShownRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!shownSignature || lastShownRef.current === shownSignature) return;
+
+    lastShownRef.current = shownSignature;
+    track('coach_suggestion_shown', {
+      count: coachInsights.length,
+      kinds: coachInsights.map((insight) => insight.id.split('-')[0]).join(','),
+      energy_mode: energyMode,
+      has_profile: energyInput != null,
+    });
+  }, [shownSignature, coachInsights, energyMode, energyInput]);
+
+  const dismissInsight = useCallback((insight: CoachInsight) => {
+    track('coach_suggestion_dismissed', { kind: insight.id.split('-')[0] ?? 'unknown' });
+    setDismissedInsights((previous) => {
+      const next = [...previous, insight.id];
+      saveDismissedForToday(next).catch(() => undefined);
+      return next;
+    });
+  }, []);
+
+  const handleApplyInsight = useCallback(
+    async (insight: CoachInsight) => {
+      if (!insight.action || insight.action.type !== 'schedule') return;
+      const task = [...visibleTasks, ...concludedTasks, ...allUserTasks].find((item) => item.id === insight.action!.taskId);
+      if (!task) {
+        Alert.alert('Erro', 'Não encontramos essa atividade.');
+        return;
+      }
+
+      setApplyingInsightId(insight.id);
+      try {
+        await syncTaskScheduleToServer(task, insight.action.startISO, insight.action.durationMin);
+        track('coach_suggestion_applied', {
+          kind: insight.id.split('-')[0] ?? 'unknown',
+          duration_min: insight.action.durationMin,
+        });
+        setDismissedInsights((previous) => {
+          const next = [...previous, insight.id];
+          saveDismissedForToday(next).catch(() => undefined);
+          return next;
+        });
+        await queryClient.invalidateQueries({ queryKey: queryKeys.tasksAll() });
+      } catch {
+        Alert.alert('Erro', 'Não foi possível aplicar a sugestão.');
+      } finally {
+        setApplyingInsightId(null);
+      }
+    },
+    [visibleTasks, concludedTasks, allUserTasks, queryClient],
+  );
+
+  const handleSelectEnergyMode = useCallback(
+    async (mode: EnergyMode) => {
+      // Par (motor, declarado) no instante da escolha — antes de qualquer refresh.
+      const engine = engineRef.current;
+      const effective = applyEnergyMode(mode, engine);
+      const declared = effective.declaredScore ?? engine.score;
+
+      setEnergyMode(mode);
+      energyModeRef.current = mode;
+      setEnergyModeOpen(false);
+      setEnergyScore(effective.score);
+      setEnergyLevel(effective.level);
+      await saveEnergyModeForToday(mode);
+
+      // Sem coleta concluída não existe score do motor para comparar, e um par
+      // (0, declarado) entraria no delta médio como discordância máxima.
+      if (energyReady) {
+        track('energy_mode_selected', {
+          mode,
+          engine_score: Math.round(engine.score),
+          declared_score: Math.round(declared),
+          delta: Math.round(declared - engine.score),
+          hours_awake: Math.round(hoursAwakeRef.current),
+          has_health_data: hasHealthDataRef.current,
+        });
+      }
+
+      // Revalida a lista com o novo nível (cache key inclui roundedEnergy).
+      await queryClient.invalidateQueries({ queryKey: queryKeys.tasksAll() });
+    },
+    [energyReady, queryClient],
+  );
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -303,9 +482,24 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
   const appState = useRef(AppState.currentState);
 
   useEffect(() => {
+    loadEnergyModeForToday().then((mode) => {
+      setEnergyMode(mode);
+      energyModeRef.current = mode;
+    });
+
+    // Sugestões dispensadas hoje: sem isso, "Agora não" só vale até o próximo
+    // remount da tela.
+    loadDismissedForToday().then(setDismissedInsights);
+
     // Garante que a Home carregue mesmo se a coleta de energia falhar.
     const runRefresh = () => {
       refreshEnergy().catch(() => setEnergyReady(true));
+      // Só avança o slot quando ele realmente virou, para não invalidar o memo
+      // das sugestões a cada minuto.
+      setNowSlot((previous) => {
+        const next = quantizeNow(new Date());
+        return next.getTime() === previous.getTime() ? previous : next;
+      });
     };
 
     runRefresh();
@@ -335,7 +529,7 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
 
   return (
     <View className="flex-1">
-      <Header isDark={isDark} energyScore={energyScore} onLogout={onLogout} onOpenConfig={onOpenConfig} onOpenFilter={() => setFilterOpen(true)} />
+      <Header isDark={isDark} energyScore={energyScore} energyMode={energyMode} onLogout={onLogout} onOpenConfig={onOpenConfig} onOpenFilter={() => setFilterOpen(true)} onOpenEnergyMode={() => setEnergyModeOpen(true)} />
 
       {showTrialBanner ? (
         <Pressable
@@ -377,6 +571,12 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
         contentContainerStyle={{ paddingBottom: 70 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={isDark ? '#e4e4e7' : '#3b82f6'} colors={['#3b82f6']} />}
       >
+        <View className="mb-3">
+          <PeakEnergyCard input={energyInput} currentScore={engineScore} isDark={isDark} />
+        </View>
+
+        <CoachSuggestions insights={coachInsights} isDark={isDark} applyingId={applyingInsightId} onApply={handleApplyInsight} onDismiss={dismissInsight} />
+
         {futureLoading ? (
           <View className="items-center justify-center py-10">
             <ActivityIndicator color={isDark ? '#e4e4e7' : '#3b82f6'} />
@@ -386,6 +586,8 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
             <TaskCard key={task.randomId} highlight={index === 0} task={task} selected={false} isDark={isDark} onComplete={() => handleToggled(task, true)} onEdit={() => onEdit?.(task)} onDelete={() => handleDelete(task)} />
           ))
         )}
+
+        {rushedHidAll ? <RushedEmptyState isDark={isDark} onShowAll={() => handleSelectEnergyMode('ideal')} /> : null}
 
         {isFutureFilter ? null : (
           <View className="w-full border-t border-zinc-200 dark:border-zinc-800" style={Platform.select({ web: { filter: 'grayscale(100%)' }, default: { opacity: 0.5 } })}>
@@ -413,9 +615,11 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
 
       <NotificationTestModal visible={testModalVisible} isDark={isDark} onClose={() => setTestModalVisible(false)} onShowNow={showNow} onShowIn30Seconds={showIn30Seconds} />
 
-      <Modal visible={subscriptionVisible} animationType="slide" presentationStyle="fullScreen" onRequestClose={() => setSubscriptionVisible(false)}>
+      <ModalScreen visible={subscriptionVisible} onClose={() => setSubscriptionVisible(false)} hideHeader>
         <Subscription source="trial_banner" onClose={() => setSubscriptionVisible(false)} />
-      </Modal>
+      </ModalScreen>
+
+      <EnergyModeSheet visible={energyModeOpen} isDark={isDark} currentMode={energyMode} engineScore={engineScore} onSelect={handleSelectEnergyMode} onClose={() => setEnergyModeOpen(false)} />
     </View>
   );
 }

@@ -40,6 +40,17 @@ export type DailyTrigger = {
   minute: number;
 };
 
+/**
+ * Dispara uma vez por semana.
+ * `weekday`: 1 = domingo … 7 = sábado (convenção do expo-notifications / iOS).
+ */
+export type WeeklyTrigger = {
+  type: 'weekly';
+  weekday: number;
+  hour: number;
+  minute: number;
+};
+
 /** Dispara após `seconds` decorrerem, opcionalmente repetindo. */
 export type TimeIntervalTrigger = {
   type: 'timeInterval';
@@ -50,7 +61,7 @@ export type TimeIntervalTrigger = {
 };
 
 /** União dos gatilhos de agendamento suportados pela lib. */
-export type NotificationTrigger = DateTrigger | DailyTrigger | TimeIntervalTrigger;
+export type NotificationTrigger = DateTrigger | DailyTrigger | WeeklyTrigger | TimeIntervalTrigger;
 
 /** Comportamento aplicado quando a notificação chega com o app em foreground. */
 export type NotificationForegroundBehavior = {

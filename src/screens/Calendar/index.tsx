@@ -10,6 +10,7 @@ import { hasGoogleClientIds, useGoogleCalendarSync } from '@/lib/googleCalendar'
 import { api } from '@/lib/network';
 import { queryKeys } from '@/lib/query';
 import { cancelTaskRemindersFor, syncTaskReminders } from '@/lib/taskReminders';
+import { ENERGY } from '@/lib/theme';
 
 import { useConfigPreferences } from '../Config/hooks/useConfigPreferences';
 import type { ScheduledSlot, Subtask, Task } from '../NewTask/data';
@@ -220,8 +221,8 @@ export default function Calendar({ onEdit, onCreateAt }: CalendarProps) {
               }}
             >
               <View className="flex-row items-center" style={{ marginRight: 14 }}>
-                <Zap size={13} color="#22c55e" style={{ marginRight: 6 }} />
-                <LevelDots value={task.energy || 0} accent="#22c55e" isDark={isDark} />
+                <Zap size={13} color={ENERGY.high} style={{ marginRight: 6 }} />
+                <LevelDots value={task.energy || 0} accent={ENERGY.high} isDark={isDark} />
               </View>
 
               <View className="flex-row items-center">

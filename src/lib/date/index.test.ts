@@ -26,4 +26,26 @@ describe('date helpers', () => {
     expect(localDateKey(lateNight, 'UTC')).toBe('2026-06-15');
     expect(localDateKey(lateNight, APP_TIME_ZONE)).toBe('2026-06-14');
   });
+
+  // Regressão: `new Date('2026-06-08')` é meia-noite UTC, que em São Paulo ainda
+  // é 07/jun. Sem tratar o formato date-only, todo dateKey que passava por aqui
+  // voltava um dia e deslocava agendas, curvas de energia e o digest semanal.
+  it('reads a YYYY-MM-DD key as a civil day in the app time zone', () => {
+    const start = startOfLocalDay('2026-06-08');
+
+    expect(localDateKey(start)).toBe('2026-06-08');
+    expect(start.toISOString()).toBe('2026-06-08T03:00:00.000Z');
+  });
+
+  it('round-trips localDateKey through startOfLocalDay', () => {
+    for (const iso of ['2026-01-01T02:00:00.000Z', '2026-06-15T02:30:58.997Z', '2026-10-18T04:00:00.000Z', '2026-12-31T23:59:59.000Z']) {
+      const key = localDateKey(new Date(iso));
+      expect(localDateKey(startOfLocalDay(key))).toBe(key);
+    }
+  });
+
+  it('keeps date-only keys stable under a time zone override', () => {
+    expect(startOfLocalDay('2026-06-08', 'UTC').toISOString()).toBe('2026-06-08T00:00:00.000Z');
+    expect(localDateKey(startOfLocalDay('2026-06-08', 'UTC'), 'UTC')).toBe('2026-06-08');
+  });
 });

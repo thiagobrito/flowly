@@ -1,6 +1,6 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { Redirect } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, useColorScheme, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -8,12 +8,14 @@ import type { TabKey } from '@/components/BottomTabBar';
 import BottomTabBar, { PREMIUM_TABS } from '@/components/BottomTabBar';
 import VoiceMicButton from '@/components/VoiceMicButton';
 import { useSession } from '@/lib/auth';
+import { addNotificationResponseListener } from '@/lib/notifications';
 import { useOnboarding } from '@/lib/onboarding';
 import { usePendingSyncFlush } from '@/lib/pendingSync';
 import { useSleepLogSync } from '@/lib/sleepLog';
 import { isSleepProfileConfigured, useSleepProfile } from '@/lib/sleepProfile';
 import { useSubscription } from '@/lib/subscription';
 import { track } from '@/lib/telemetry';
+import { ensureWeeklyReviewNotification, WEEKLY_REVIEW_DATA_TYPE } from '@/lib/weeklyReview';
 import Calendar from '@/screens/Calendar';
 import { onceFrequencyFromISO } from '@/screens/Calendar/scheduleSync';
 import Config from '@/screens/Config';
@@ -24,6 +26,7 @@ import Statistics from '@/screens/Statistics';
 import PaywallFunnel from '@/screens/Subscription/funnel/PaywallFunnel';
 import Tasks from '@/screens/Tasks/index';
 import VoiceAssistant, { type VoiceTaskDraft } from '@/screens/VoiceAssistant';
+import WeeklyReview from '@/screens/WeeklyReview';
 
 type NewTaskDraft = {
   initialFrequency: FrequencyConfig;
@@ -44,15 +47,18 @@ type ActiveScreenProps = {
   onNewTaskSuccess: () => void;
   autoOpenSleep?: boolean;
   onSleepPromptHandled?: () => void;
+  onOpenWeeklyReview?: () => void;
 };
 
-function ActiveScreen({ tab, onLogout, onOpenConfig, editingTask, newTaskDraft, onEdit, onCreateAt, onNewTaskSuccess, autoOpenSleep, onSleepPromptHandled }: ActiveScreenProps) {
+function ActiveScreen({ tab, onLogout, onOpenConfig, editingTask, newTaskDraft, onEdit, onCreateAt, onNewTaskSuccess, autoOpenSleep, onSleepPromptHandled, onOpenWeeklyReview }: ActiveScreenProps) {
   if (tab === 'new') {
     return <NewTask task={editingTask} initialName={newTaskDraft?.initialName} initialFrequency={newTaskDraft?.initialFrequency} initialArea={newTaskDraft?.initialArea} onSuccess={onNewTaskSuccess} />;
   }
   if (tab === 'goals') return <Goals />;
   if (tab === 'calendar') return <Calendar onEdit={onEdit} onCreateAt={onCreateAt} />;
-  if (tab === 'progress') return <Statistics autoOpenSleep={autoOpenSleep} onSleepPromptHandled={onSleepPromptHandled} />;
+  if (tab === 'progress') {
+    return <Statistics autoOpenSleep={autoOpenSleep} onSleepPromptHandled={onSleepPromptHandled} onOpenWeeklyReview={onOpenWeeklyReview} />;
+  }
   return <Tasks onLogout={onLogout} onEdit={onEdit} onOpenConfig={onOpenConfig} />;
 }
 
@@ -67,6 +73,8 @@ function Home() {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [newTaskDraft, setNewTaskDraft] = useState<NewTaskDraft | null>(null);
   const [voiceVisible, setVoiceVisible] = useState(false);
+  const [weeklyReviewVisible, setWeeklyReviewVisible] = useState(false);
+  const [weeklyReviewRequested, setWeeklyReviewRequested] = useState(false);
   const [autoOpenSleep, setAutoOpenSleep] = useState(false);
   const sleepPrompted = useRef(false);
   const { isHydrated, isAuthenticated, signOut } = useSession();
@@ -91,10 +99,56 @@ function Home() {
   // Health Connect) na abertura do app e a cada retorno ao foreground.
   useSleepLogSync(isAuthenticated);
 
+  // Agenda (ou revalida) a revisão semanal local quando há sessão autenticada.
+  useEffect(() => {
+    if (!isAuthenticated || !onboardingCompleted) return;
+    ensureWeeklyReviewNotification().catch(() => undefined);
+  }, [isAuthenticated, onboardingCompleted]);
+
+  // Toque na notificação de revisão semanal. Só registra a intenção: abrir o
+  // digest depende do acesso, que pode ainda não ter chegado do servidor quando
+  // o app é aberto direto pela notificação.
+  useEffect(() => {
+    const subscription = addNotificationResponseListener((response) => {
+      const type = response.notification.request.content.data?.type;
+      if (type === WEEKLY_REVIEW_DATA_TYPE) {
+        // Registrado no toque, não na abertura: é a taxa de abertura do push que
+        // a Feature 5 promete medir, e ela existe mesmo quando o paywall
+        // intercepta o destino.
+        track('weekly_review_push_opened');
+        setWeeklyReviewRequested(true);
+      }
+    });
+    return () => subscription.remove();
+  }, []);
+
   // Trial expirado e sem assinatura ativa: modo limitado (home + nova atividade).
   // Enquanto não houver resposta do servidor (`isReady`), o app abre normalmente —
   // não trancamos ninguém por falta de informação.
   const isLocked = subscriptionReady && !isPremium;
+
+  const openPaywall = useCallback((reason: string) => {
+    track('locked_feature_tapped', { feature: reason });
+    setPaywallOpen(true);
+  }, []);
+
+  const openWeeklyReview = useCallback((source: 'push' | 'statistics') => {
+    track('weekly_review_opened', { source });
+    setWeeklyReviewVisible(true);
+  }, []);
+
+  // Resolve a intenção da notificação assim que o acesso é conhecido: sem
+  // acesso, a revisão semanal é justamente o valor que o paywall vende.
+  useEffect(() => {
+    if (!weeklyReviewRequested || !subscriptionReady) return;
+
+    setWeeklyReviewRequested(false);
+    if (isLocked) {
+      openPaywall('weekly_review');
+      return;
+    }
+    openWeeklyReview('push');
+  }, [weeklyReviewRequested, subscriptionReady, isLocked, openPaywall, openWeeklyReview]);
 
   // Sem perfil de sono configurado: leva para Estatísticas e abre o modal do card de Sono.
   useEffect(() => {
@@ -115,11 +169,6 @@ function Home() {
       setTab('home');
     }
   }, [isLocked, tab]);
-
-  const openPaywall = (reason: string) => {
-    track('locked_feature_tapped', { feature: reason });
-    setPaywallOpen(true);
-  };
 
   const handleTabChange = (next: TabKey) => {
     if (isLocked && (PREMIUM_TABS as readonly string[]).includes(next)) {
@@ -190,6 +239,11 @@ function Home() {
     ]);
   };
 
+  // Montado nos dois branches: o gate de paywall faz um `return` antecipado, e
+  // deixar o modal só no branch normal transforma o toque na notificação num
+  // no-op silencioso.
+  const weeklyReview = <WeeklyReview visible={weeklyReviewVisible} onClose={() => setWeeklyReviewVisible(false)} />;
+
   if (isLocked && paywallOpen) {
     return (
       <View className="flex-1 bg-black">
@@ -203,6 +257,7 @@ function Home() {
           }}
           onExhausted={() => setPaywallOpen(false)}
         />
+        {weeklyReview}
       </View>
     );
   }
@@ -227,6 +282,7 @@ function Home() {
               onNewTaskSuccess={handleNewTaskSuccess}
               autoOpenSleep={autoOpenSleep}
               onSleepPromptHandled={() => setAutoOpenSleep(false)}
+              onOpenWeeklyReview={() => openWeeklyReview('statistics')}
             />
           )}
 
@@ -236,6 +292,8 @@ function Home() {
       </SafeAreaView>
 
       <VoiceAssistant visible={voiceVisible} onClose={() => setVoiceVisible(false)} onEdit={handleVoiceEdit} onCreated={handleVoiceCreated} />
+
+      {weeklyReview}
     </View>
   );
 }

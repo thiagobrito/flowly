@@ -1,3 +1,4 @@
+import { ENERGY } from '@/lib/theme';
 import { resolveLifeAreaId } from '@/screens/common';
 
 export type GoalStatus = 'active' | 'completed' | 'paused' | 'archived';
@@ -182,10 +183,11 @@ export const TREND_LABELS: Record<ExecutionTrend, string> = {
   declining: 'Em queda',
 };
 
+/** Mesma semântica das faixas de energia: verde ok, amarelo atenção, vermelho risco. */
 export const HEALTH_DOT_COLOR: Record<HealthLevel, string> = {
-  green: '#22c55e',
-  yellow: '#eab308',
-  red: '#ef4444',
+  green: ENERGY.high,
+  yellow: ENERGY.medium,
+  red: ENERGY.low,
 };
 
 export const STATUS_OPTIONS: { value: GoalStatus; label: string }[] = [

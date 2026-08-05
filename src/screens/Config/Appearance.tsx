@@ -1,12 +1,10 @@
 import { Monitor, Moon, Sun } from 'lucide-react-native';
 import { Pressable, Text, View } from 'react-native';
 
-import { type ThemeMode, useThemePreference } from '@/lib/theme';
+import { ACCENT, mutedText, type ThemeMode, useThemePreference } from '@/lib/theme';
 
 import Card from './components/Card';
 import SectionTitle from './components/SectionTitle';
-
-const ACCENT = '#6366f1';
 
 type Option = {
   mode: ThemeMode;
@@ -22,7 +20,7 @@ const OPTIONS: Option[] = [
 
 export default function AppearanceSection({ isDark }: { isDark: boolean }) {
   const { mode, setMode } = useThemePreference();
-  const inactiveColor = isDark ? '#a1a1aa' : '#71717a';
+  const inactiveColor = mutedText(isDark);
 
   return (
     <>

@@ -48,7 +48,16 @@
           "error",
           "ForInStatement",
           "LabeledStatement",
-          "WithStatement"
+          "WithStatement",
+          {
+            // `SafeAreaView` é uma view nativa: ela sobe a cadeia `reactSuperview`
+            // procurando um `RNCSafeAreaProvider` e, se não achar, não aplica
+            // padding nenhum — sem warning. O `Modal` do RN monta o conteúdo em
+            // outra hierarquia nativa, então o provider da raiz do app fica
+            // inalcançável e o topo da tela desaparece sob o notch.
+            "selector": "JSXElement[openingElement.name.name='Modal'] JSXElement[openingElement.name.name='SafeAreaView']",
+            "message": "SafeAreaView dentro de Modal não recebe insets. Use ModalScreen ou BottomSheetModal de @/components, que declaram um SafeAreaProvider dentro do Modal."
+          }
         ], // Overrides Airbnb configuration and enable no-restricted-syntax
         "import/prefer-default-export": "off", // Named export is easier to refactor automatically
         "simple-import-sort/imports": "error", // Import configuration for `eslint-plugin-simple-import-sort`

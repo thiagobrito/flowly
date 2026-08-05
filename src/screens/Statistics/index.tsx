@@ -1,7 +1,7 @@
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
-import { BatteryFull, CheckCircle, HandFist } from 'lucide-react-native';
+import { BatteryFull, CalendarRange, CheckCircle, HandFist } from 'lucide-react-native';
 import { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, RefreshControl, ScrollView, Text, useColorScheme, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, RefreshControl, ScrollView, Text, useColorScheme, View } from 'react-native';
 
 import { startOfLocalDay, toLocalISOString } from '@/lib/date';
 import { flowlyInputFromMetrics, lastDaysRange, useEnergyScore } from '@/lib/energy';
@@ -19,9 +19,10 @@ import type { ProgressData } from './types';
 type StatisticsProps = {
   autoOpenSleep?: boolean;
   onSleepPromptHandled?: () => void;
+  onOpenWeeklyReview?: () => void;
 };
 
-export default function Statistics({ autoOpenSleep, onSleepPromptHandled }: StatisticsProps = {}) {
+export default function Statistics({ autoOpenSleep, onSleepPromptHandled, onOpenWeeklyReview }: StatisticsProps = {}) {
   const isDark = useColorScheme() === 'dark';
   const queryClient = useQueryClient();
   const [refreshing, setRefreshing] = useState(false);
@@ -85,6 +86,24 @@ export default function Statistics({ autoOpenSleep, onSleepPromptHandled }: Stat
             <DayChip key={day.date} day={day} onPress={() => setSelectedDay(day.date)} />
           ))}
         </View>
+
+        {onOpenWeeklyReview ? (
+          <Pressable
+            onPress={onOpenWeeklyReview}
+            accessibilityRole="button"
+            accessibilityLabel="Abrir revisão semanal"
+            className="mt-4 flex-row items-center justify-center rounded-2xl border px-4 py-3 active:opacity-80"
+            style={{
+              borderColor: isDark ? 'rgba(99,102,241,0.35)' : 'rgba(99,102,241,0.25)',
+              backgroundColor: isDark ? 'rgba(99,102,241,0.12)' : 'rgba(99,102,241,0.08)',
+            }}
+          >
+            <CalendarRange size={16} color="#6366f1" />
+            <Text className="ml-2 text-sm font-semibold" style={{ color: '#6366f1' }}>
+              Ver revisão semanal
+            </Text>
+          </Pressable>
+        ) : null}
 
         <View className="mt-7 flex-row items-center justify-between">
           <View className="flex-1 gap-2">

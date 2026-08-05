@@ -19,4 +19,21 @@ export const queryKeys = {
   goals: () => ['goals'] as const,
   /** Estatísticas/progresso de um dia. */
   report: (dateKey: string) => ['report', dateKey] as const,
+  /**
+   * Input do motor de energia usado pela revisão semanal.
+   * Depende do perfil de sono: mudar o perfil muda todas as sete curvas.
+   */
+  weeklyReviewEnergy: (sleepProfileKey: unknown) => ['weeklyReview', 'energy', sleepProfileKey] as const,
+  /**
+   * Digest dos sete dias. O `wakeTime` entra na chave porque é o que ancora a
+   * curva de cada dia — sem ele na chave, uma coleta nova não revalidaria.
+   */
+  weeklyReviewDigest: (dateKey: string, wakeTime: string | null) => ['weeklyReview', 'digest', dateKey, wakeTime] as const,
+  /**
+   * Ranking das sugestões do coach feito pela IA.
+   *
+   * A fingerprint dos candidatos entra na chave e o `staleTime` é infinito: o
+   * texto só muda quando a agenda muda, não a cada render.
+   */
+  coachSuggestions: (dateKey: string, fingerprint: string) => ['coach-suggestions', dateKey, fingerprint] as const,
 };

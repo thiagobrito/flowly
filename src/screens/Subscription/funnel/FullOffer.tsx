@@ -1,11 +1,13 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { Check, X } from 'lucide-react-native';
+import { Check } from 'lucide-react-native';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
+import FloatingCloseButton from '@/components/FloatingCloseButton';
 import { useFeatureFlags } from '@/lib/featureFlags';
 import type { OfferStep, SubscriptionPlanId } from '@/lib/subscription';
+import { ENERGY } from '@/lib/theme';
 
 import LegalLinks from '../components/LegalLinks';
 import PlanToggle from '../components/PlanToggle';
@@ -62,135 +64,136 @@ export default function FullOffer({ step, flow, basePriceLabel, onSubscribe, onD
     pricingCaption = `${priceLabel} cobrados hoje. Renova todo ${periodLabel}. Cancele quando quiser.`;
   }
 
+  // O gate monta FullOffer fora de `Modal`, mas ainda assim declaramos um
+  // SafeAreaProvider local — o mesmo contrato de `ModalScreen` — para o
+  // FloatingCloseButton e o SafeAreaView não dependerem da hierarquia raiz.
   return (
-    <View className="flex-1 bg-black">
-      <Background />
+    <SafeAreaProvider>
+      <View className="flex-1 bg-black">
+        <Background />
 
-      <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
-        <View className="absolute right-4 top-14 z-10">
-          <Pressable onPress={onDismiss} accessibilityRole="button" accessibilityLabel="Fechar" className="size-10 items-center justify-center rounded-full bg-white/40 active:opacity-70">
-            <X size={20} color="white" />
-          </Pressable>
-        </View>
+        <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
+          <FloatingCloseButton onPress={onDismiss} />
 
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
-          <View className="px-6 pt-6">
-            {step.badge ? (
-              <View className="mb-3 self-center rounded-full px-3 py-1" style={{ backgroundColor: '#6366f1' }}>
-                <Text className="text-[11px] font-bold tracking-wide text-white">{step.badge}</Text>
-              </View>
-            ) : null}
-
-            <Text className="text-center text-2xl font-bold" style={{ color: titleColor }}>
-              {step.title}
-            </Text>
-            <Text className="mt-2 text-center text-sm leading-5" style={{ color: subtitleColor }}>
-              {step.subtitle}
-            </Text>
-
-            {step.countdownSeconds ? (
-              <View className="mt-5 rounded-2xl border p-4" style={{ backgroundColor: cardBg, borderColor: cardBorder }}>
-                <Text className="mb-3 text-center text-xs" style={{ color: subtitleColor }}>
-                  A oferta termina em:
-                </Text>
-                <Countdown seconds={step.countdownSeconds} isDark={isDark} onExpire={onDismiss} variant="blocks" />
-              </View>
-            ) : null}
-
-            {step.showPlanToggle ? (
-              <View className="mt-6">
-                <PlanToggle value={selectedPlan} onChange={setSelectedPlan} isDark={isDark} />
-              </View>
-            ) : null}
-
-            <View className="mt-6 items-center">
-              {step.discountLabel ? (
-                <View className="mb-2 rounded-full px-3 py-1" style={{ backgroundColor: 'rgba(99,102,241,0.15)' }}>
-                  <Text className="text-sm font-bold" style={{ color: '#6366f1' }}>
-                    {step.discountLabel}
-                  </Text>
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
+            <View className="px-6 pt-6">
+              {step.badge ? (
+                <View className="mb-3 self-center rounded-full px-3 py-1" style={{ backgroundColor: '#6366f1' }}>
+                  <Text className="text-[11px] font-bold tracking-wide text-white">{step.badge}</Text>
                 </View>
               ) : null}
 
-              <View className="flex-row items-baseline">
-                {showStrikethrough ? (
-                  <Text className="mr-2 text-base line-through" style={{ color: mutedColor }}>
-                    {basePriceLabel}
+              <Text className="text-center text-2xl font-bold" style={{ color: titleColor }}>
+                {step.title}
+              </Text>
+              <Text className="mt-2 text-center text-sm leading-5" style={{ color: subtitleColor }}>
+                {step.subtitle}
+              </Text>
+
+              {step.countdownSeconds ? (
+                <View className="mt-5 rounded-2xl border p-4" style={{ backgroundColor: cardBg, borderColor: cardBorder }}>
+                  <Text className="mb-3 text-center text-xs" style={{ color: subtitleColor }}>
+                    A oferta termina em:
+                  </Text>
+                  <Countdown seconds={step.countdownSeconds} isDark={isDark} onExpire={onDismiss} variant="blocks" />
+                </View>
+              ) : null}
+
+              {step.showPlanToggle ? (
+                <View className="mt-6">
+                  <PlanToggle value={selectedPlan} onChange={setSelectedPlan} isDark={isDark} />
+                </View>
+              ) : null}
+
+              <View className="mt-6 items-center">
+                {step.discountLabel ? (
+                  <View className="mb-2 rounded-full px-3 py-1" style={{ backgroundColor: 'rgba(99,102,241,0.15)' }}>
+                    <Text className="text-sm font-bold" style={{ color: '#6366f1' }}>
+                      {step.discountLabel}
+                    </Text>
+                  </View>
+                ) : null}
+
+                <View className="flex-row items-baseline">
+                  {showStrikethrough ? (
+                    <Text className="mr-2 text-base line-through" style={{ color: mutedColor }}>
+                      {basePriceLabel}
+                    </Text>
+                  ) : null}
+                  <Text className="text-3xl font-bold" style={{ color: titleColor }}>
+                    {priceLabel}
+                  </Text>
+                </View>
+
+                {showPerMonth ? (
+                  <Text className="mt-1 text-sm" style={{ color: subtitleColor }}>
+                    {perMonthLabel}/mês
                   </Text>
                 ) : null}
-                <Text className="text-3xl font-bold" style={{ color: titleColor }}>
-                  {priceLabel}
-                </Text>
               </View>
 
-              {showPerMonth ? (
-                <Text className="mt-1 text-sm" style={{ color: subtitleColor }}>
-                  {perMonthLabel}/mês
-                </Text>
+              {isDiscounted ? (
+                <View className="mt-6 gap-2">
+                  {PREMIUM_BENEFITS.map((benefit) => (
+                    <View key={benefit} className="flex-row items-center">
+                      <View className="size-6 items-center justify-center rounded-full" style={{ backgroundColor: 'rgba(34,197,94,0.16)' }}>
+                        <Check size={14} color={ENERGY.high} strokeWidth={3} />
+                      </View>
+                      <Text className="ml-3 flex-1 text-[15px] leading-5" style={{ color: subtitleColor }}>
+                        {benefit}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
               ) : null}
             </View>
 
-            {isDiscounted ? (
-              <View className="mt-6 gap-2">
-                {PREMIUM_BENEFITS.map((benefit) => (
-                  <View key={benefit} className="flex-row items-center">
-                    <View className="size-6 items-center justify-center rounded-full" style={{ backgroundColor: 'rgba(34,197,94,0.16)' }}>
-                      <Check size={14} color="#22c55e" strokeWidth={3} />
-                    </View>
-                    <Text className="ml-3 flex-1 text-[15px] leading-5" style={{ color: subtitleColor }}>
-                      {benefit}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-            ) : null}
+            {/* A oferta da loja manda; sem ela, cai na duração divulgada pelo servidor. */}
+            <TrialTimeline isDark={isDark} hasFreeTrial={showFreeTrial} trialDays={intro?.periodDays ?? trialDays} />
+          </ScrollView>
+
+          <View className="px-6 pb-2 pt-3">
+            <Pressable onPress={onRestore} disabled={ctaDisabled} accessibilityRole="button" className="mb-3 active:opacity-70">
+              <Text className="text-center text-sm" style={{ color: mutedColor }}>
+                Restaurar compra
+              </Text>
+            </Pressable>
+
+            <Pressable onPress={() => onSubscribe(plan)} disabled={ctaDisabled} accessibilityRole="button" className="active:opacity-90" style={{ opacity: ctaDisabled ? 0.7 : 1 }}>
+              <LinearGradient
+                colors={['#3b82f6', '#6366f1']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={{
+                  height: 52,
+                  borderRadius: 999,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  shadowColor: '#6366f1',
+                  shadowOffset: { width: 0, height: 6 },
+                  shadowOpacity: 0.35,
+                  shadowRadius: 14,
+                  elevation: 8,
+                }}
+              >
+                {flow.busy || !flow.offeringReady ? <ActivityIndicator color="#ffffff" /> : <Text className="text-base font-semibold text-white">{ctaLabel}</Text>}
+              </LinearGradient>
+            </Pressable>
+
+            <Text className="mt-3 text-center text-xs leading-4" style={{ color: mutedColor }}>
+              {pricingCaption}
+            </Text>
+
+            <Pressable onPress={onDismiss} disabled={flow.busy} accessibilityRole="button" className="mt-2 active:opacity-70">
+              <Text className="text-center text-sm underline" style={{ color: subtitleColor }}>
+                {step.dismissLabel}
+              </Text>
+            </Pressable>
+
+            <LegalLinks isDark={isDark} />
           </View>
-
-          {/* A oferta da loja manda; sem ela, cai na duração divulgada pelo servidor. */}
-          <TrialTimeline isDark={isDark} hasFreeTrial={showFreeTrial} trialDays={intro?.periodDays ?? trialDays} />
-        </ScrollView>
-
-        <View className="px-6 pb-2 pt-3">
-          <Pressable onPress={onRestore} disabled={ctaDisabled} accessibilityRole="button" className="mb-3 active:opacity-70">
-            <Text className="text-center text-sm" style={{ color: mutedColor }}>
-              Restaurar compra
-            </Text>
-          </Pressable>
-
-          <Pressable onPress={() => onSubscribe(plan)} disabled={ctaDisabled} accessibilityRole="button" className="active:opacity-90" style={{ opacity: ctaDisabled ? 0.7 : 1 }}>
-            <LinearGradient
-              colors={['#3b82f6', '#6366f1']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={{
-                height: 52,
-                borderRadius: 999,
-                alignItems: 'center',
-                justifyContent: 'center',
-                shadowColor: '#6366f1',
-                shadowOffset: { width: 0, height: 6 },
-                shadowOpacity: 0.35,
-                shadowRadius: 14,
-                elevation: 8,
-              }}
-            >
-              {flow.busy || !flow.offeringReady ? <ActivityIndicator color="#ffffff" /> : <Text className="text-base font-semibold text-white">{ctaLabel}</Text>}
-            </LinearGradient>
-          </Pressable>
-
-          <Text className="mt-3 text-center text-xs leading-4" style={{ color: mutedColor }}>
-            {pricingCaption}
-          </Text>
-
-          <Pressable onPress={onDismiss} disabled={flow.busy} accessibilityRole="button" className="mt-2 active:opacity-70">
-            <Text className="text-center text-sm underline" style={{ color: subtitleColor }}>
-              {step.dismissLabel}
-            </Text>
-          </Pressable>
-
-          <LegalLinks isDark={isDark} />
-        </View>
-      </SafeAreaView>
-    </View>
+        </SafeAreaView>
+      </View>
+    </SafeAreaProvider>
   );
 }

@@ -20,7 +20,7 @@
         "ITSAppUsesNonExemptEncryption": false,
         "NSPhotoLibraryUsageDescription": "O Flowly pode acessar sua galeria para salvar ou importar arquivos quando voc\u00ea realizar essa a\u00e7\u00e3o no app."
       },
-      "buildNumber": "2",
+      "buildNumber": "3",
       "appleTeamId": "WCZL6FK4U7"
     },
     "android": {
@@ -38,7 +38,7 @@
         "android.permission.health.READ_ACTIVE_CALORIES_BURNED",
         "android.permission.POST_NOTIFICATIONS"
       ],
-      "versionCode": 2026080302
+      "versionCode": 2026080303
     },
     "web": {
       "favicon": "./assets/favicon.png",

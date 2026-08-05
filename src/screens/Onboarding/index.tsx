@@ -1,9 +1,9 @@
 import { ChevronLeft } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import Animated, { FadeInLeft, FadeInRight, FadeOutLeft, FadeOutRight } from 'react-native-reanimated';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
+import ModalScreen from '@/components/ModalScreen';
 import { api } from '@/lib/network';
 import { useOnboarding } from '@/lib/onboarding';
 import type { PersistedRecord } from '@/lib/storage';
@@ -18,6 +18,7 @@ import Subscription from '@/screens/Subscription';
 import ActivitiesStep, { type OnboardingActivity } from './components/ActivitiesStep';
 import Background from './components/Background';
 import CompletedStep from './components/CompletedStep';
+import EnergyPreviewStep from './components/EnergyPreviewStep';
 import GoalsStep from './components/GoalsStep';
 import IntroStep from './components/IntroStep';
 import LanguageStep from './components/LanguageStep';
@@ -162,6 +163,8 @@ export default function Onboarding({ isDark, onComplete }: OnboardingProps) {
         return <MicrophoneStep step={step} isDark={isDark} onNext={goNext} />;
       case 'sleepProfile':
         return <SleepProfileStep step={step} isDark={isDark} onNext={goNext} />;
+      case 'energyPreview':
+        return <EnergyPreviewStep step={step} isDark={isDark} onNext={goNext} />;
       case 'payment':
         return <PaymentStep step={step} isDark={isDark} onOpenPaywall={() => setShowPaywall(true)} onSkip={skipStep} />;
       case 'completed':
@@ -190,38 +193,27 @@ export default function Onboarding({ isDark, onComplete }: OnboardingProps) {
         </Animated.View>
       </ScrollView>
 
-      <Modal visible={showPaywall} animationType="slide" presentationStyle="fullScreen" onRequestClose={handlePaywallClose}>
-        <Background isDark={isDark} />
+      <ModalScreen visible={showPaywall} onClose={handlePaywallClose} hideHeader backdrop={<Background isDark={isDark} />}>
         <Subscription onClose={handlePaywallClose} />
-      </Modal>
+      </ModalScreen>
 
-      <Modal visible={showGoals} animationType="slide" presentationStyle="fullScreen" onRequestClose={() => setShowGoals(false)}>
-        <View className="flex-1 bg-white dark:bg-black">
-          <Background isDark={isDark} />
-          <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
-            <View className="flex-1 px-4 pt-2">
-              <NewGoals isDark={isDark} onComplete={handleGoalsComplete} onClose={() => setShowGoals(false)} />
-            </View>
-          </SafeAreaView>
+      <ModalScreen visible={showGoals} onClose={() => setShowGoals(false)} hideHeader isDark={isDark} backgroundColor={isDark ? '#000000' : '#ffffff'} backdrop={<Background isDark={isDark} />}>
+        <View className="flex-1 px-4 pt-2">
+          <NewGoals isDark={isDark} onComplete={handleGoalsComplete} onClose={() => setShowGoals(false)} />
         </View>
-      </Modal>
+      </ModalScreen>
 
-      <Modal visible={showActivities} animationType="slide" presentationStyle="fullScreen" onRequestClose={() => setShowActivities(false)}>
-        <View className="flex-1 bg-white dark:bg-black">
-          <Background isDark={isDark} />
-          <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
-            <View className="flex-1 px-4 pt-2">
-              <View className="h-10 flex-row items-center">
-                <Pressable onPress={() => setShowActivities(false)} accessibilityRole="button" accessibilityLabel="Voltar ao onboarding" className="-ml-1 flex-row items-center active:opacity-70">
-                  <ChevronLeft size={24} color={isDark ? '#e4e4e7' : '#27272a'} />
-                  <Text className="text-base font-medium text-zinc-700 dark:text-zinc-200">Voltar</Text>
-                </Pressable>
-              </View>
-              <NewTask initialArea={goalName} onCreate={handleActivityCreated} onSuccess={handleActivitySuccess} />
-            </View>
-          </SafeAreaView>
+      <ModalScreen visible={showActivities} onClose={() => setShowActivities(false)} hideHeader isDark={isDark} backgroundColor={isDark ? '#000000' : '#ffffff'} backdrop={<Background isDark={isDark} />}>
+        <View className="flex-1 px-4 pt-2">
+          <View className="h-10 flex-row items-center">
+            <Pressable onPress={() => setShowActivities(false)} accessibilityRole="button" accessibilityLabel="Voltar ao onboarding" className="-ml-1 flex-row items-center active:opacity-70">
+              <ChevronLeft size={24} color={isDark ? '#e4e4e7' : '#27272a'} />
+              <Text className="text-base font-medium text-zinc-700 dark:text-zinc-200">Voltar</Text>
+            </Pressable>
+          </View>
+          <NewTask initialArea={goalName} onCreate={handleActivityCreated} onSuccess={handleActivitySuccess} />
         </View>
-      </Modal>
+      </ModalScreen>
     </KeyboardAvoidingView>
   );
 }

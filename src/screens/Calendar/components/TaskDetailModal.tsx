@@ -2,6 +2,8 @@ import { GoalIcon, Pencil, TrendingUp, X, Zap } from 'lucide-react-native';
 import { type ReactNode, useCallback, useEffect, useState } from 'react';
 import { Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
+import { ENERGY } from '@/lib/theme';
+
 import { EstimatedTimePicker, SubtaskEditor } from '../../NewTask/components';
 import type { Subtask, Task } from '../../NewTask/data';
 import { describeFrequency, getFrequencyMeta, getLifeArea, LEVEL_LABELS } from '../../NewTask/data';
@@ -217,8 +219,8 @@ export default function TaskDetailModal({ visible, task, isDark, durationMin, on
 
             <DetailRow label="Energia gasta" isDark={isDark}>
               <View className="flex-row items-center">
-                <Zap size={16} color="#22c55e" style={{ marginRight: 8 }} />
-                <LevelDots value={task.energy || 0} accent="#22c55e" isDark={isDark} big />
+                <Zap size={16} color={ENERGY.high} style={{ marginRight: 8 }} />
+                <LevelDots value={task.energy || 0} accent={ENERGY.high} isDark={isDark} big />
                 <Text className="ml-3 text-sm font-medium" style={{ color: mutedColor }}>
                   {levelLabel(task.energy)}
                 </Text>

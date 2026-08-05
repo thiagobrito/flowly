@@ -1,9 +1,8 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { X } from 'lucide-react-native';
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
+import FloatingCloseButton from '@/components/FloatingCloseButton';
 import { useFeatureFlags } from '@/lib/featureFlags';
 import type { SubscriptionPlanId } from '@/lib/subscription';
 import { SUBSCRIPTION_PLANS } from '@/lib/subscription';
@@ -79,76 +78,72 @@ export default function Subscription({ onClose, onDevBypass, source = 'onboardin
   const subtitleColor = '#d4d4d8';
   const mutedColor = '#71717a';
 
+  // Sem SafeAreaView próprio: o pai sempre monta esta tela dentro de
+  // `ModalScreen`, que já declara o SafeAreaProvider + SafeAreaView.
   return (
     <View className="flex-1 bg-black">
       <Background />
 
-      <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
-        <View className="absolute right-4 top-14 z-10">
-          <Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel="Fechar" className="size-10 items-center justify-center rounded-full bg-white/40 active:opacity-70">
-            <X size={20} color="white" />
-          </Pressable>
-        </View>
+      <FloatingCloseButton onPress={onClose} />
 
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
-          <IllustrationHeader />
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
+        <IllustrationHeader />
 
-          <View className="px-6 pt-6">
-            <Text className="text-center text-2xl font-bold" style={{ color: titleColor }}>
-              {headerTitle}
-            </Text>
-            <Text className="mt-2 text-center text-sm leading-5" style={{ color: subtitleColor }}>
-              {pricingSubtitle}
-            </Text>
-
-            <View className="mt-6">
-              <PlanToggle value={selectedPlan} onChange={setSelectedPlan} isDark={isDark} />
-            </View>
-
-            <Text className="mt-3 text-center text-xs leading-4" style={{ color: mutedColor }}>
-              {planDetails}
-            </Text>
-          </View>
-
-          {/* A oferta da loja manda; sem ela, cai na duração divulgada pelo servidor. */}
-          <TrialTimeline isDark={isDark} hasFreeTrial={showFreeTrial} trialDays={introInfo?.periodDays ?? trialDays} />
-        </ScrollView>
-
-        <View className="px-6 pb-2 pt-3">
-          <Pressable onPress={handleRestore} disabled={busy} accessibilityRole="button" className="mb-3 active:opacity-70">
-            <Text className="text-center text-sm" style={{ color: mutedColor }}>
-              Restaurar compra
-            </Text>
-          </Pressable>
-
-          <Text className="mb-3 text-center text-xs lowercase" style={{ color: subtitleColor }}>
-            cancelar a qualquer momento
+        <View className="px-6 pt-6">
+          <Text className="text-center text-2xl font-bold" style={{ color: titleColor }}>
+            {headerTitle}
+          </Text>
+          <Text className="mt-2 text-center text-sm leading-5" style={{ color: subtitleColor }}>
+            {pricingSubtitle}
           </Text>
 
-          <Pressable onPress={handleSubscribe} disabled={busy} accessibilityRole="button" className="active:opacity-90" style={{ opacity: busy ? 0.7 : 1 }}>
-            <LinearGradient
-              colors={['#3b82f6', '#6366f1']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={{
-                height: 52,
-                borderRadius: 999,
-                alignItems: 'center',
-                justifyContent: 'center',
-                shadowColor: '#6366f1',
-                shadowOffset: { width: 0, height: 6 },
-                shadowOpacity: 0.35,
-                shadowRadius: 14,
-                elevation: 8,
-              }}
-            >
-              {busy ? <ActivityIndicator color="#ffffff" /> : <Text className="text-base font-semibold text-white">{ctaLabel}</Text>}
-            </LinearGradient>
-          </Pressable>
+          <View className="mt-6">
+            <PlanToggle value={selectedPlan} onChange={setSelectedPlan} isDark={isDark} />
+          </View>
 
-          <LegalLinks isDark={isDark} />
+          <Text className="mt-3 text-center text-xs leading-4" style={{ color: mutedColor }}>
+            {planDetails}
+          </Text>
         </View>
-      </SafeAreaView>
+
+        {/* A oferta da loja manda; sem ela, cai na duração divulgada pelo servidor. */}
+        <TrialTimeline isDark={isDark} hasFreeTrial={showFreeTrial} trialDays={introInfo?.periodDays ?? trialDays} />
+      </ScrollView>
+
+      <View className="px-6 pb-2 pt-3">
+        <Pressable onPress={handleRestore} disabled={busy} accessibilityRole="button" className="mb-3 active:opacity-70">
+          <Text className="text-center text-sm" style={{ color: mutedColor }}>
+            Restaurar compra
+          </Text>
+        </Pressable>
+
+        <Text className="mb-3 text-center text-xs lowercase" style={{ color: subtitleColor }}>
+          cancelar a qualquer momento
+        </Text>
+
+        <Pressable onPress={handleSubscribe} disabled={busy} accessibilityRole="button" className="active:opacity-90" style={{ opacity: busy ? 0.7 : 1 }}>
+          <LinearGradient
+            colors={['#3b82f6', '#6366f1']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={{
+              height: 52,
+              borderRadius: 999,
+              alignItems: 'center',
+              justifyContent: 'center',
+              shadowColor: '#6366f1',
+              shadowOffset: { width: 0, height: 6 },
+              shadowOpacity: 0.35,
+              shadowRadius: 14,
+              elevation: 8,
+            }}
+          >
+            {busy ? <ActivityIndicator color="#ffffff" /> : <Text className="text-base font-semibold text-white">{ctaLabel}</Text>}
+          </LinearGradient>
+        </Pressable>
+
+        <LegalLinks isDark={isDark} />
+      </View>
     </View>
   );
 }

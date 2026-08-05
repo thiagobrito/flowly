@@ -36,6 +36,19 @@ export const TELEMETRY_EVENTS = [
   'offering_missing',
   'subscription_sync_failed',
   'api_request_failed',
+
+  // Produto — energia
+  'energy_mode_selected',
+  'peak_score_shared',
+
+  // Produto — sugestões do coach
+  'coach_suggestion_shown',
+  'coach_suggestion_applied',
+  'coach_suggestion_dismissed',
+
+  // Produto — revisão semanal
+  'weekly_review_opened',
+  'weekly_review_push_opened',
 ] as const;
 
 export type TelemetryEventName = (typeof TELEMETRY_EVENTS)[number];

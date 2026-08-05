@@ -70,16 +70,36 @@ export function localDateKey(date = new Date(), timeZone = APP_TIME_ZONE): strin
   return `${year}-${pad(month)}-${pad(day)}`;
 }
 
-/** Normaliza uma data ou ISO para meia-noite do mesmo dia civil no fuso do app. */
-export function startOfLocalDay(value: string | Date, timeZone = APP_TIME_ZONE): Date {
-  const parsed = value instanceof Date ? new Date(value.getTime()) : new Date(value);
-  const base = Number.isNaN(parsed.getTime()) ? new Date() : parsed;
+/** `YYYY-MM-DD` sem hora nem offset. */
+const DATE_ONLY = /^(\d{4})-(\d{2})-(\d{2})$/;
 
-  const { year, month, day } = getZonedParts(base, timeZone);
-
-  // Meia-noite no relógio de parede do fuso, convertida para o instante UTC real.
+/** Converte um dia civil do fuso do app no instante UTC da sua meia-noite. */
+function midnightOf(year: number, month: number, day: number, timeZone: string): Date {
   const wallClockAsUTC = Date.UTC(year, month - 1, day, 0, 0, 0, 0);
   const { offsetMinutes } = getZonedParts(new Date(wallClockAsUTC), timeZone);
 
   return new Date(wallClockAsUTC - offsetMinutes * 60_000);
+}
+
+/**
+ * Normaliza uma data ou ISO para meia-noite do mesmo dia civil no fuso do app.
+ *
+ * Uma string `YYYY-MM-DD` é lida como dia civil **no fuso do app**, não como
+ * UTC. `new Date('2026-06-08')` resolve para meia-noite UTC, que em São Paulo
+ * ainda é 07/jun 21:00 — sem este tratamento, todo `dateKey` que passa por aqui
+ * volta um dia, deslocando agendas e curvas de energia silenciosamente.
+ */
+export function startOfLocalDay(value: string | Date, timeZone = APP_TIME_ZONE): Date {
+  if (typeof value === 'string') {
+    const dateOnly = DATE_ONLY.exec(value);
+    if (dateOnly) {
+      return midnightOf(Number(dateOnly[1]), Number(dateOnly[2]), Number(dateOnly[3]), timeZone);
+    }
+  }
+
+  const parsed = value instanceof Date ? new Date(value.getTime()) : new Date(value);
+  const base = Number.isNaN(parsed.getTime()) ? new Date() : parsed;
+  const { year, month, day } = getZonedParts(base, timeZone);
+
+  return midnightOf(year, month, day, timeZone);
 }

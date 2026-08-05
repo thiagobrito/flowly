@@ -88,7 +88,7 @@
 
 import { addNotificationReceivedListener, addNotificationResponseListener, getLastNotificationResponse } from './listeners';
 import { registerForPushNotificationsAsync } from './push';
-import { cancelAllNotifications, cancelNotification, getScheduledNotifications, scheduleAt, scheduleDaily, scheduleNotification } from './scheduler';
+import { cancelAllNotifications, cancelNotification, getScheduledNotifications, scheduleAt, scheduleDaily, scheduleNotification, scheduleWeekly } from './scheduler';
 
 /**
  * Facade agregando as operações mais comuns. Para APIs avançadas, importe as
@@ -98,6 +98,7 @@ export const notifications = {
   schedule: scheduleNotification,
   scheduleAt,
   scheduleDaily,
+  scheduleWeekly,
   cancel: cancelNotification,
   cancelAll: cancelAllNotifications,
   getScheduled: getScheduledNotifications,
@@ -116,7 +117,7 @@ export { addNotificationReceivedListener, addNotificationResponseListener, getLa
 export { assertNotificationsNativeAvailable, getExpoNotifications, isNotificationsNativeAvailable, NotificationsNativeUnavailableError, resetNotificationsNativeCacheForTests } from './native';
 export { ensurePermissions, getPermissionStatus, requestPermissions } from './permissions';
 export { registerForPushNotificationsAsync } from './push';
-export { cancelAllNotifications, cancelNotification, getScheduledNotifications, scheduleAt, scheduleDaily, scheduleNotification } from './scheduler';
+export { cancelAllNotifications, cancelNotification, getScheduledNotifications, scheduleAt, scheduleDaily, scheduleNotification, scheduleWeekly } from './scheduler';
 export type {
   AndroidChannelConfig,
   DailyTrigger,
@@ -132,4 +133,5 @@ export type {
   PushPermissionStatus,
   PushRegistration,
   TimeIntervalTrigger,
+  WeeklyTrigger,
 } from './types';

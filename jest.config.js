@@ -12,7 +12,21 @@ module.exports = {
   ],
   clearMocks: true,
   collectCoverage: true,
-  collectCoverageFrom: ['./src/lib/energy/config.ts', './src/lib/energy/engine/**/*.{js,ts}', '!./src/lib/energy/engine/index.ts', './src/lib/energy/collectors/shared.ts', './src/lib/storage/helpers.ts', './src/screens/Tasks/filter.ts'],
+  collectCoverageFrom: [
+    './src/lib/energy/config.ts',
+    './src/lib/energy/engine/**/*.{js,ts}',
+    '!./src/lib/energy/engine/index.ts',
+    './src/lib/energy/collectors/shared.ts',
+    './src/lib/energy/peakWindow.ts',
+    './src/lib/energyMode/**/*.{js,ts}',
+    '!./src/lib/energyMode/index.ts',
+    './src/lib/coach/**/*.{js,ts}',
+    '!./src/lib/coach/index.ts',
+    './src/lib/weeklyReview/**/*.{js,ts}',
+    '!./src/lib/weeklyReview/index.ts',
+    './src/lib/storage/helpers.ts',
+    './src/screens/Tasks/filter.ts',
+  ],
   coverageThreshold: {
     global: {
       branches: 30,

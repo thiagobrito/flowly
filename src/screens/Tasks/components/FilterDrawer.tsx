@@ -123,6 +123,9 @@ export default function FilterDrawer({ visible, isDark, dateFilters, selectedDat
 
           <Animated.View style={[{ width: PANEL_WIDTH }, panelStyle]} className="h-full">
             <View className="flex-1" style={{ backgroundColor: isDark ? '#18181b' : '#fafafa' }}>
+              {/* eslint-disable-next-line no-restricted-syntax -- o SafeAreaProvider
+                  declarado acima, dentro do Modal, é o que faz este SafeAreaView
+                  receber insets. Drawer lateral não cabe em ModalScreen. */}
               <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
                 <View className="flex-row items-center justify-between px-4 pb-3 pt-2">
                   <View className="flex-row items-center">

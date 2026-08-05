@@ -5,11 +5,11 @@
  * intenção → nome → quando → área → confirmação. A interpretação é híbrida:
  * parser local pt-BR primeiro, fallback LLM via backend quando disponível.
  */
-import { GoalIcon, X } from 'lucide-react-native';
+import { GoalIcon } from 'lucide-react-native';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Linking, Modal, Pressable, ScrollView, Text, useColorScheme, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, Text, useColorScheme, View } from 'react-native';
 
+import ModalScreen from '@/components/ModalScreen';
 import { api } from '@/lib/network';
 import { usePendingSync } from '@/lib/pendingSync';
 import { llmParseArea, llmParseFrequency } from '@/lib/voice/llmParse';
@@ -325,73 +325,57 @@ export default function VoiceAssistant({ visible, onClose, onEdit, onCreated }: 
   const dimText = isDark ? '#52525b' : '#a1a1aa';
 
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={handleClose}>
-      <View className="flex-1 bg-white dark:bg-black">
-        <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
-          <View className="flex-row items-center justify-end px-4 pt-2">
-            <Pressable
-              onPress={handleClose}
-              accessibilityRole="button"
-              accessibilityLabel="Fechar assistente"
-              className="size-10 items-center justify-center rounded-full active:opacity-70"
-              style={{ backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)' }}
-            >
-              <X size={20} color={isDark ? '#e4e4e7' : '#3f3f46'} />
-            </Pressable>
+    <ModalScreen visible={visible} onClose={handleClose} accessibilityLabel="Fechar assistente" isDark={isDark} backgroundColor={isDark ? '#000000' : '#ffffff'}>
+      {step === 'confirm' && frequency && area ? (
+        <ConfirmStep isDark={isDark} name={name} frequency={frequency} areaValue={area.value} areaLabel={area.label} submitting={submitting} onConfirm={handleConfirm} onEdit={handleEdit} />
+      ) : (
+        <View className="flex-1 items-center justify-between px-6 pb-10">
+          <View className="flex-1 items-center justify-center">
+            <Text className="text-center text-3xl font-bold text-zinc-900 dark:text-zinc-50">{STEP_PROMPTS[step]}</Text>
+
+            {step === 'intent' ? (
+              <Pressable
+                onPress={() => {
+                  abort();
+                  advance('name');
+                }}
+                accessibilityRole="button"
+                accessibilityLabel="Criar tarefa"
+                className="mt-6 active:opacity-60"
+              >
+                <Text className="text-center text-xl font-semibold" style={{ color: dimText }}>
+                  &ldquo;Criar tarefa&rdquo;
+                </Text>
+              </Pressable>
+            ) : null}
+
+            {step === 'area' ? (
+              <AreaOptions
+                isDark={isDark}
+                goalLabels={goalLabels}
+                onSelect={(selected) => {
+                  abort();
+                  handleFinalTranscript(selected);
+                }}
+              />
+            ) : null}
+
+            {transcript && listening ? (
+              <Text className="mt-6 text-center text-base text-zinc-500 dark:text-zinc-400" numberOfLines={3}>
+                {transcript}
+              </Text>
+            ) : null}
+
+            {hint ? (
+              <Text className="mt-6 text-center text-sm" style={{ color: '#f97316' }}>
+                {hint}
+              </Text>
+            ) : null}
           </View>
 
-          {step === 'confirm' && frequency && area ? (
-            <ConfirmStep isDark={isDark} name={name} frequency={frequency} areaValue={area.value} areaLabel={area.label} submitting={submitting} onConfirm={handleConfirm} onEdit={handleEdit} />
-          ) : (
-            <View className="flex-1 items-center justify-between px-6 pb-10">
-              <View className="flex-1 items-center justify-center">
-                <Text className="text-center text-3xl font-bold text-zinc-900 dark:text-zinc-50">{STEP_PROMPTS[step]}</Text>
-
-                {step === 'intent' ? (
-                  <Pressable
-                    onPress={() => {
-                      abort();
-                      advance('name');
-                    }}
-                    accessibilityRole="button"
-                    accessibilityLabel="Criar tarefa"
-                    className="mt-6 active:opacity-60"
-                  >
-                    <Text className="text-center text-xl font-semibold" style={{ color: dimText }}>
-                      &ldquo;Criar tarefa&rdquo;
-                    </Text>
-                  </Pressable>
-                ) : null}
-
-                {step === 'area' ? (
-                  <AreaOptions
-                    isDark={isDark}
-                    goalLabels={goalLabels}
-                    onSelect={(selected) => {
-                      abort();
-                      handleFinalTranscript(selected);
-                    }}
-                  />
-                ) : null}
-
-                {transcript && listening ? (
-                  <Text className="mt-6 text-center text-base text-zinc-500 dark:text-zinc-400" numberOfLines={3}>
-                    {transcript}
-                  </Text>
-                ) : null}
-
-                {hint ? (
-                  <Text className="mt-6 text-center text-sm" style={{ color: '#f97316' }}>
-                    {hint}
-                  </Text>
-                ) : null}
-              </View>
-
-              <ListeningIndicator listening={listening} processing={processing} isDark={isDark} onPress={start} />
-            </View>
-          )}
-        </SafeAreaView>
-      </View>
-    </Modal>
+          <ListeningIndicator listening={listening} processing={processing} isDark={isDark} onPress={start} />
+        </View>
+      )}
+    </ModalScreen>
   );
 }

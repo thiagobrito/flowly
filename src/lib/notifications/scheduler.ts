@@ -34,6 +34,14 @@ function toTriggerInput(trigger: NotificationTrigger): SchedulableNotificationTr
       return { type: Types.DATE, date: trigger.date, channelId };
     case 'daily':
       return { type: Types.DAILY, hour: trigger.hour, minute: trigger.minute, channelId };
+    case 'weekly':
+      return {
+        type: Types.WEEKLY,
+        weekday: trigger.weekday,
+        hour: trigger.hour,
+        minute: trigger.minute,
+        channelId,
+      };
     case 'timeInterval':
       return {
         type: Types.TIME_INTERVAL,
@@ -66,6 +74,14 @@ export function scheduleAt(content: NotificationContent, date: Date | number): P
 /** Atalho: agenda uma notificação diária recorrente em `hour:minute`. */
 export function scheduleDaily(content: NotificationContent, hour: number, minute: number): Promise<string> {
   return scheduleNotification(content, { type: 'daily', hour, minute });
+}
+
+/**
+ * Atalho: agenda uma notificação semanal recorrente.
+ * `weekday`: 1 = domingo … 7 = sábado.
+ */
+export function scheduleWeekly(content: NotificationContent, weekday: number, hour: number, minute: number): Promise<string> {
+  return scheduleNotification(content, { type: 'weekly', weekday, hour, minute });
 }
 
 /** Cancela um agendamento específico pelo id retornado por `scheduleNotification`. */
