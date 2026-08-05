@@ -2,10 +2,10 @@
  * # Coach mobile
  *
  * Sugestões acionáveis de agenda alinhadas à energia do dia.
- * Lógica pura (testável) + UI consome `buildRecommendations`.
+ * Lógica pura (testável) + UI consome sugestões do servidor.
  */
 
-export { type AiSuggestionsContext, insightsFingerprint, mergeAiSuggestions, toCandidates, useAiCoachSuggestions } from './aiSuggestions';
+export { type AiCoachSuggestionsResult, type AiSuggestionsContext, mapServerSuggestions, sendCoachSuggestionFeedback, useAiCoachSuggestions } from './aiSuggestions';
 export { buildMobileDayCurve, type DayEnergyCurve, type EnergyHour } from './dayCurve';
 export { loadDismissedForToday, saveDismissedForToday } from './dismissed';
 export { buildCandidates, buildRecommendations, energyValleyRecommendations, LOW_SLEEP_HOURS, MAX_RECOMMENDATIONS, quantizeNow, sleepDebtDeferRecommendations, unscheduledImpactRecommendations } from './rules';

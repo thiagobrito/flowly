@@ -72,11 +72,17 @@ describe('CoachSuggestions', () => {
     expect(onApply).toHaveBeenCalledTimes(1);
   });
 
-  it('esconde os botões quando a sugestão não é acionável', () => {
+  it('esconde Aplicar e mantém Agora não quando a sugestão não é acionável', () => {
     setup({ insights: [insight({ action: undefined })] });
 
     expect(screen.queryByLabelText('Aplicar')).toBeNull();
-    expect(screen.queryByLabelText('Dispensar')).toBeNull();
+    expect(screen.getByLabelText('Dispensar')).toBeTruthy();
+  });
+
+  it('mostra loading da seção enquanto o servidor responde', () => {
+    setup({ insights: [], loading: true });
+
+    expect(screen.getByText('Sugestões do dia')).toBeTruthy();
   });
 
   it('usa o actionLabel da sugestão quando ele existe', () => {

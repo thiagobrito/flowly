@@ -43,8 +43,9 @@ function useAppStateFocus() {
 export function QueryProvider({ children }: { children: ReactNode }) {
   useAppStateFocus();
 
+  // 24 * 60 * 60 * 1000
   return (
-    <PersistQueryClientProvider client={queryClient} persistOptions={{ persister, maxAge: 24 * 60 * 60 * 1000 }}>
+    <PersistQueryClientProvider client={queryClient} persistOptions={{ persister, maxAge: 1 }}>
       {children}
     </PersistQueryClientProvider>
   );

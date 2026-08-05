@@ -30,10 +30,10 @@ export const queryKeys = {
    */
   weeklyReviewDigest: (dateKey: string, wakeTime: string | null) => ['weeklyReview', 'digest', dateKey, wakeTime] as const,
   /**
-   * Ranking das sugestões do coach feito pela IA.
+   * Sugestões do coach (server-first).
    *
-   * A fingerprint dos candidatos entra na chave e o `staleTime` é infinito: o
-   * texto só muda quando a agenda muda, não a cada render.
+   * Só o `dateKey` entra na chave: o cache autoritativo no servidor é por dia
+   * (24h). Refetch no cliente segue a mesma janela via `staleTime`.
    */
-  coachSuggestions: (dateKey: string, fingerprint: string) => ['coach-suggestions', dateKey, fingerprint] as const,
+  coachSuggestions: (dateKey: string) => ['coach-suggestions', dateKey] as const,
 };

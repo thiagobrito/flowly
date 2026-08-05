@@ -5,7 +5,7 @@ import { ActivityIndicator, Alert, AppState, Platform, Pressable, RefreshControl
 
 import ModalScreen from '@/components/ModalScreen';
 import PeakEnergyCard from '@/components/PeakEnergyCard';
-import { buildCandidates, buildMobileDayCurve, type CoachInsight, loadDismissedForToday, LOW_SLEEP_HOURS, MAX_RECOMMENDATIONS, quantizeNow, saveDismissedForToday, useAiCoachSuggestions } from '@/lib/coach';
+import { type CoachInsight, loadDismissedForToday, MAX_RECOMMENDATIONS, saveDismissedForToday, sendCoachSuggestionFeedback, useAiCoachSuggestions } from '@/lib/coach';
 import { localDateKey, startOfLocalDay, toLocalISOString } from '@/lib/date';
 import { computeEnergyAtMoment, type FlowlyEngineInput, flowlyInputFromMetrics, getHealthProvider } from '@/lib/energy';
 import { applyEnergyMode, type EnergyMode, type EngineEnergy, filterTasksForMode, loadEnergyModeForToday, saveEnergyModeForToday } from '@/lib/energyMode';
@@ -97,15 +97,12 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
   const [energyScore, setEnergyScore] = useState<number>(0);
   const [engineScore, setEngineScore] = useState<number>(0);
   const [energyLevel, setEnergyLevel] = useState<number>(0);
-  const [energyReady, setEnergyReady] = useState<boolean>(false);
+  const [energyReady, setEnergyReady] = useState<boolean>(true);
   const [energyMode, setEnergyMode] = useState<EnergyMode>('ideal');
   const [energyModeOpen, setEnergyModeOpen] = useState(false);
   const [energyInput, setEnergyInput] = useState<FlowlyEngineInput | null>(null);
   const [lastNightSleepHours, setLastNightSleepHours] = useState<number | null>(null);
   const [dismissedInsights, setDismissedInsights] = useState<string[]>([]);
-  // `now` quantizado em slots de 15 min: em `new Date()` cru, o slot mais cedo
-  // possível anda a cada segundo e as sugestões trocam de horário sozinhas.
-  const [nowSlot, setNowSlot] = useState(() => quantizeNow(new Date()));
   const [applyingInsightId, setApplyingInsightId] = useState<string | null>(null);
   const energyModeRef = useRef<EnergyMode>('ideal');
   energyModeRef.current = energyMode;
@@ -171,11 +168,7 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
   // está ativo, e compartilham o cache `tasksCalendar` com o Calendário.
   const tomorrowDate = useMemo(() => getTomorrowDate(startOfLocalDay(dateKey)), [dateKey]);
   const tomorrowKey = localDateKey(tomorrowDate);
-  // A regra de dívida de sono agenda para amanhã, então precisa da agenda de
-  // amanhã para não sugerir um horário já ocupado. Fora desse caso, a busca
-  // continua sob demanda.
-  const sleepDebtActive = lastNightSleepHours != null && lastNightSleepHours < LOW_SLEEP_HOURS;
-  const wantTomorrow = filterOpen || selectedDateFilter === 'tomorrow' || sleepDebtActive;
+  const wantTomorrow = filterOpen || selectedDateFilter === 'tomorrow';
 
   const tomorrowQuery = useQuery<Task[]>({
     queryKey: queryKeys.tasksCalendar(tomorrowKey),
@@ -352,30 +345,13 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
     return result;
   }, []);
 
-  // Candidatas determinísticas: são elas que definem o que é acionável. A IA
-  // apenas escolhe entre estas e reescreve o texto.
-  const coachCandidates = useMemo(() => {
-    if (!energyReady) return [] as CoachInsight[];
-
-    const candidates = buildCandidates({
-      dateKey,
-      now: nowSlot,
-      tasks: visibleTasks,
-      concluded: concludedTasks,
-      curve: buildMobileDayCurve(energyInput, dateKey),
-      lastNightSleepHours,
-      tomorrowTasks,
-      tomorrowCurve: buildMobileDayCurve(energyInput, tomorrowKey),
-    });
-
-    return candidates.filter((insight) => !dismissedInsights.includes(insight.id));
-  }, [energyReady, energyInput, dateKey, nowSlot, visibleTasks, concludedTasks, lastNightSleepHours, dismissedInsights, tomorrowTasks, tomorrowKey]);
-
+  // Agenda e candidatas vêm do servidor; o app só manda contexto de energia.
   const aiContext = useMemo(() => ({ energyScore, lastNightSleepHours }), [energyScore, lastNightSleepHours]);
-  const rankedInsights = useAiCoachSuggestions(dateKey, coachCandidates, aiContext);
-  // Sem IA disponível o hook devolve as candidatas na ordem determinística, então
-  // o corte aqui é o mesmo que `buildRecommendations` faria.
-  const coachInsights = useMemo(() => rankedInsights.slice(0, MAX_RECOMMENDATIONS), [rankedInsights]);
+  const coachQueryEnabled = energyReady;
+  const { insights: rankedInsights, isPending: coachPending, batchId: coachBatchId } = useAiCoachSuggestions(dateKey, aiContext, coachQueryEnabled);
+
+  // Resposta do servidor, cortada e sem ids já aplicados/dispensados no dia.
+  const coachInsights = useMemo(() => rankedInsights.filter((insight) => !dismissedInsights.includes(insight.id)).slice(0, MAX_RECOMMENDATIONS), [rankedInsights, dismissedInsights]);
 
   // Uma impressão por conjunto de sugestões, para medir aplicação sem inflar o
   // denominador a cada re-render da lista.
@@ -394,14 +370,18 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
     });
   }, [shownSignature, coachInsights, energyMode, energyInput]);
 
-  const dismissInsight = useCallback((insight: CoachInsight) => {
-    track('coach_suggestion_dismissed', { kind: insight.id.split('-')[0] ?? 'unknown' });
-    setDismissedInsights((previous) => {
-      const next = [...previous, insight.id];
-      saveDismissedForToday(next).catch(() => undefined);
-      return next;
-    });
-  }, []);
+  const dismissInsight = useCallback(
+    (insight: CoachInsight) => {
+      track('coach_suggestion_dismissed', { kind: insight.id.split('-')[0] ?? 'unknown' });
+      sendCoachSuggestionFeedback({ dateKey, suggestionId: insight.id, status: 'dismissed', batchId: coachBatchId });
+      setDismissedInsights((previous) => {
+        const next = [...previous, insight.id];
+        saveDismissedForToday(next).catch(() => undefined);
+        return next;
+      });
+    },
+    [dateKey, coachBatchId],
+  );
 
   const handleApplyInsight = useCallback(
     async (insight: CoachInsight) => {
@@ -419,6 +399,7 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
           kind: insight.id.split('-')[0] ?? 'unknown',
           duration_min: insight.action.durationMin,
         });
+        sendCoachSuggestionFeedback({ dateKey, suggestionId: insight.id, status: 'applied', batchId: coachBatchId });
         setDismissedInsights((previous) => {
           const next = [...previous, insight.id];
           saveDismissedForToday(next).catch(() => undefined);
@@ -431,7 +412,7 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
         setApplyingInsightId(null);
       }
     },
-    [visibleTasks, concludedTasks, allUserTasks, queryClient],
+    [visibleTasks, concludedTasks, allUserTasks, queryClient, dateKey, coachBatchId],
   );
 
   const handleSelectEnergyMode = useCallback(
@@ -494,12 +475,6 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
     // Garante que a Home carregue mesmo se a coleta de energia falhar.
     const runRefresh = () => {
       refreshEnergy().catch(() => setEnergyReady(true));
-      // Só avança o slot quando ele realmente virou, para não invalidar o memo
-      // das sugestões a cada minuto.
-      setNowSlot((previous) => {
-        const next = quantizeNow(new Date());
-        return next.getTime() === previous.getTime() ? previous : next;
-      });
     };
 
     runRefresh();
@@ -575,7 +550,7 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
           <PeakEnergyCard input={energyInput} currentScore={engineScore} isDark={isDark} />
         </View>
 
-        <CoachSuggestions insights={coachInsights} isDark={isDark} applyingId={applyingInsightId} onApply={handleApplyInsight} onDismiss={dismissInsight} />
+        <CoachSuggestions insights={coachInsights} loading={coachQueryEnabled && coachPending} isDark={isDark} applyingId={applyingInsightId} onApply={handleApplyInsight} onDismiss={dismissInsight} />
 
         {futureLoading ? (
           <View className="items-center justify-center py-10">
