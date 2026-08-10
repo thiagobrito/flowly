@@ -19,6 +19,9 @@ import type { CoachAction, CoachInsight } from './types';
 /** Alinhado ao TTL de 24h do cache no servidor. */
 const STALE_TIME_MS = 24 * 60 * 60 * 1000;
 
+/** Janela curta enquanto a versão da LLM ainda está sendo gerada no servidor. */
+const AI_PENDING_STALE_TIME_MS = 30_000;
+
 type ServerSuggestion = {
   id: string;
   title: string;
@@ -76,9 +79,10 @@ export function mapServerSuggestions(suggestions: ServerSuggestion[] | null | un
   return mapped;
 }
 
-type FetchRankingResult = {
+export type FetchRankingResult = {
   suggestions: ServerSuggestion[];
   batchId: string | null;
+  source: 'ai' | 'cache' | 'fallback';
 };
 
 async function fetchRanking(dateKey: string, context: AiSuggestionsContext): Promise<FetchRankingResult> {
@@ -90,6 +94,7 @@ async function fetchRanking(dateKey: string, context: AiSuggestionsContext): Pro
   return {
     suggestions: response?.suggestions ?? [],
     batchId: response?.batchId ?? null,
+    source: response?.source ?? 'fallback',
   };
 }
 
@@ -109,12 +114,18 @@ export function sendCoachSuggestionFeedback(params: { dateKey: string; suggestio
  * Insights com texto/ordem/ação do servidor. Enquanto pendente ou em erro sem
  * dados, devolve lista vazia — a UI não inventa sugestões locais.
  */
-export function useAiCoachSuggestions(dateKey: string, context: AiSuggestionsContext, enabled: boolean): AiCoachSuggestionsResult {
+export function useAiCoachSuggestions(dateKey: string, context: AiSuggestionsContext, enabled: boolean, seed: FetchRankingResult | null = null): AiCoachSuggestionsResult {
   const query = useQuery({
     queryKey: queryKeys.coachSuggestions(dateKey),
     queryFn: () => fetchRanking(dateKey, context),
     enabled,
-    staleTime: STALE_TIME_MS,
+    // O payload da Home já traz as sugestões do dia quando o servidor as tem em
+    // cache; nesse caso não há requisição alguma.
+    ...(seed ? { initialData: seed } : {}),
+    // O servidor devolve o fallback determinístico na hora e gera a versão da
+    // LLM em background. Enquanto a resposta não for `ai`, mantemos a query
+    // stale para buscar o texto reescrito no próximo foco do app.
+    staleTime: (cached) => (cached.state.data?.source === 'ai' ? STALE_TIME_MS : AI_PENDING_STALE_TIME_MS),
     gcTime: STALE_TIME_MS,
     retry: 1,
   });

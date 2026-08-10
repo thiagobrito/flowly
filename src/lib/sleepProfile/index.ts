@@ -13,6 +13,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { takeSleepProfileSnapshot } from '@/lib/home/snapshot';
 import { api, getAuthToken } from '@/lib/network';
 import { usePendingSync } from '@/lib/pendingSync';
 import type { PersistedRecord } from '@/lib/storage';
@@ -85,6 +86,17 @@ function toSyncPayload(profile: SleepProfile): SleepProfileData {
 /** Um perfil "vazio" (nada informado) — usado para decidir se hidratamos do servidor. */
 function isProfileEmpty(profile: SleepProfileData): boolean {
   return profile.hasDevice == null && profile.usualWakeTime == null && profile.usualBedTime == null && Object.keys(profile.overrides ?? {}).length === 0;
+}
+
+/**
+ * `GET /home` já traz o perfil no boot. Reaproveitar o que acabou de chegar
+ * evita uma segunda requisição disputando banda com o carregamento da tela.
+ */
+function fetchRemoteProfile(): Promise<{ profile: SleepProfileData | null }> {
+  const snapshot = takeSleepProfileSnapshot();
+  if (snapshot !== undefined) return Promise.resolve({ profile: snapshot });
+
+  return api.get<{ profile: SleepProfileData | null }>(SYNC_PATH);
 }
 
 /**
@@ -224,8 +236,7 @@ export function useSleepProfile() {
     }
 
     hydrationAttempted = true;
-    api
-      .get<{ profile: SleepProfileData | null }>(SYNC_PATH)
+    fetchRemoteProfile()
       .then((res) => {
         const remote = res?.profile;
         // Só popula se ainda estiver vazio (o usuário pode ter editado enquanto

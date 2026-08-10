@@ -7,13 +7,23 @@
 
 import type { CustomerInfo } from 'react-native-purchases';
 
+import { takeSubscriptionSnapshot } from '@/lib/home/snapshot';
 import { api } from '@/lib/network';
 
 import { ENTITLEMENT_ID, resolvePlanId } from './config';
 import type { PaymentPayload, SubscriptionStatus } from './types';
 
-/** Busca o status da assinatura no backend. */
+/**
+ * Busca o status da assinatura no backend.
+ *
+ * `GET /home` já devolve esse status no boot. Quando ele acabou de chegar,
+ * aproveitamos — é uma requisição a menos competindo com o carregamento da
+ * tela. Fora dessa janela (ou em telas que não passam pela Home), vai à rede.
+ */
 export function fetchSubscription(): Promise<SubscriptionStatus> {
+  const snapshot = takeSubscriptionSnapshot();
+  if (snapshot) return Promise.resolve(snapshot);
+
   return api.get<SubscriptionStatus>('/subscription');
 }
 

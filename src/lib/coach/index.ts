@@ -5,7 +5,7 @@
  * Lógica pura (testável) + UI consome sugestões do servidor.
  */
 
-export { type AiCoachSuggestionsResult, type AiSuggestionsContext, mapServerSuggestions, sendCoachSuggestionFeedback, useAiCoachSuggestions } from './aiSuggestions';
+export { type AiCoachSuggestionsResult, type AiSuggestionsContext, type FetchRankingResult, mapServerSuggestions, sendCoachSuggestionFeedback, useAiCoachSuggestions } from './aiSuggestions';
 export { buildMobileDayCurve, type DayEnergyCurve, type EnergyHour } from './dayCurve';
 export { loadDismissedForToday, saveDismissedForToday } from './dismissed';
 export { buildCandidates, buildRecommendations, energyValleyRecommendations, LOW_SLEEP_HOURS, MAX_RECOMMENDATIONS, quantizeNow, sleepDebtDeferRecommendations, unscheduledImpactRecommendations } from './rules';

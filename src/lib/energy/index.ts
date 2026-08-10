@@ -188,5 +188,6 @@ export {
   normalizeSleepQuality,
 } from './engine';
 export { useEnergyScore, type UseEnergyScoreOptions, type UseEnergyScoreResult } from './hooks/useEnergyScore';
+export { loadLastEnergyLevel, saveLastEnergyLevel } from './lastLevel';
 export { type DayPeriodHeat, findPeakWindow, formatPeakWindowLabel, PEAK_WINDOW_HOURS, type PeakWindow, periodHeatmap } from './peakWindow';
 export type { DateRange, EnergyBand, EnergyCurvePoint, EnergyScore, FlowlyEnergyComponents, FlowlyEnergyResult, FlowlyEngineInput, HealthMetrics, MetricKey, SleepNight, SubScore, WeightTier } from './types';

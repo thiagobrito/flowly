@@ -10,9 +10,11 @@
  */
 
 import { toLocalISOString } from '@/lib/date';
+import { type HomeData, weekTasks } from '@/lib/home';
 import { api } from '@/lib/network';
 import { ensureAndroidChannel, getPermissionStatus, getScheduledNotifications, notifications } from '@/lib/notifications';
 import { getNotificationsConfig } from '@/lib/notifications/config';
+import { queryClient, queryKeys } from '@/lib/query';
 import { getOnceStartISO } from '@/screens/Calendar/eventMapping';
 import type { Task } from '@/screens/NewTask/data';
 import { getWeekDates } from '@/screens/Tasks/taskDateFilter';
@@ -62,8 +64,21 @@ function organizeTasks(tasks: unknown): Task[] {
   });
 }
 
-/** Busca as tarefas visíveis (não concluídas) da semana, deduplicadas por id. */
+/**
+ * Tarefas visíveis (não concluídas) da semana, deduplicadas por id.
+ *
+ * A Home já carrega a semana inteira em `GET /home`; quando esse payload está
+ * no cache, os lembretes se apoiam nele. Antes esta função disparava sete
+ * `GET /tasks` no boot do app — sete leituras da mesma coleção, concorrendo com
+ * o carregamento da tela só para agendar notificações locais.
+ */
 async function fetchWeekVisibleTasks(): Promise<Task[]> {
+  const cached = queryClient.getQueriesData<HomeData>({ queryKey: queryKeys.homeAll() });
+  for (const [, data] of cached) {
+    const tasks = weekTasks(data?.week);
+    if (tasks.length > 0) return tasks;
+  }
+
   const weekDates = getWeekDates();
   const results = await Promise.allSettled(
     weekDates.map((date) =>

@@ -1,14 +1,14 @@
-import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { Crown, GoalIcon } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, AppState, Platform, Pressable, RefreshControl, ScrollView, Text, useColorScheme, View } from 'react-native';
 
 import ModalScreen from '@/components/ModalScreen';
-import PeakEnergyCard from '@/components/PeakEnergyCard';
 import { type CoachInsight, loadDismissedForToday, MAX_RECOMMENDATIONS, saveDismissedForToday, sendCoachSuggestionFeedback, useAiCoachSuggestions } from '@/lib/coach';
 import { localDateKey, startOfLocalDay, toLocalISOString } from '@/lib/date';
-import { computeEnergyAtMoment, type FlowlyEngineInput, flowlyInputFromMetrics, getHealthProvider } from '@/lib/energy';
+import { computeEnergyAtMoment, type FlowlyEngineInput, flowlyInputFromMetrics, getHealthProvider, loadLastEnergyLevel, saveLastEnergyLevel } from '@/lib/energy';
 import { applyEnergyMode, type EnergyMode, type EngineEnergy, filterTasksForMode, loadEnergyModeForToday, saveEnergyModeForToday } from '@/lib/energyMode';
+import { type HomeData, tasksForDay, useHome, weekTasks } from '@/lib/home';
 import { api } from '@/lib/network';
 import { queryKeys } from '@/lib/query';
 import { applySleepProfile, useSleepProfile } from '@/lib/sleepProfile';
@@ -29,7 +29,7 @@ import Header from './components/Header';
 import RushedEmptyState from './components/RushedEmptyState';
 import TaskCard from './components/TaskCard';
 import { moveTask, removeTaskFromLists, type TasksData } from './taskCache';
-import { DATE_FILTERS, type DateFilterId, getTomorrowDate, getWeekDates, taskMatchesDateFilter } from './taskDateFilter';
+import { DATE_FILTERS, type DateFilterId, getTomorrowDate, taskMatchesDateFilter } from './taskDateFilter';
 
 type TasksProps = {
   onEdit?: (task: Task) => void;
@@ -37,46 +37,13 @@ type TasksProps = {
   onOpenConfig?: () => void;
 };
 
-function OrganizeTasks(tasks: any): Task[] {
-  return tasks.map((task: any, index: number) => {
-    // eslint-disable-next-line no-underscore-dangle -- campo `_id` retornado pela API MongoDB
-    const id = task.id ?? (task as Task & { _id?: string })._id ?? '';
-    return {
-      ...task,
-      id,
-      // Chave estável entre refetches (id + posição) para o React reconciliar as listas.
-      randomId: `${id || 'task'}-${index}`,
-    };
-  });
-}
-
-async function fetchTodayTasks(energyLevel: number): Promise<{ visibleTasks: Task[]; concludedTasks: Task[] }> {
-  const today = toLocalISOString();
-  const results = await api.get<any>('/tasks', {
-    params: { date: today, energyLevel },
-  });
-
-  const visibleTasks = OrganizeTasks(results.visibleTasks);
-  const concludedTasks = OrganizeTasks(results.concludedTasks);
-
-  return { visibleTasks, concludedTasks };
-}
-
-// Todas as tarefas do usuário (sem filtro de dia). Necessário para o filtro
-// "Sem data", que é um conceito client-side (o servidor não tem esse recorte).
-async function fetchAllTasks(): Promise<Task[]> {
-  const results = await api.get<any>('/tasks', { params: { scope: 'all' } });
-  return OrganizeTasks(results.tasks ?? []);
-}
-
-// Busca as tarefas de um dia específico direto do servidor (fonte da verdade,
-// via `FilterTasksToShow`), no mesmo formato do Calendário: visíveis + concluídas
-// com a flag `done`. A energia é fixa (5) para manter o cache estável e
-// compartilhado com a tela de Calendário (chave `tasksCalendar`).
-async function fetchDayTasks(dateISO: string): Promise<Task[]> {
-  const response = await api.get<any>('/tasks', { params: { date: dateISO, energyLevel: 5 } });
-  const combined = [...(response.visibleTasks ?? []).map((task: Task) => ({ ...task, done: false })), ...(response.concludedTasks ?? []).map((task: Task) => ({ ...task, done: true }))];
-  return OrganizeTasks(combined);
+/**
+ * Aplica uma atualização otimista às listas de hoje dentro do payload da Home,
+ * preservando o resto (semana, sem data, assinatura, coach).
+ */
+function updateHomeToday(data: HomeData | undefined, update: (today: TasksData) => TasksData): HomeData | undefined {
+  if (!data) return data;
+  return { ...data, today: update(data.today) };
 }
 
 /**
@@ -98,6 +65,8 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
   const [engineScore, setEngineScore] = useState<number>(0);
   const [energyLevel, setEnergyLevel] = useState<number>(0);
   const [energyReady, setEnergyReady] = useState<boolean>(true);
+  /** Nível da sessão anterior já lido do disco — libera a primeira requisição. */
+  const [energySeeded, setEnergySeeded] = useState(false);
   const [energyMode, setEnergyMode] = useState<EnergyMode>('ideal');
   const [energyModeOpen, setEnergyModeOpen] = useState(false);
   const [energyInput, setEnergyInput] = useState<FlowlyEngineInput | null>(null);
@@ -116,25 +85,20 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
   // uma entrada de cache a cada micro-variação da coleta de 60s).
   const dateKey = localDateKey();
   const roundedEnergy = Math.round(energyLevel);
-  const tasksKey = useMemo(() => queryKeys.tasks(dateKey, roundedEnergy), [dateKey, roundedEnergy]);
+  const homeKey = useMemo(() => queryKeys.home(dateKey, roundedEnergy), [dateKey, roundedEnergy]);
 
-  const tasksQuery = useQuery<TasksData>({
-    queryKey: tasksKey,
-    queryFn: () => fetchTodayTasks(roundedEnergy),
-    enabled: energyReady,
-  });
+  // Uma requisição só traz tarefas do dia, da semana, sem data, assinatura,
+  // perfil de sono e sugestões do coach.
+  const homeQuery = useHome(toLocalISOString(), roundedEnergy, energySeeded);
+  const home = homeQuery.data;
 
-  const allTasksQuery = useQuery<Task[]>({
-    queryKey: queryKeys.tasksAllList(),
-    queryFn: fetchAllTasks,
-  });
-
-  const visibleTasks = useMemo(() => tasksQuery.data?.visibleTasks ?? [], [tasksQuery.data]);
-  const concludedTasks = useMemo(() => tasksQuery.data?.concludedTasks ?? [], [tasksQuery.data]);
-  const allUserTasks = useMemo(() => allTasksQuery.data ?? [], [allTasksQuery.data]);
+  const visibleTasks = useMemo(() => home?.today.visibleTasks ?? [], [home]);
+  const concludedTasks = useMemo(() => home?.today.concludedTasks ?? [], [home]);
+  const nodateTasks = useMemo(() => home?.nodateTasks ?? [], [home]);
   // Spinner só na primeiríssima carga (sem cache) — ao voltar para a Home o
-  // conteúdo do cache aparece instantaneamente.
-  const loading = !energyReady || tasksQuery.isLoading;
+  // conteúdo do cache aparece instantaneamente. `energyReady` não entra aqui: a
+  // coleta de saúde é local e só reordena a lista, não deve segurar a tela.
+  const loading = !energySeeded || (homeQuery.isLoading && !home);
 
   const [filterOpen, setFilterOpen] = useState(false);
   const [testModalVisible, setTestModalVisible] = useState(false);
@@ -162,57 +126,30 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
   // conclusão é por dia e dias futuros não têm conclusão).
   const isFutureFilter = selectedDateFilter === 'tomorrow' || selectedDateFilter === 'thisWeek';
 
-  // "Amanhã" e "Esta semana" seguem o modelo do Calendário: buscam cada dia
-  // direto do servidor (fonte da verdade), em vez de reimplementar a recorrência
-  // no cliente. As queries só disparam quando o drawer está aberto ou o filtro
-  // está ativo, e compartilham o cache `tasksCalendar` com o Calendário.
+  // "Amanhã" e "Esta semana" continuam vindo do servidor (fonte da verdade da
+  // recorrência), mas já chegam junto no payload da Home — antes cada um desses
+  // filtros disparava de uma a sete requisições extras ao ser aberto.
   const tomorrowDate = useMemo(() => getTomorrowDate(startOfLocalDay(dateKey)), [dateKey]);
   const tomorrowKey = localDateKey(tomorrowDate);
-  const wantTomorrow = filterOpen || selectedDateFilter === 'tomorrow';
-
-  const tomorrowQuery = useQuery<Task[]>({
-    queryKey: queryKeys.tasksCalendar(tomorrowKey),
-    queryFn: () => fetchDayTasks(toLocalISOString(tomorrowDate)),
-    enabled: energyReady && wantTomorrow,
-  });
-  const tomorrowTasks = useMemo(() => (tomorrowQuery.data ?? []).filter((task) => !task.done), [tomorrowQuery.data]);
-
-  const weekDates = useMemo(() => getWeekDates(startOfLocalDay(dateKey)), [dateKey]);
-  const wantWeek = filterOpen || selectedDateFilter === 'thisWeek';
-
-  const week = useQueries({
-    queries: weekDates.map((day) => ({
-      queryKey: queryKeys.tasksCalendar(localDateKey(day)),
-      queryFn: () => fetchDayTasks(toLocalISOString(day)),
-      enabled: energyReady && wantWeek,
-    })),
-    combine: (results) => {
-      const byId = new Map<string, Task>();
-      results.forEach((result) =>
-        (result.data ?? []).forEach((task) => {
-          if (!task.done && !byId.has(task.id)) byId.set(task.id, task);
-        }),
-      );
-      return { tasks: Array.from(byId.values()), isLoading: results.some((result) => result.isLoading) };
-    },
-  });
+  const tomorrowTasks = useMemo(() => tasksForDay(home?.week, tomorrowKey), [home, tomorrowKey]);
+  const allWeekTasks = useMemo(() => weekTasks(home?.week), [home]);
 
   const matchesArea = useCallback((task: Task) => selectedAreas.length === 0 || selectedAreas.includes(task.goal.name), [selectedAreas]);
 
-  // Contagens dos filtros: Hoje/Amanhã/Esta semana vêm dos dados reais do
-  // servidor; "Sem data" continua sendo um recorte client-side sobre a lista
-  // completa do usuário.
+  // Todas as contagens vêm dos recortes que o servidor já entregou no payload
+  // da Home, inclusive "Sem data" — que antes era calculado no cliente sobre a
+  // lista completa de tarefas do usuário.
   const filterDateOptions = useMemo(
     () =>
       DATE_FILTERS.map((filter) => {
         let count = 0;
         if (filter.id === 'today') count = visibleTasks.length + concludedTasks.length;
         else if (filter.id === 'tomorrow') count = tomorrowTasks.length;
-        else if (filter.id === 'thisWeek') count = week.tasks.length;
-        else count = allUserTasks.filter((task) => taskMatchesDateFilter(task, 'nodate')).length;
+        else if (filter.id === 'thisWeek') count = allWeekTasks.length;
+        else count = nodateTasks.length;
         return { ...filter, count };
       }),
-    [visibleTasks.length, concludedTasks.length, tomorrowTasks, week.tasks, allUserTasks],
+    [visibleTasks.length, concludedTasks.length, tomorrowTasks, allWeekTasks, nodateTasks],
   );
 
   // As opções de área derivam da fonte do filtro ativo, senão áreas presentes só
@@ -220,7 +157,7 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
   const filterAreas = useMemo<FilterArea[]>(() => {
     let source = allTasks;
     if (selectedDateFilter === 'tomorrow') source = tomorrowTasks;
-    else if (selectedDateFilter === 'thisWeek') source = week.tasks;
+    else if (selectedDateFilter === 'thisWeek') source = allWeekTasks;
 
     const counts = new Map<string, number>();
     source.forEach((task) => {
@@ -237,7 +174,7 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
         count,
       };
     });
-  }, [selectedDateFilter, tomorrowTasks, week.tasks, allTasks]);
+  }, [selectedDateFilter, tomorrowTasks, allWeekTasks, allTasks]);
 
   const applyFilters = useCallback(
     (tasks: Task[]) =>
@@ -251,11 +188,11 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
   const filteredVisible = useMemo(() => {
     let list: Task[];
     if (selectedDateFilter === 'tomorrow') list = tomorrowTasks.filter(matchesArea);
-    else if (selectedDateFilter === 'thisWeek') list = week.tasks.filter(matchesArea);
-    else if (selectedDateFilter === 'nodate') list = allUserTasks.filter((task) => taskMatchesDateFilter(task, 'nodate') && matchesArea(task));
+    else if (selectedDateFilter === 'thisWeek') list = allWeekTasks.filter(matchesArea);
+    else if (selectedDateFilter === 'nodate') list = nodateTasks.filter(matchesArea);
     else list = applyFilters(visibleTasks);
     return filterTasksForMode(list, energyMode);
-  }, [selectedDateFilter, tomorrowTasks, week.tasks, allUserTasks, matchesArea, visibleTasks, applyFilters, energyMode]);
+  }, [selectedDateFilter, tomorrowTasks, allWeekTasks, nodateTasks, matchesArea, visibleTasks, applyFilters, energyMode]);
 
   // Concluídas ficam fora do filtro de modo: Rushed serve para decidir o que
   // fazer agora, e esconder o que já foi feito apaga o progresso do dia.
@@ -268,8 +205,8 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
   // Sem aviso, a tela vazia parece falha de carregamento.
   const rushedHidAll = energyMode === 'rushed' && filteredVisible.length === 0 && applyFilters(visibleTasks).length > 0;
 
-  // Enquanto o filtro futuro selecionado ainda busca, evita mostrar vazio.
-  const futureLoading = (selectedDateFilter === 'tomorrow' && tomorrowQuery.isLoading) || (selectedDateFilter === 'thisWeek' && week.isLoading);
+  // Enquanto o payload da Home ainda busca, evita mostrar o filtro futuro vazio.
+  const futureLoading = isFutureFilter && homeQuery.isLoading;
 
   const toggleArea = (id: string) => {
     setSelectedAreas((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]));
@@ -293,12 +230,12 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
         text: 'Deletar',
         style: 'destructive',
         onPress: async () => {
-          const previous = queryClient.getQueryData<TasksData>(tasksKey);
-          queryClient.setQueryData<TasksData>(tasksKey, (data) => removeTaskFromLists(data, task.id));
+          const previous = queryClient.getQueryData<HomeData>(homeKey);
+          queryClient.setQueryData<HomeData>(homeKey, (data) => updateHomeToday(data, (today) => removeTaskFromLists(today, task.id)));
           try {
             await api.delete(`/tasks`, { params: { id: task.id } });
           } catch {
-            if (previous) queryClient.setQueryData(tasksKey, previous);
+            if (previous) queryClient.setQueryData(homeKey, previous);
             Alert.alert('Erro', 'Não foi possível deletar a atividade.');
             return;
           } finally {
@@ -313,10 +250,10 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
   // tarefa entre as listas no cache (sem esperar refetch) e revalidamos.
   const handleToggled = useCallback(
     (task: Task, nowConcluded: boolean) => {
-      queryClient.setQueryData<TasksData>(tasksKey, (data) => moveTask(data, task.id, nowConcluded));
+      queryClient.setQueryData<HomeData>(homeKey, (data) => updateHomeToday(data, (today) => moveTask(today, task.id, nowConcluded)));
       queryClient.invalidateQueries({ queryKey: queryKeys.tasksAll() });
     },
-    [queryClient, tasksKey],
+    [queryClient, homeKey],
   );
 
   const refreshEnergy = useCallback(async () => {
@@ -342,13 +279,18 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
     setEnergyScore(effective.score);
     setEnergyLevel(effective.level);
     setEnergyReady(true);
+    // Semente da próxima abertura: sem ela a primeira requisição sai com nível 0
+    // e precisa ser refeita quando a coleta real chega.
+    saveLastEnergyLevel(effective.level).catch(() => undefined);
     return result;
   }, []);
 
   // Agenda e candidatas vêm do servidor; o app só manda contexto de energia.
   const aiContext = useMemo(() => ({ energyScore, lastNightSleepHours }), [energyScore, lastNightSleepHours]);
-  const coachQueryEnabled = energyReady;
-  const { insights: rankedInsights, isPending: coachPending, batchId: coachBatchId } = useAiCoachSuggestions(dateKey, aiContext, coachQueryEnabled);
+  // A Home já traz as sugestões do dia quando existem. Só chamamos o endpoint
+  // de geração quando ela voltou sem nada — é lá que a agenda é recalculada.
+  const coachQueryEnabled = energyReady && Boolean(home) && !home?.coach;
+  const { insights: rankedInsights, isPending: coachPending, batchId: coachBatchId } = useAiCoachSuggestions(dateKey, aiContext, coachQueryEnabled, home?.coach ?? null);
 
   // Resposta do servidor, cortada e sem ids já aplicados/dispensados no dia.
   const coachInsights = useMemo(() => rankedInsights.filter((insight) => !dismissedInsights.includes(insight.id)).slice(0, MAX_RECOMMENDATIONS), [rankedInsights, dismissedInsights]);
@@ -386,7 +328,9 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
   const handleApplyInsight = useCallback(
     async (insight: CoachInsight) => {
       if (!insight.action || insight.action.type !== 'schedule') return;
-      const task = [...visibleTasks, ...concludedTasks, ...allUserTasks].find((item) => item.id === insight.action!.taskId);
+      // As candidatas do coach saem das tarefas do dia, mas a semana e as sem
+      // data entram na busca para cobrir sugestões de reagendamento.
+      const task = [...visibleTasks, ...concludedTasks, ...allWeekTasks, ...nodateTasks].find((item) => item.id === insight.action!.taskId);
       if (!task) {
         Alert.alert('Erro', 'Não encontramos essa atividade.');
         return;
@@ -412,7 +356,7 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
         setApplyingInsightId(null);
       }
     },
-    [visibleTasks, concludedTasks, allUserTasks, queryClient, dateKey, coachBatchId],
+    [visibleTasks, concludedTasks, allWeekTasks, nodateTasks, queryClient, dateKey, coachBatchId],
   );
 
   const handleSelectEnergyMode = useCallback(
@@ -471,6 +415,16 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
     // Sugestões dispensadas hoje: sem isso, "Agora não" só vale até o próximo
     // remount da tela.
     loadDismissedForToday().then(setDismissedInsights);
+
+    // O nível de energia entra na chave da requisição. Recuperá-lo do disco
+    // antes do primeiro fetch (leitura local, poucos milissegundos) evita pedir
+    // a lista com nível 0 e ter que refazer a requisição quando a coleta de
+    // saúde termina.
+    loadLastEnergyLevel()
+      .then((level) => {
+        if (level != null) setEnergyLevel(level);
+      })
+      .finally(() => setEnergySeeded(true));
 
     // Garante que a Home carregue mesmo se a coleta de energia falhar.
     const runRefresh = () => {
@@ -546,9 +500,9 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
         contentContainerStyle={{ paddingBottom: 70 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={isDark ? '#e4e4e7' : '#3b82f6'} colors={['#3b82f6']} />}
       >
-        <View className="mb-3">
+        {/* <View className="mb-3">
           <PeakEnergyCard input={energyInput} currentScore={engineScore} isDark={isDark} />
-        </View>
+        </View> */}
 
         <CoachSuggestions insights={coachInsights} loading={coachQueryEnabled && coachPending} isDark={isDark} applyingId={applyingInsightId} onApply={handleApplyInsight} onDismiss={dismissInsight} />
 

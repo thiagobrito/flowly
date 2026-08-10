@@ -40,12 +40,20 @@ function useAppStateFocus() {
   }, []);
 }
 
+/**
+ * Por quanto tempo o cache gravado em disco continua sendo reidratado.
+ *
+ * Estava em 1 ms, o que descartava o cache inteiro logo na reidratação e fazia
+ * toda abertura do app começar do spinner, mesmo tendo os dados da sessão
+ * anterior em disco.
+ */
+const PERSISTED_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+
 export function QueryProvider({ children }: { children: ReactNode }) {
   useAppStateFocus();
 
-  // 24 * 60 * 60 * 1000
   return (
-    <PersistQueryClientProvider client={queryClient} persistOptions={{ persister, maxAge: 1 }}>
+    <PersistQueryClientProvider client={queryClient} persistOptions={{ persister, maxAge: PERSISTED_CACHE_MAX_AGE_MS }}>
       {children}
     </PersistQueryClientProvider>
   );

@@ -7,6 +7,16 @@
  */
 
 export const queryKeys = {
+  /**
+   * Payload agregado da Home: tarefas do dia, da semana, sem data, assinatura,
+   * perfil de sono e sugestões do coach numa resposta só.
+   *
+   * Fica sob o prefixo `tasks` de propósito — toda invalidação de tarefa
+   * (concluir, editar, agendar) precisa revalidar este payload também.
+   */
+  home: (dateKey: string, energyLevel: number) => ['tasks', 'home', dateKey, energyLevel] as const,
+  /** Prefixo do payload da Home, independente de dia/energia. */
+  homeAll: () => ['tasks', 'home'] as const,
   /** Lista de tarefas de um dia, priorizada pelo nível de energia informado. */
   tasks: (dateKey: string, energyLevel: number) => ['tasks', 'list', dateKey, energyLevel] as const,
   /** Tarefas do calendário para um dia (agendadas + concluídas). */

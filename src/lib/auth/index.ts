@@ -23,6 +23,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
+import { clearHomeSnapshot } from '@/lib/home/snapshot';
 import { api, HttpError, isNetworkError, setAuthToken, setAuthTokenProvider } from '@/lib/network';
 import { getPersistedSnapshot, usePersistedState } from '@/lib/storage';
 import { loginUser, logoutUser } from '@/lib/subscription';
@@ -122,6 +123,9 @@ export function useSession() {
   const signOut = useCallback(() => {
     applyAuthHeader(null);
     logoutUser().catch(() => undefined);
+    // Assinatura e perfil de sono trazidos pela Home ficam em memória fora do
+    // React Query; sem limpar, a próxima conta a logar leria os dados da anterior.
+    clearHomeSnapshot();
     setSession({ ...EMPTY_SESSION });
   }, [setSession]);
 
