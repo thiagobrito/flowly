@@ -40,7 +40,7 @@ function OptionRow({ label, selected, isDark, onPress }: OptionRowProps) {
     <Pressable
       onPress={onPress}
       accessibilityRole="radio"
-      accessibilityState={{ selected }}
+      aria-checked={selected}
       className="mb-2 flex-row items-center justify-between rounded-xl border px-4 py-3.5 active:opacity-80"
       style={{ borderColor: colors.border, backgroundColor: colors.background }}
     >

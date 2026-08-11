@@ -1,6 +1,8 @@
 node_modules
 out
-!.detoxrc.js
+# Bundles exportados pelo `expo export` (o de produção e o da suíte E2E).
+dist
+dist-e2e
 tailwind.config.js
 babel.config.js
 metro.config.js

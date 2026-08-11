@@ -59,7 +59,7 @@ function FilterRow({ label, Icon, accent, count, selected, isDark, onPress }: Fi
   if (selected) backgroundColor = `${accent}1f`;
 
   return (
-    <Pressable onPress={onPress} accessibilityRole="checkbox" accessibilityState={{ checked: selected }} accessibilityLabel={label} className="mb-1 flex-row items-center rounded-2xl p-3 active:opacity-70" style={{ backgroundColor }}>
+    <Pressable onPress={onPress} accessibilityRole="checkbox" aria-checked={selected} accessibilityLabel={label} className="mb-1 flex-row items-center rounded-2xl p-3 active:opacity-70" style={{ backgroundColor }}>
       <View className="size-9 items-center justify-center rounded-xl" style={{ backgroundColor: `${accent}22` }}>
         <Icon size={18} color={accent} />
       </View>

@@ -126,7 +126,13 @@ export default function IntegrationSection({ isDark }: { isDark: boolean }) {
           label="Sincronizar com Google Calendar"
           description={googleDescription}
           isDark={isDark}
-          trailing={pending && !isConnected ? <ActivityIndicator color={isDark ? '#e4e4e7' : '#3b82f6'} /> : <SettingsToggle value={isConnected} onValueChange={handleGoogleCalendarToggle} disabled={!isReady || pending} isDark={isDark} />}
+          trailing={
+            pending && !isConnected ? (
+              <ActivityIndicator color={isDark ? '#e4e4e7' : '#3b82f6'} />
+            ) : (
+              <SettingsToggle label="Sincronizar com Google Calendar" value={isConnected} onValueChange={handleGoogleCalendarToggle} disabled={!isReady || pending} isDark={isDark} />
+            )
+          }
         />
         {isConnected ? (
           <SettingsRow
@@ -142,7 +148,7 @@ export default function IntegrationSection({ isDark }: { isDark: boolean }) {
           description={healthDescription()}
           isDark={isDark}
           showDivider={false}
-          trailing={<SettingsToggle value={Boolean(preferences.healthEnabled)} onValueChange={handleHealthToggle} disabled={!healthAvailable} isDark={isDark} />}
+          trailing={<SettingsToggle label={`Configurações do ${healthLabel()}`} value={Boolean(preferences.healthEnabled)} onValueChange={handleHealthToggle} disabled={!healthAvailable} isDark={isDark} />}
         />
       </Card>
     </>

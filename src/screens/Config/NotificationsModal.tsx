@@ -44,7 +44,7 @@ export default function NotificationsModal({ visible, isDark, enabled, onChangeE
               <Text className="text-base font-medium text-zinc-900 dark:text-zinc-50">Lembretes de tarefas</Text>
               <Text className="mt-0.5 text-sm text-zinc-500 dark:text-zinc-400">Avisos 10 min antes e no horário de início das suas tarefas agendadas.</Text>
             </View>
-            <SettingsToggle value={enabled} onValueChange={onChangeEnabled} isDark={isDark} />
+            <SettingsToggle label="Lembretes de tarefas" value={enabled} onValueChange={onChangeEnabled} isDark={isDark} />
           </View>
         </View>
       </View>

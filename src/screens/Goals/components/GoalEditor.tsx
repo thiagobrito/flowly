@@ -49,7 +49,7 @@ function FieldLabel({ children }: { children: React.ReactNode }) {
   return <Text className="mb-1.5 text-sm font-medium text-zinc-700 dark:text-zinc-200">{children}</Text>;
 }
 
-function NumberField({ label, value, onChange, isDark, suffix, highlighted = false }: { label: string; value: number; onChange: (value: number) => void; isDark: boolean; suffix?: string; highlighted?: boolean }) {
+function NumberField({ label, value, onChange, isDark, suffix, highlighted = false, forMetric }: { label: string; value: number; onChange: (value: number) => void; isDark: boolean; suffix?: string; highlighted?: boolean; forMetric?: string }) {
   const fieldStyle = highlighted
     ? {
         borderColor: ACCENT,
@@ -73,6 +73,8 @@ function NumberField({ label, value, onChange, isDark, suffix, highlighted = fal
             onChange(Number.isNaN(numeric) ? 0 : numeric);
           }}
           keyboardType="numeric"
+          // Sem o nome da métrica, os três campos se anunciam igual em cada card.
+          accessibilityLabel={forMetric ? `${label} de ${forMetric}` : label}
           placeholderTextColor={isDark ? '#71717a' : '#a1a1aa'}
           className="flex-1 py-2.5 text-[15px] text-zinc-900 dark:text-zinc-50"
           style={highlighted ? { fontWeight: '700' } : undefined}
@@ -307,9 +309,9 @@ export default function GoalEditor({ goal, isNew, isDark, onCancel, onSave, onDe
                 </Pressable>
               </View>
               <View className="mt-2.5 flex-row gap-3">
-                <NumberField label="Inicial" value={metric.initial} onChange={(value) => updateMetric(metric.id, { initial: value })} isDark={isDark} />
-                <NumberField label="Atual" value={metric.current} onChange={(value) => updateMetric(metric.id, { current: value })} isDark={isDark} highlighted />
-                <NumberField label="Alvo" value={metric.target} onChange={(value) => updateMetric(metric.id, { target: value })} isDark={isDark} />
+                <NumberField label="Inicial" forMetric={metric.label} value={metric.initial} onChange={(value) => updateMetric(metric.id, { initial: value })} isDark={isDark} />
+                <NumberField label="Atual" forMetric={metric.label} value={metric.current} onChange={(value) => updateMetric(metric.id, { current: value })} isDark={isDark} highlighted />
+                <NumberField label="Alvo" forMetric={metric.label} value={metric.target} onChange={(value) => updateMetric(metric.id, { target: value })} isDark={isDark} />
               </View>
               <View className="mt-2.5">
                 <FieldLabel>Unidade de medida</FieldLabel>

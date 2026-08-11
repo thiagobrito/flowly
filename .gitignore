@@ -6,6 +6,11 @@
 # testing
 /coverage
 
+# e2e (Playwright): bundle web exportado, traces e relatórios
+/dist-e2e/
+/e2e/.artifacts/
+/e2e/.report/
+
 # expo
 .expo/
 android

@@ -61,7 +61,7 @@ export default function Header({ isDark, energyScore, energyMode = 'ideal', onLo
       </View>
 
       <View className="flex-row items-center" style={{ gap: 8 }}>
-        <Pressable onPress={onOpenConfig} accessibilityRole="button" accessibilityLabel="Settings" className="size-10 items-center justify-center rounded-full bg-white/40 dark:bg-white/10">
+        <Pressable onPress={onOpenConfig} accessibilityRole="button" accessibilityLabel="Configurações" className="size-10 items-center justify-center rounded-full bg-white/40 dark:bg-white/10">
           <SlidersHorizontal size={18} color={isDark ? '#e4e4e7' : '#27272a'} />
         </Pressable>
 

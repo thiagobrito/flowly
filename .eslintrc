@@ -80,14 +80,9 @@
         "plugin:testing-library/react"
       ]
     },
-    // Configuration for e2e testing
+    // Configuration for e2e testing (Playwright sobre react-native-web)
     {
-      "files": ["e2e/**/*.ts"],
-      "plugins": ["jest", "jest-formatting", "detox"],
-      "extends": [
-        "plugin:jest/recommended",
-        "plugin:jest-formatting/recommended"
-      ],
+      "files": ["e2e/**/*.ts", "playwright.config.ts"],
       "parserOptions": {
         "project": "./e2e/tsconfig.json"
       },
@@ -97,7 +92,32 @@
           {
             "devDependencies": true
           }
-        ]
+        ],
+        // Os specs rodam no browser via `page.evaluate`, onde `document`,
+        // `localStorage` e afins são o ambiente, não um vazamento.
+        "no-undef": "off",
+        // Percorrer a árvore de telas é sequencial por natureza: cada passo
+        // depende do estado que o anterior deixou na página.
+        "no-await-in-loop": "off",
+        "no-restricted-syntax": "off",
+        // `app` é o handle do teste para o mundo do backend falso: ajustar
+        // `app.world` no meio do spec é a API, não um efeito colateral.
+        "no-param-reassign": "off",
+        // `_id` é o nome do campo no Mongo e `__e2e*` marca os ganchos que só
+        // existem no bundle de teste: renomear os dois seria mentir.
+        "no-underscore-dangle": "off",
+        "no-continue": "off"
+      }
+    },
+    // O shim de `Alert` é JS puro (entra no bundle pelo Metro, não pelo tsc).
+    {
+      "files": ["e2e/**/*.js"],
+      "parserOptions": {
+        "ecmaVersion": 2022,
+        "sourceType": "module"
+      },
+      "env": {
+        "browser": true
       }
     }
   ]

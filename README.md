@@ -10,33 +10,33 @@ npm run dev:android
 
 This will open the app in the iOS simulator or Android emulator.
 
-### Testing
+### Testes
 
-Testing is an important part of the development process and often the neglected one. This starter code comes up with Jest and React Testing Library for unit testing and Detox for E2E testing.
+Jest + React Testing Library para unidade, e Playwright sobre `react-native-web`
+para E2E.
 
-#### Unit Testing
-
-To run the unit tests, run the following command (for example, in [Warp](https://go.warp.dev/nextjs-bp)):
+#### Unidade
 
 ```shell
 npm run test
 ```
 
-#### E2E Testing
+#### E2E
 
-To run the E2E tests, you first need to run the following command:
-
-```shell
-npm run e2e:prepare # Only need to run once
-```
-
-Then, you can run the following command to run the E2E tests:
+O app é exportado como web (`expo export --platform web`) e testado num browser
+real: specs por tela, mais uma varredura que percorre o app cobrando invariantes
+(erro de console, requisição falha, texto vazado, acessibilidade) em todo estado
+alcançável. Detalhes, cenários e o modo de integração com a API estão em
+[e2e/README.md](e2e/README.md).
 
 ```shell
-npm run e2e:ios
-# Or
-npm run e2e:android
+npm run e2e        # exporta o bundle e roda a suíte inteira
+npm run e2e:only   # reaproveita o bundle já exportado
 ```
+
+A suíte é gate de publicação: `python build.py` roda `npm run e2e:ci` e, com o repo
+da API ao lado, também a passada de contrato contra o backend real. `--no-e2e` pula
+em emergência.
 
 ### VSCode information (optional)
 

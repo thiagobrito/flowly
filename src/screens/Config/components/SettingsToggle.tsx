@@ -1,6 +1,8 @@
 import { Switch } from 'react-native';
 
 type SettingsToggleProps = {
+  /** Nome do ajuste: o texto ao lado do interruptor não é lido junto com ele. */
+  label: string;
   value: boolean;
   onValueChange: (value: boolean) => void;
   disabled?: boolean;
@@ -9,7 +11,7 @@ type SettingsToggleProps = {
 
 const ACCENT = '#6366f1';
 
-export default function SettingsToggle({ value, onValueChange, disabled = false, isDark }: SettingsToggleProps) {
+export default function SettingsToggle({ label, value, onValueChange, disabled = false, isDark }: SettingsToggleProps) {
   let thumbColor = '#fafafa';
   if (value) {
     thumbColor = ACCENT;
@@ -22,6 +24,7 @@ export default function SettingsToggle({ value, onValueChange, disabled = false,
       value={value}
       onValueChange={onValueChange}
       disabled={disabled}
+      accessibilityLabel={label}
       trackColor={{
         false: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)',
         true: '#3b82f520',

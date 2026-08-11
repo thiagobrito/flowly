@@ -17,7 +17,7 @@ export default function Checkbox({ label, checked, onChange, isDark }: CheckboxP
   }
 
   return (
-    <Pressable onPress={() => onChange(!checked)} accessibilityRole="checkbox" accessibilityState={{ checked }} className="flex-row items-center active:opacity-70">
+    <Pressable onPress={() => onChange(!checked)} accessibilityRole="checkbox" aria-checked={checked} className="flex-row items-center active:opacity-70">
       <View
         className="size-5 items-center justify-center rounded-md border"
         style={{

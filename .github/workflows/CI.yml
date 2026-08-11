@@ -35,3 +35,37 @@ jobs:
 
       - name: Run unit tests
         run: npm run test
+
+  e2e:
+    name: E2E do app (fixtures)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use Node.js 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: "npm"
+      - run: npm ci
+
+      # Só Chromium: a suíte roda o app sob react-native-web, e um navegador
+      # basta para o que ela verifica.
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      # Modo fixtures: sem backend, o job não depende do repo da API. O contrato
+      # contra a API real roda no build de publicação (build/checks.py).
+      - name: Run E2E
+        run: npm run e2e:ci
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-report
+          path: |
+            e2e/.report
+            e2e/.artifacts
+          retention-days: 7
+          if-no-files-found: ignore

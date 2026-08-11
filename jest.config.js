@@ -35,5 +35,6 @@ module.exports = {
       statements: 30,
     },
   },
-  testPathIgnorePatterns: ['<rootDir>/node_modules/', '<rootDir>/.expo/'],
+  // `e2e/` é do Playwright: precisa de browser e do bundle web exportado.
+  testPathIgnorePatterns: ['<rootDir>/node_modules/', '<rootDir>/.expo/', '<rootDir>/e2e/', '<rootDir>/dist-e2e/'],
 };

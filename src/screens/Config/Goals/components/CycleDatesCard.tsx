@@ -93,7 +93,7 @@ export default function CycleDatesCard({ startDate, endDate, freeDates, isDark, 
 
       <View className="mt-4 flex-row items-center justify-between">
         <Text className="flex-1 pr-3 text-sm font-medium text-zinc-800 dark:text-zinc-100">Definir datas livremente</Text>
-        <SettingsToggle value={freeDates} onValueChange={onToggleFreeDates} isDark={isDark} />
+        <SettingsToggle label="Definir datas livremente" value={freeDates} onValueChange={onToggleFreeDates} isDark={isDark} />
       </View>
 
       {freeDates ? (

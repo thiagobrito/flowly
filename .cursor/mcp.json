@@ -2,6 +2,10 @@
   "mcpServers": {
     "mongodb": {
       "command": "/Users/thiagobrito/dev/flowly/.cursor/run-mongodb-mcp.sh"
+    },
+    "playwright": {
+      "command": "npx",
+      "args": ["-y", "@playwright/mcp@latest", "--browser", "chromium", "--viewport-size", "430,932"]
     }
   }
 }

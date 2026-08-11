@@ -32,7 +32,7 @@ export default function LanguageStep({ step, isDark, language, onSelect, onNext 
               onPress={() => option.enabled && onSelect(option.code)}
               disabled={!option.enabled}
               accessibilityRole="radio"
-              accessibilityState={{ selected, disabled: !option.enabled }}
+              aria-checked={selected}
               className="flex-row items-center justify-between rounded-2xl border p-4 active:opacity-80"
               style={{
                 borderColor: selected ? ACCENT : restingBorder,

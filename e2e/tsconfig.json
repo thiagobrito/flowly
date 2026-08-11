@@ -1,8 +1,16 @@
 {
   "extends": "../tsconfig.json",
   "compilerOptions": {
-    "isolatedModules": false
+    "isolatedModules": false,
+    "jsx": "react",
+    "types": ["node"],
+    // Os testes rodam o app no browser: `page.evaluate` executa código com
+    // acesso a `document`/`localStorage`, que o `lib` do app (React Native) não tem.
+    "lib": ["es2022", "dom"],
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "noEmit": true
   },
-  "include": ["**/*.ts"],
+  "include": ["**/*.ts", "../playwright.config.ts"],
   "exclude": []
 }

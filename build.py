@@ -6,6 +6,7 @@ Pipeline: versão (YYYY.MM.DD + build) → testes → prebuild → archive/expor
 Exemplos:
     python build.py                # pipeline completo
     python build.py all --no-tests # pula testes
+    python build.py all --no-e2e   # pula só o E2E (emergência)
     python build.py test           # só verificações
     python build.py build          # só prebuild + archive/export
     python build.py upload         # só upload do último .ipa
@@ -43,7 +44,7 @@ def _cmd_config(_: argparse.Namespace) -> int:
 
 
 def _cmd_test(args: argparse.Namespace) -> int:
-    run_checks(skip_lint=args.no_lint, skip_tests=False)
+    run_checks(skip_lint=args.no_lint, skip_tests=False, skip_e2e=args.no_e2e)
     return 0
 
 
@@ -71,7 +72,7 @@ def _cmd_all(args: argparse.Namespace) -> int:
     section(f"Versão {version.display}")
 
     if not args.no_tests:
-        run_checks(skip_lint=args.no_lint, skip_tests=False)
+        run_checks(skip_lint=args.no_lint, skip_tests=False, skip_e2e=args.no_e2e)
 
     apply_to_app_json(version, cfg.team_id)
     prebuild(clean=args.clean)
@@ -111,11 +112,13 @@ def _build_parser() -> argparse.ArgumentParser:
     p_all = sub.add_parser("all", help="Pipeline completo (padrão).")
     p_all.add_argument("--no-tests", action="store_true", help="Pula as verificações.")
     p_all.add_argument("--no-lint", action="store_true", help="Pula o lint.")
+    p_all.add_argument("--no-e2e", action="store_true", help="Pula a suíte E2E (emergência).")
     p_all.add_argument("--no-upload", action="store_true", help="Gera o .ipa sem subir.")
     p_all.set_defaults(func=_cmd_all)
 
     p_test = sub.add_parser("test", help="Apenas type-check/lint/testes.")
     p_test.add_argument("--no-lint", action="store_true", help="Pula o lint.")
+    p_test.add_argument("--no-e2e", action="store_true", help="Pula a suíte E2E (emergência).")
     p_test.set_defaults(func=_cmd_test)
 
     p_build = sub.add_parser("build", help="Apenas prebuild + archive/export.")
@@ -140,6 +143,7 @@ def main(argv: list[str] | None = None) -> int:
         args.func = _cmd_all
         args.no_tests = False
         args.no_lint = False
+        args.no_e2e = False
         args.no_upload = False
 
     if args.command in _BUILD_COMMANDS:

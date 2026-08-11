@@ -186,7 +186,10 @@ export default function TaskCard({ highlight, task, selected, isDark, onComplete
 
         <GestureDetector gesture={panGesture}>
           <Animated.View style={cardStyle}>
-            <View accessibilityRole="button" accessibilityState={{ selected: isSelected }} className="active:opacity-80">
+            {/* Sem papel de botão: o card em si não tem ação — quem age são o
+                check, o expandir e as ações de arrastar. Anunciá-lo como botão
+                prometeria um toque que não faz nada. */}
+            <View className="active:opacity-80">
               <View className="overflow-hidden rounded-2xl" style={{ borderColor, backgroundColor, borderWidth: 1.5 }}>
                 <View className="flex-row items-center p-3">
                   <View className="size-11 items-center justify-center rounded-2xl" style={{ backgroundColor: `${accent}22` }}>
@@ -253,7 +256,7 @@ export default function TaskCard({ highlight, task, selected, isDark, onComplete
                     </View>
                   </View>
 
-                  <Pressable onPress={handlePress} accessibilityRole="button" accessibilityState={{ selected: isSelected }} className="active:opacity-80">
+                  <Pressable onPress={handlePress} accessibilityRole="button" accessibilityLabel={isSelected ? `Desfazer ${task.name}` : `Concluir ${task.name}`} accessibilityState={{ selected: isSelected }} className="active:opacity-80">
                     <View className="ml-2 size-6 items-center justify-center">
                       <CheckIcon isSelected={isSelected} isDark={isDark} accent={accent} />
                     </View>
@@ -275,7 +278,14 @@ export default function TaskCard({ highlight, task, selected, isDark, onComplete
                         if (subtask.done) subtaskColor = mutedColor;
 
                         return (
-                          <Pressable key={subtask.id} onPress={() => toggleSubtask(subtask)} accessibilityRole="button" accessibilityState={{ checked: subtask.done }} className="flex-row items-start py-2 active:opacity-70">
+                          <Pressable
+                            key={subtask.id}
+                            onPress={() => toggleSubtask(subtask)}
+                            accessibilityRole="button"
+                            accessibilityLabel={subtask.name}
+                            accessibilityState={{ checked: subtask.done }}
+                            className="flex-row items-start py-2 active:opacity-70"
+                          >
                             <CheckIcon isSelected={subtask.done} isDark={isDark} accent={accent} />
                             <Text className="ml-3 flex-1 text-sm leading-5" style={{ color: subtaskColor, textDecorationLine: subtask.done ? 'line-through' : 'none' }}>
                               {subtask.name}
