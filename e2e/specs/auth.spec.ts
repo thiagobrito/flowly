@@ -51,8 +51,9 @@ test.describe('login', () => {
     await expect(app.dialog()).toContainText('E-mail ou senha inválidos.');
     await app.confirm('OK');
     await expect(app.page.getByText('Bem-vindo de volta')).toBeVisible();
-    // Sem sessão persistida: o guard continuaria mandando para o login.
-    expect(await app.page.evaluate(() => window.localStorage.getItem('auth_session_v1'))).toBeNull();
+    // Nenhum token gravado: o guard continuaria mandando para o login.
+    const stored = await app.page.evaluate(() => window.localStorage.getItem('auth_session_v1'));
+    expect(stored === null || JSON.parse(stored).token === null).toBe(true);
   });
 
   test('navega para o cadastro e volta', async ({ app }) => {
@@ -131,7 +132,14 @@ test.describe('cadastro', () => {
 });
 
 test.describe('guards de rota', () => {
-  test('sem token, qualquer rota autenticada cai no login', async ({ app }) => {
+  test('instalação nova abre no cadastro, não no login', async ({ app }) => {
+    await app.launch({ state: { token: null, hasAccount: false }, waitForTabs: false });
+
+    await expect(app.page.getByText('Comece agora e organize seus dias com mais foco.')).toBeVisible();
+    expect(app.api.calls.filter((call) => call.path === '/home')).toEqual([]);
+  });
+
+  test('sem token, quem já teve conta no aparelho cai no login', async ({ app }) => {
     await app.launch({ state: { token: null }, waitForTabs: false });
 
     await expect(app.page.getByText('Bem-vindo de volta')).toBeVisible();

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { Alert, AppState, Linking } from 'react-native';
 
-import { ensurePermissions, getPermissionStatus } from '@/lib/notifications';
+import { ensurePermissions } from '@/lib/notifications';
 import { cancelTaskReminders, syncTaskReminders } from '@/lib/taskReminders';
 
 import { useConfigPreferences } from './useConfigPreferences';
@@ -20,17 +20,11 @@ export function useTaskReminders() {
   useEffect(() => {
     if (!isHydrated) return undefined;
 
-    const run = async () => {
-      if (enabled) {
-        const status = await getPermissionStatus();
-        if (status === 'undetermined') {
-          await ensurePermissions();
-        }
-      }
-      await syncTaskReminders({ enabled });
-    };
-
-    run();
+    // Sem pedir permissão aqui: este efeito roda no boot, antes do login, e um
+    // alerta do sistema na primeira abertura afugenta quem ainda não sabe o que
+    // o app faz. A permissão é pedida no passo de notificações do onboarding e
+    // no toggle dos ajustes, onde existe contexto para o "por quê".
+    syncTaskReminders({ enabled });
 
     const subscription = AppState.addEventListener('change', (nextState) => {
       if (appState.current.match(/inactive|background/) && nextState === 'active') {

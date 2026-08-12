@@ -2,9 +2,11 @@ import '../global.css';
 
 import * as Sentry from '@sentry/react-native';
 import { Stack } from 'expo-router';
+import { useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { initAttribution } from '@/lib/attribution';
 import { configureNotifications, ensureAndroidChannel, setupNotificationHandler, useNotifications } from '@/lib/notifications';
 import { QueryProvider } from '@/lib/query';
 import { initTelemetry } from '@/lib/telemetry';
@@ -41,6 +43,12 @@ export default Sentry.wrap(function Layout() {
   useNotifications();
   useTaskReminders();
   useThemePreference();
+
+  // Só liga o SDK para a instalação ser contada. O alerta do ATT fica para
+  // depois do cadastro (`requestAttributionConsent`).
+  useEffect(() => {
+    initAttribution().catch(() => undefined);
+  }, []);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

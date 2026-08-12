@@ -62,7 +62,8 @@ test('deletar a conta chama o servidor e derruba a sessão', async ({ app }) => 
   await expect.poll(() => app.api.calls.some((call) => call.method === 'DELETE' && call.path === '/auth/delete')).toBe(true);
   await expect(app.page.getByText('Bem-vindo de volta')).toBeVisible();
   // `signOut` sobrescreve o registro com token nulo, em vez de apagar a chave.
-  expect(JSON.parse((await stored(app, 'auth_session_v1')) ?? '{}').token).toBeNull();
+  // A escrita é assíncrona (fila do `InteractionManager`), por isso esperamos.
+  await expect.poll(async () => JSON.parse((await stored(app, 'auth_session_v1')) ?? '{}').token).toBeNull();
 });
 
 test('cancelar a exclusão da conta não chama o servidor', async ({ app }) => {
@@ -84,5 +85,6 @@ test('sair volta para o login e limpa a sessão', async ({ app }) => {
 
   await expect(app.page.getByText('Bem-vindo de volta')).toBeVisible();
   // `signOut` sobrescreve o registro com token nulo, em vez de apagar a chave.
-  expect(JSON.parse((await stored(app, 'auth_session_v1')) ?? '{}').token).toBeNull();
+  // A escrita é assíncrona (fila do `InteractionManager`), por isso esperamos.
+  await expect.poll(async () => JSON.parse((await stored(app, 'auth_session_v1')) ?? '{}').token).toBeNull();
 });

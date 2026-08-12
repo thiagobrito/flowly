@@ -77,7 +77,7 @@ function Home() {
   const [weeklyReviewRequested, setWeeklyReviewRequested] = useState(false);
   const [autoOpenSleep, setAutoOpenSleep] = useState(false);
   const sleepPrompted = useRef(false);
-  const { isHydrated, isAuthenticated, signOut } = useSession();
+  const { isHydrated, isAuthenticated, hasAccount, signOut } = useSession();
   const { isHydrated: onboardingHydrated, completed: onboardingCompleted } = useOnboarding();
   const { profile, isHydrated: sleepHydrated, isReady: sleepReady } = useSleepProfile();
 
@@ -225,7 +225,9 @@ function Home() {
   }
 
   if (!isAuthenticated) {
-    return <Redirect href="/login" />;
+    // Quem chega de um anúncio nunca teve conta: pedir login seria cobrar uma
+    // senha que não existe. O caminho de entrar continua a um toque na tela.
+    return <Redirect href={hasAccount ? '/login' : '/create-account'} />;
   }
 
   if (!onboardingCompleted) {

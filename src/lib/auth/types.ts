@@ -8,6 +8,12 @@ import type { PersistedRecord } from '@/lib/storage';
 export type Session = PersistedRecord & {
   token: string | null;
   email: string | null;
+  /**
+   * Este aparelho já autenticou alguma vez. Sobrevive ao logout: é o que
+   * distingue quem esqueceu de entrar de quem acabou de instalar, para não
+   * receber um recém-chegado com uma tela de login.
+   */
+  hasAccount?: boolean;
   /** Marcado como `true` pela lib de storage após a hidratação. */
   loaded?: boolean;
   lastUpdate?: string;

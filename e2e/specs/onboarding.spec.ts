@@ -50,7 +50,9 @@ test('percorre os 12 passos e entra no app', async ({ app }) => {
 
   await expect(app.page.getByRole('button', { name: 'Home', exact: true })).toBeVisible();
   // Concluir precisa persistir a flag, senão o guard devolve o usuário ao fluxo.
-  expect(JSON.parse((await app.page.evaluate(() => window.localStorage.getItem('onboarding_v2'))) ?? '{}')).toMatchObject({ completed: true });
+  // A escrita passa pela fila do `InteractionManager`, então esperamos o valor:
+  // ler uma vez só mede quem chegou primeiro, não se a gravação acontece.
+  await expect.poll(async () => JSON.parse((await app.page.evaluate(() => window.localStorage.getItem('onboarding_v2'))) ?? '{}').completed).toBe(true);
 });
 
 test('sem o endpoint /onboarding, o roteiro padrão aparece', async ({ app }) => {

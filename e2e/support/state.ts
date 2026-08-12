@@ -28,6 +28,12 @@ export type LocalStateOptions = {
   /** `null` remove a sessão (usado nos testes de guard de rota). */
   token?: string | null;
   email?: string;
+  /**
+   * Aparelho que já teve conta alguma vez. Combinado com `token: null` descreve
+   * quem saiu e volta (vai para o login); com `false`, uma instalação nova (vai
+   * para o cadastro).
+   */
+  hasAccount?: boolean;
   /** `false` força o app a mandar para `/onboarding`. */
   onboardingCompleted?: boolean;
   /** `false` deixa o perfil de sono vazio, que dispara o prompt automático. */
@@ -42,7 +48,7 @@ export type LocalState = Record<string, string>;
 
 /** Monta o conteúdo do `localStorage` para um cenário. */
 export function buildLocalState(options: LocalStateOptions = {}): LocalState {
-  const { token = 'E2E_TOKEN', email = 'e2e@flowly.app', onboardingCompleted = true, sleepConfigured = true, theme = 'light', energyMode, onboardingStep } = options;
+  const { token = 'E2E_TOKEN', email = 'e2e@flowly.app', hasAccount = true, onboardingCompleted = true, sleepConfigured = true, theme = 'light', energyMode, onboardingStep } = options;
 
   const state: LocalState = {
     onboarding_v2: JSON.stringify({ completed: onboardingCompleted, language: 'pt-BR' }),
@@ -55,7 +61,9 @@ export function buildLocalState(options: LocalStateOptions = {}): LocalState {
   };
 
   if (token !== null) {
-    state.auth_session_v1 = JSON.stringify({ token, email });
+    state.auth_session_v1 = JSON.stringify({ token, email, hasAccount: true });
+  } else if (hasAccount) {
+    state.auth_session_v1 = JSON.stringify({ token: null, email: null, hasAccount: true });
   }
 
   if (sleepConfigured) {

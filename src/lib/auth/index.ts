@@ -18,11 +18,13 @@
  *
  * - `isHydrated` — `false` até a leitura do storage terminar (evita flicker no guard).
  * - `isAuthenticated` — há token válido em sessão.
+ * - `hasAccount` — este aparelho já autenticou alguma vez (sobrevive ao logout).
  * - `pending` — uma chamada de login/cadastro está em andamento.
  */
 
 import { useCallback, useEffect, useState } from 'react';
 
+import { trackSignupCompleted } from '@/lib/attribution';
 import { clearHomeSnapshot } from '@/lib/home/snapshot';
 import { api, HttpError, isNetworkError, setAuthToken, setAuthTokenProvider } from '@/lib/network';
 import { getPersistedSnapshot, usePersistedState } from '@/lib/storage';
@@ -33,7 +35,7 @@ import { track } from '@/lib/telemetry';
 import type { AuthResponse, AuthResult, Credentials, Session } from './types';
 
 const SESSION_KEY = 'auth_session_v1';
-const EMPTY_SESSION: Session = { token: null, email: null };
+const EMPTY_SESSION: Session = { token: null, email: null, hasAccount: false };
 
 /**
  * Resolve o token sob demanda a partir do snapshot síncrono da sessão
@@ -87,7 +89,7 @@ export function useSession() {
         const data = await api.post<AuthResponse>(path, credentials);
         applyAuthHeader(data.token);
         const email = data.user?.email ?? credentials.email;
-        setSession({ token: data.token, email });
+        setSession({ token: data.token, email, hasAccount: true });
         // Vincula as compras ao usuário no RevenueCat (não bloqueia o login).
         loginUser(email).catch(() => undefined);
         track(events.succeeded);
@@ -109,6 +111,7 @@ export function useSession() {
       track('signup_started');
       const registered = await authenticate('/auth/register', credentials, { succeeded: 'signup_succeeded', failed: 'signup_failed' });
       if (!registered.ok) return registered;
+      trackSignupCompleted();
 
       // Se o cadastro não autenticou (endpoint não retornou token), faz login
       // automático para que o usuário recém-criado já entre no app/onboarding
@@ -126,13 +129,14 @@ export function useSession() {
     // Assinatura e perfil de sono trazidos pela Home ficam em memória fora do
     // React Query; sem limpar, a próxima conta a logar leria os dados da anterior.
     clearHomeSnapshot();
-    setSession({ ...EMPTY_SESSION });
+    setSession({ ...EMPTY_SESSION, hasAccount: true });
   }, [setSession]);
 
   return {
     session,
     isHydrated: Boolean(session.loaded),
     isAuthenticated: Boolean(session.token),
+    hasAccount: Boolean(session.hasAccount),
     pending,
     signIn,
     signUp,
