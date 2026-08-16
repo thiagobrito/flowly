@@ -9,12 +9,12 @@ from .config import Config, load_config
 from .utils import OUTPUT_DIR, ROOT, capture, log, run, section
 
 
-def prebuild(clean: bool = False) -> None:
+def prebuild(clean: bool = False, env: dict | None = None) -> None:
     section("Expo prebuild (gera ios/ localmente)")
     cmd = ["npx", "expo", "prebuild", "--platform", "ios", "--non-interactive"]
     if clean:
         cmd.append("--clean")
-    run(cmd)
+    run(cmd, env=env)
 
 
 def _resolve_workspace(cfg: Config) -> Path:

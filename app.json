@@ -2,7 +2,7 @@
   "expo": {
     "name": "Flowly",
     "slug": "flowly-m-gvdcsjo9xgnlwu4indg",
-    "version": "2026.08.09",
+    "version": "2026.08.14",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -12,13 +12,23 @@
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "locales": {
+      "pt-BR": "./locales/pt-BR.json"
+    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.flowly-v2.app",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
-        "NSPhotoLibraryUsageDescription": "O Flowly pode acessar sua galeria para salvar ou importar arquivos quando você realizar essa ação no app."
+        "CFBundleAllowMixedLocalizations": true,
+        "CFBundleDevelopmentRegion": "pt-BR",
+        "CFBundleLocalizations": [
+          "pt-BR"
+        ],
+        "NSPhotoLibraryUsageDescription": "O Flowly pode acessar sua galeria para salvar ou importar arquivos quando voc\u00ea realizar essa a\u00e7\u00e3o no app."
       },
       "buildNumber": "1",
       "appleTeamId": "WCZL6FK4U7"
@@ -38,7 +48,7 @@
         "android.permission.health.READ_ACTIVE_CALORIES_BURNED",
         "android.permission.POST_NOTIFICATIONS"
       ],
-      "versionCode": 2026080901
+      "versionCode": 2026081401
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -47,6 +57,7 @@
     "plugins": [
       "expo-router",
       "./plugins/withXcodeDefaultToolchain.js",
+      "./plugins/withIosPrimaryLocale.js",
       [
         "expo-notifications",
         {
@@ -57,8 +68,8 @@
       [
         "react-native-health",
         {
-          "healthSharePermission": "Permitir que o Flowly leia seus dados de saúde para calcular seu Energy Score.",
-          "healthUpdatePermission": "Permitir que o Flowly atualize seus dados de saúde."
+          "healthSharePermission": "Permitir que o Flowly leia seus dados de sa\u00fade para calcular seu Energy Score.",
+          "healthUpdatePermission": "Permitir que o Flowly atualize seus dados de sa\u00fade."
         }
       ],
       "react-native-health-connect",
@@ -87,14 +98,14 @@
       [
         "expo-speech-recognition",
         {
-          "microphonePermission": "Permitir que o Flowly use o microfone para você criar tarefas por voz.",
-          "speechRecognitionPermission": "Permitir que o Flowly reconheça a sua fala para criar tarefas por voz."
+          "microphonePermission": "Permitir que o Flowly use o microfone para voc\u00ea criar tarefas por voz.",
+          "speechRecognitionPermission": "Permitir que o Flowly reconhe\u00e7a a sua fala para criar tarefas por voz."
         }
       ],
       [
         "expo-tracking-transparency",
         {
-          "userTrackingPermission": "Permitir que o Flowly saiba de qual anúncio você veio, para investir só no que traz pessoas como você. Nada disso é usado dentro do app."
+          "userTrackingPermission": "Permitir que o Flowly saiba de qual an\u00fancio voc\u00ea veio, para investir s\u00f3 no que traz pessoas como voc\u00ea. Nada disso \u00e9 usado dentro do app."
         }
       ]
     ],

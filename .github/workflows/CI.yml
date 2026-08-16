@@ -36,6 +36,11 @@ jobs:
       - name: Run unit tests
         run: npm run test
 
+      # Classificador do smoke nativo (não precisa de Xcode). O launch no
+      # simulador fica em `python build.py smoke`, no Mac de publicação.
+      - name: Smoke iOS classifier
+        run: python -m unittest discover -s build -p 'test_*.py' -q
+
   e2e:
     name: E2E do app (fixtures)
     runs-on: ubuntu-latest

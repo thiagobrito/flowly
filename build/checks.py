@@ -5,6 +5,7 @@ from __future__ import annotations
 import contextlib
 import os
 import subprocess
+import sys
 import time
 import urllib.error
 import urllib.request
@@ -30,6 +31,7 @@ def run_checks(skip_lint: bool = False, skip_tests: bool = False, skip_e2e: bool
 
     if not skip_tests:
         run(["npm", "test", "--", "--ci", "--silent"])
+        run([sys.executable, "-m", "unittest", "discover", "-s", "build", "-p", "test_*.py", "-q"])
 
     if not skip_e2e:
         run_e2e()

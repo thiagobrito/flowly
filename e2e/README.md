@@ -103,6 +103,27 @@ navegador. É o ambiente para dirigir o app à mão — ou para o agente do skil
 converte o que achar em spec daqui. Exige o repo da API em `../web`, com `npm run
 build` feito.
 
+## Smoke nativo iOS
+
+O Playwright desta pasta exporta para **web**. Lá `Platform.OS !== 'ios'`, então
+`new NativeEventEmitter(null)` é no-op — o crash fatal de boot sem o SDK da Meta
+(FLOWLY-MOBILE-16) nunca aparece. O smoke nativo fecha esse buraco:
+
+```bash
+npm run e2e:ios-smoke          # python build.py smoke
+python build.py smoke --skip-prebuild --skip-build   # relança o .app já compilado
+```
+
+Ele gera o `ios/` **sem** `META_APP_ID`/`META_CLIENT_TOKEN` (o plugin fica de
+fora, como no release que caiu), compila para o iPhone Simulator, lança o app e
+falha se o processo morrer ou se o invariant do `NativeEventEmitter` aparecer no
+log. Se o [Maestro](https://maestro.mobile.dev) estiver instalado, também afirma
+que a tela de login ("Bem-vindo de volta") ficou visível.
+
+Requer macOS + Xcode. Não roda no CI de PR (Ubuntu). Roda no caminho de
+publicação (`python build.py all`); `python build.py all --no-ios-smoke` pula
+em emergência.
+
 ## Onde a suíte roda
 
 No CI de PR, no job `e2e` (modo mock, sem backend). E no caminho de publicação:

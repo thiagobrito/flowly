@@ -67,13 +67,14 @@ def run(cmd: Sequence[str], cwd: Path | None = None, env: dict | None = None) ->
     log(f"concluído em {elapsed:.1f}s", "ok")
 
 
-def capture(cmd: Sequence[str], cwd: Path | None = None) -> str:
+def capture(cmd: Sequence[str], cwd: Path | None = None, env: dict | None = None) -> str:
     """Executa um comando e devolve o stdout como string."""
     result = subprocess.run(
         cmd,
         cwd=str(cwd or ROOT),
         capture_output=True,
         text=True,
+        env=env,
     )
     if result.returncode != 0:
         sys.stderr.write(result.stderr)

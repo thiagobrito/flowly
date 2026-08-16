@@ -1,0 +1,10 @@
+{
+  "CFBundleDisplayName": "Flowly",
+  "CFBundleName": "Flowly",
+  "NSPhotoLibraryUsageDescription": "O Flowly pode acessar sua galeria para salvar ou importar arquivos quando você realizar essa ação no app.",
+  "NSUserTrackingUsageDescription": "Permitir que o Flowly saiba de qual anúncio você veio, para investir só no que traz pessoas como você. Nada disso é usado dentro do app.",
+  "NSMicrophoneUsageDescription": "Permitir que o Flowly use o microfone para você criar tarefas por voz.",
+  "NSSpeechRecognitionUsageDescription": "Permitir que o Flowly reconheça a sua fala para criar tarefas por voz.",
+  "NSHealthShareUsageDescription": "Permitir que o Flowly leia seus dados de saúde para calcular seu Energy Score.",
+  "NSHealthUpdateUsageDescription": "Permitir que o Flowly atualize seus dados de saúde."
+}

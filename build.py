@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 """Flowly — automação de build/upload iOS local (sem servidores Expo).
 
-Pipeline: versão (YYYY.MM.DD + build) → testes → prebuild → archive/export → upload.
+Pipeline: versão (YYYY.MM.DD + build) → testes → smoke iOS (sem Meta) → prebuild → archive/export → upload.
 
 Exemplos:
     python build.py                # pipeline completo
     python build.py all --no-tests # pula testes
     python build.py all --no-e2e   # pula só o E2E (emergência)
+    python build.py all --no-ios-smoke  # pula o smoke nativo iOS
+    python build.py smoke          # só o smoke nativo (simulador, sem Meta)
     python build.py test           # só verificações
     python build.py build          # só prebuild + archive/export
     python build.py upload         # só upload do último .ipa
@@ -25,11 +27,12 @@ import sys
 from build.checks import run_checks
 from build.config import apply_build_environment, load_config, print_summary
 from build.ios_build import archive_and_export, prebuild
+from build.ios_smoke import run_ios_smoke
 from build.upload import upload as upload_step
 from build.utils import CommandError, log, section
 from build.version import apply_to_app_json, commit_version, next_version
 
-_BUILD_COMMANDS = frozenset({"all", "build", "upload", "config"})
+_BUILD_COMMANDS = frozenset({"all", "build", "upload", "config", "smoke"})
 
 
 def _cmd_version(args: argparse.Namespace) -> int:
@@ -45,6 +48,11 @@ def _cmd_config(_: argparse.Namespace) -> int:
 
 def _cmd_test(args: argparse.Namespace) -> int:
     run_checks(skip_lint=args.no_lint, skip_tests=False, skip_e2e=args.no_e2e)
+    return 0
+
+
+def _cmd_smoke(args: argparse.Namespace) -> int:
+    run_ios_smoke(skip_prebuild=args.skip_prebuild, skip_build=args.skip_build)
     return 0
 
 
@@ -73,6 +81,12 @@ def _cmd_all(args: argparse.Namespace) -> int:
 
     if not args.no_tests:
         run_checks(skip_lint=args.no_lint, skip_tests=False, skip_e2e=args.no_e2e)
+
+    if not args.no_ios_smoke:
+        # Roda ANTES do prebuild de publicação: o smoke gera ios/ sem o plugin
+        # da Meta de propósito. O prebuild abaixo reconstitui ios/ com o env
+        # completo (incluindo META_* se existirem).
+        run_ios_smoke()
 
     apply_to_app_json(version, cfg.team_id)
     prebuild(clean=args.clean)
@@ -113,8 +127,14 @@ def _build_parser() -> argparse.ArgumentParser:
     p_all.add_argument("--no-tests", action="store_true", help="Pula as verificações.")
     p_all.add_argument("--no-lint", action="store_true", help="Pula o lint.")
     p_all.add_argument("--no-e2e", action="store_true", help="Pula a suíte E2E (emergência).")
+    p_all.add_argument("--no-ios-smoke", action="store_true", help="Pula o smoke nativo iOS (emergência).")
     p_all.add_argument("--no-upload", action="store_true", help="Gera o .ipa sem subir.")
     p_all.set_defaults(func=_cmd_all)
+
+    p_smoke = sub.add_parser("smoke", help="Smoke nativo iOS no simulador, sem o SDK da Meta.")
+    p_smoke.add_argument("--skip-prebuild", action="store_true", help="Reusa ios/ já gerado (precisa ter nascido sem META_*).")
+    p_smoke.add_argument("--skip-build", action="store_true", help="Reusa o .app em build/output/DerivedData-smoke.")
+    p_smoke.set_defaults(func=_cmd_smoke)
 
     p_test = sub.add_parser("test", help="Apenas type-check/lint/testes.")
     p_test.add_argument("--no-lint", action="store_true", help="Pula o lint.")
@@ -144,6 +164,7 @@ def main(argv: list[str] | None = None) -> int:
         args.no_tests = False
         args.no_lint = False
         args.no_e2e = False
+        args.no_ios_smoke = False
         args.no_upload = False
 
     if args.command in _BUILD_COMMANDS:

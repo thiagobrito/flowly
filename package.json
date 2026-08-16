@@ -20,6 +20,7 @@
     "e2e:ci": "npm run e2e:bundle && playwright test --project=app --project=sweep",
     "e2e:ui": "playwright test --ui",
     "e2e:explore": "node --no-warnings=MODULE_TYPELESS_PACKAGE_JSON e2e/support/explore.mjs",
+    "e2e:ios-smoke": "python3 build.py smoke",
     "prepare": "husky install",
     "postinstall": "patch-package"
   },

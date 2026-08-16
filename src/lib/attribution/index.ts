@@ -18,6 +18,13 @@
  * credenciais — tudo aqui vira no-op silencioso. Importar no topo derrubava o
  * app inteiro com `Cannot find native module 'ExpoTrackingTransparency'`.
  *
+ * Para o SDK da Meta adiar o `require` não basta: o barrel do pacote reexporta
+ * `AccessToken`, cujo módulo já na carga constrói um `NativeEventEmitter` sobre
+ * o módulo nativo. Sem o native isso é um invariant violation que o Metro
+ * reporta como fatal antes de qualquer `catch` daqui — foi o que derrubou o app
+ * no boot da 2026.08.12. Daí consultar `NativeModules` como porteiro, no mesmo
+ * espírito de `lib/subscription/client`.
+ *
  * ## Privacidade
  *
  * No iOS nada é enviado com identificador de anúncio antes do consentimento do
@@ -27,7 +34,7 @@
  */
 
 import type * as ExpoTrackingTransparency from 'expo-tracking-transparency';
-import { Platform } from 'react-native';
+import { NativeModules, Platform } from 'react-native';
 import type * as MetaSdk from 'react-native-fbsdk-next';
 
 type TrackingModule = typeof ExpoTrackingTransparency;
@@ -52,13 +59,25 @@ function getTracking(): TrackingModule | null {
   return trackingModule;
 }
 
+/**
+ * `true` quando o binário nativo inclui os módulos do SDK da Meta. Precisa ser
+ * verdade antes do `require`: ver o cabeçalho deste arquivo.
+ */
+function isMetaNativeAvailable(): boolean {
+  return Boolean(NativeModules.FBSettings && NativeModules.FBAccessToken && NativeModules.FBAppEventsLogger);
+}
+
 function getMetaSdk(): MetaSdkModule | null {
   if (metaSdkModule === undefined) {
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports, global-require
-      metaSdkModule = require('react-native-fbsdk-next') as MetaSdkModule;
-    } catch {
-      metaSdkModule = null;
+    metaSdkModule = null;
+
+    if (isMetaNativeAvailable()) {
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports, global-require
+        metaSdkModule = require('react-native-fbsdk-next') as MetaSdkModule;
+      } catch {
+        metaSdkModule = null;
+      }
     }
   }
   return metaSdkModule;
@@ -119,6 +138,13 @@ export async function requestAttributionConsent(): Promise<void> {
   } catch {
     // Ver acima.
   }
+}
+
+/** Restaura os caches de disponibilidade e o controle de idempotência. Útil em testes. */
+export function resetAttributionCacheForTests(): void {
+  trackingModule = undefined;
+  metaSdkModule = undefined;
+  initialized = false;
 }
 
 /** Registra na Meta que uma conta foi criada. */

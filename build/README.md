@@ -43,6 +43,8 @@ App Store Connect API → gerar chave com papel **App Manager**. Baixe o `.p8`
 python build.py            # pipeline completo: testes → build → upload
 python build.py all --no-tests     # pula as verificações
 python build.py all --no-e2e       # pula só o E2E (emergência)
+python build.py all --no-ios-smoke # pula o smoke nativo iOS (emergência)
+python build.py smoke              # só o smoke nativo (simulador, sem Meta)
 python build.py all --no-upload    # gera o .ipa sem enviar
 python build.py all --clean        # prebuild --clean (regenera ios/)
 
@@ -59,7 +61,8 @@ python build.py --build 7 all   # força um número de build específico
 
 | Etapa    | Comando por baixo |
 |----------|-------------------|
-| testes   | `npm run check-types`, `npm run lint`, `npm test`, `npm run e2e:ci` |
+| testes   | `npm run check-types`, `npm run lint`, `npm test`, unittest de `build/`, `npm run e2e:ci` |
+| smoke iOS | prebuild **sem** Meta → `xcodebuild` simulador → launch → log do `NativeEventEmitter` |
 | contrato | `npm run build` em `../web` + API efêmera + `playwright --project=integration` |
 | versão   | escreve em `app.json` + `build/state.json` |
 | prebuild | `npx expo prebuild --platform ios` |
@@ -75,7 +78,8 @@ API antes da publicação. Se o repo da API não estiver ao lado — ou sem
 ## Saídas
 
 Os artefatos vão para `build/output/` (`.xcarchive`, `.ipa`,
-`ExportOptions.plist`). Essa pasta é ignorada pelo Git.
+`ExportOptions.plist`, `DerivedData-smoke/`, `ios-smoke.log`). Essa pasta é
+ignorada pelo Git.
 
 ## Solução de problemas
 
