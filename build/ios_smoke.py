@@ -36,10 +36,15 @@ MAESTRO_FLOW = ROOT / "e2e" / "ios" / "smoke.yaml"
 
 
 def env_without_meta(source: dict[str, str] | None = None) -> dict[str, str]:
-    """Copia o ambiente sem as credenciais que puxam o plugin da Meta."""
+    """Copia o ambiente com as credenciais da Meta zeradas.
+
+    Não apaga as chaves: o `@expo/env` relê `mobile/.env` quando elas estão
+    ausentes, e o `build.py` agora sempre define os dois valores. String vazia
+    é falsy no `app.config.js` e impede o dotenv de recolocar o App ID.
+    """
     env = dict(source if source is not None else os.environ)
     for key in META_ENV_KEYS:
-        env.pop(key, None)
+        env[key] = ""
     return env
 
 
@@ -177,7 +182,9 @@ def run_ios_smoke(*, skip_prebuild: bool = False, skip_build: bool = False) -> N
         log("META_APP_ID/META_CLIENT_TOKEN presentes no ambiente — o smoke ignora os dois para reproduzir o binário sem plugin.", "warn")
 
     if not skip_prebuild:
-        prebuild(env=env)
+        # --clean: um ios/ gerado com o SDK (ou por um archive anterior) mantém
+        # FacebookAppID no Info.plist se o prebuild for incremental.
+        prebuild(clean=True, env=env)
     elif not (ROOT / "ios").exists():
         raise RuntimeError("ios/ ausente. Rode sem --skip-prebuild.")
 

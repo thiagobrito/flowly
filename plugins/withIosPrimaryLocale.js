@@ -11,10 +11,12 @@ const { withInfoPlist, withXcodeProject } = require('@expo/config-plugins');
 const PRIMARY_LOCALE = 'pt-BR';
 
 function applyInfoPlist(plist) {
-  plist.CFBundleDevelopmentRegion = PRIMARY_LOCALE;
-  plist.CFBundleAllowMixedLocalizations = true;
-  plist.CFBundleLocalizations = [PRIMARY_LOCALE];
-  return plist;
+  return {
+    ...plist,
+    CFBundleDevelopmentRegion: PRIMARY_LOCALE,
+    CFBundleAllowMixedLocalizations: true,
+    CFBundleLocalizations: [PRIMARY_LOCALE],
+  };
 }
 
 function applyXcodeProject(project) {
@@ -30,28 +32,27 @@ function applyXcodeProject(project) {
   }
 
   const configs = project.pbxXCBuildConfigurationSection();
-  for (const key of Object.keys(configs)) {
+  Object.keys(configs).forEach((key) => {
     const item = configs[key];
-    if (item?.buildSettings) {
+    if (item && item.buildSettings) {
       item.buildSettings.DEVELOPMENT_LANGUAGE = PRIMARY_LOCALE;
     }
-  }
+  });
 
   return project;
 }
 
 function withIosPrimaryLocale(config) {
-  config = withInfoPlist(config, (cfg) => {
-    cfg.modResults = applyInfoPlist(cfg.modResults);
-    return cfg;
-  });
-
-  config = withXcodeProject(config, (cfg) => {
-    cfg.modResults = applyXcodeProject(cfg.modResults);
-    return cfg;
-  });
-
-  return config;
+  return withXcodeProject(
+    withInfoPlist(config, (cfg) => ({
+      ...cfg,
+      modResults: applyInfoPlist(cfg.modResults),
+    })),
+    (cfg) => ({
+      ...cfg,
+      modResults: applyXcodeProject(cfg.modResults),
+    }),
+  );
 }
 
 module.exports = withIosPrimaryLocale;

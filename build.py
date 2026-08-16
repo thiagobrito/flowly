@@ -25,7 +25,7 @@ import argparse
 import sys
 
 from build.checks import run_checks
-from build.config import apply_build_environment, load_config, print_summary
+from build.config import apply_build_environment, load_config, print_summary, validate_meta_credentials
 from build.ios_build import archive_and_export, prebuild
 from build.ios_smoke import run_ios_smoke
 from build.upload import upload as upload_step
@@ -43,6 +43,7 @@ def _cmd_version(args: argparse.Namespace) -> int:
 
 def _cmd_config(_: argparse.Namespace) -> int:
     print_summary(load_config())
+    validate_meta_credentials()
     return 0
 
 
@@ -58,6 +59,7 @@ def _cmd_smoke(args: argparse.Namespace) -> int:
 
 def _cmd_build(args: argparse.Namespace) -> int:
     cfg = load_config()
+    validate_meta_credentials()
     version = next_version(args.build)
     section(f"Versão {version.display}")
     apply_to_app_json(version, cfg.team_id)
@@ -75,6 +77,7 @@ def _cmd_upload(_: argparse.Namespace) -> int:
 def _cmd_all(args: argparse.Namespace) -> int:
     cfg = load_config()
     print_summary(cfg)
+    validate_meta_credentials()
 
     version = next_version(args.build)
     section(f"Versão {version.display}")
@@ -83,13 +86,13 @@ def _cmd_all(args: argparse.Namespace) -> int:
         run_checks(skip_lint=args.no_lint, skip_tests=False, skip_e2e=args.no_e2e)
 
     if not args.no_ios_smoke:
-        # Roda ANTES do prebuild de publicação: o smoke gera ios/ sem o plugin
-        # da Meta de propósito. O prebuild abaixo reconstitui ios/ com o env
-        # completo (incluindo META_* se existirem).
+        # Roda ANTES do prebuild de publicação: o smoke regenera ios/ sem o
+        # plugin da Meta. O prebuild abaixo precisa de --clean para o archive
+        # nascer de novo COM o SDK (App ID + Client Token forçados no env).
         run_ios_smoke()
 
     apply_to_app_json(version, cfg.team_id)
-    prebuild(clean=args.clean)
+    prebuild(clean=True if not args.no_ios_smoke else args.clean)
     ipa = archive_and_export(cfg)
 
     if args.no_upload:

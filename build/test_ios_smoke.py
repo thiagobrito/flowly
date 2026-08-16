@@ -8,17 +8,17 @@ from build.ios_smoke import classify_logs, env_without_meta, info_plist_has_face
 
 
 class EnvWithoutMetaTest(unittest.TestCase):
-    def test_remove_as_duas_credenciais_e_preserva_o_resto(self) -> None:
+    def test_zera_as_duas_credenciais_e_preserva_o_resto(self) -> None:
         env = env_without_meta({"META_APP_ID": "123", "META_CLIENT_TOKEN": "abc", "PATH": "/bin"})
 
-        self.assertNotIn("META_APP_ID", env)
-        self.assertNotIn("META_CLIENT_TOKEN", env)
+        self.assertEqual(env["META_APP_ID"], "")
+        self.assertEqual(env["META_CLIENT_TOKEN"], "")
         self.assertEqual(env["PATH"], "/bin")
 
-    def test_nao_quebra_quando_as_chaves_ja_estao_ausentes(self) -> None:
+    def test_forca_vazio_quando_as_chaves_estao_ausentes(self) -> None:
         env = env_without_meta({"PATH": "/bin"})
 
-        self.assertEqual(env, {"PATH": "/bin"})
+        self.assertEqual(env, {"PATH": "/bin", "META_APP_ID": "", "META_CLIENT_TOKEN": ""})
 
 
 class ClassifyLogsTest(unittest.TestCase):

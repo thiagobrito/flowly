@@ -4,6 +4,9 @@ from __future__ import annotations
 
 import json
 import os
+import urllib.error
+import urllib.parse
+import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -13,6 +16,14 @@ ENV_FILE = BUILD_DIR / ".env"
 ROOT_ENV = ROOT / ".env"
 ROOT_ENV_LOCAL = ROOT / ".env.local"
 PRODUCTION_API_URL = "https://flowly-web-coral.vercel.app/api/v1"
+
+# App Facebook do Flowly Tasks — não o ads_mcp. Sem estes valores o prebuild
+# omite o plugin da Meta e o binário na loja não reporta instalação.
+META_APP_ID = "1612062970628529"
+META_CLIENT_TOKEN = "e3fc070d7b958d9c89d4bc2e8e1a87d6"
+META_APP_NAME = "Flowly Tasks"
+META_IOS_STORE_ID = "6778602637"
+META_GRAPH_VERSION = "v22.0"
 
 
 def _load_env_file(path: Path, *, prefix: str | None = None) -> None:
@@ -90,13 +101,67 @@ class Config:
 def apply_build_environment() -> None:
     """Carrega variáveis de ambiente para o build Expo, incluindo o `.env` raiz.
 
-    Mantém `EXPO_PUBLIC_API_URL` apontando para produção (não usa o localhost do .env local).
+    Força API de produção e as credenciais do app Flowly Tasks. Sem o App ID e
+    o Client Token, o `app.config.js` deixa o SDK da Meta de fora do binário.
     """
     _load_env_file(ENV_FILE)
     # Sentry CLI roda dentro do xcodebuild e precisa do token no ambiente do processo pai.
     _load_env_file(ROOT_ENV_LOCAL, prefix="SENTRY_")
     _load_env_file(ROOT_ENV)
     os.environ["EXPO_PUBLIC_API_URL"] = PRODUCTION_API_URL
+    os.environ["META_APP_ID"] = META_APP_ID
+    os.environ["META_CLIENT_TOKEN"] = META_CLIENT_TOKEN
+
+
+def interpret_meta_app_payload(payload: dict) -> list[str]:
+    """Problemas no JSON da Graph API, ou lista vazia se o app está certo."""
+    problems: list[str] = []
+    if payload.get("error"):
+        message = payload["error"].get("message", payload["error"])
+        return [f"Graph API recusou o App ID/Client Token: {message}"]
+
+    if str(payload.get("id", "")) != META_APP_ID:
+        problems.append(f"id {payload.get('id')!r} ≠ {META_APP_ID}")
+    if payload.get("name") != META_APP_NAME:
+        problems.append(f"nome {payload.get('name')!r} ≠ {META_APP_NAME!r}")
+
+    platforms = payload.get("supported_platforms") or []
+    if "IPHONE" not in platforms:
+        problems.append(f"plataforma iOS ausente (veio {platforms})")
+
+    itunes = (payload.get("object_store_urls") or {}).get("itunes") or ""
+    if META_IOS_STORE_ID not in itunes:
+        problems.append(f"URL da App Store sem id{META_IOS_STORE_ID} (veio {itunes!r})")
+    return problems
+
+
+def validate_meta_credentials() -> None:
+    """Confere na Graph API se App ID + Client Token são do Flowly Tasks.
+
+    Rede fora do ar só avisa: não derruba o archive. Credencial errada falha.
+    """
+    query = urllib.parse.urlencode(
+        {
+            "fields": "id,name,object_store_urls,supported_platforms",
+            "access_token": f"{META_APP_ID}|{META_CLIENT_TOKEN}",
+        }
+    )
+    url = f"https://graph.facebook.com/{META_GRAPH_VERSION}/{META_APP_ID}?{query}"
+    try:
+        with urllib.request.urlopen(url, timeout=15) as response:
+            payload = json.loads(response.read().decode())
+    except urllib.error.HTTPError as exc:
+        payload = json.loads(exc.read().decode()) if exc.fp else {"error": {"message": str(exc)}}
+    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
+        log(f"Validação Meta pulada (rede): {exc}", "warn")
+        return
+
+    problems = interpret_meta_app_payload(payload)
+    if problems:
+        raise RuntimeError("Credenciais Meta inválidas para o build: " + "; ".join(problems))
+
+    store = (payload.get("object_store_urls") or {}).get("itunes", "")
+    log(f"Meta OK: {payload.get('name')} ({META_APP_ID}) → {store}", "ok")
 
 
 def load_config() -> Config:
@@ -132,3 +197,6 @@ def print_summary(cfg: Config) -> None:
         "info",
     )
     log(f"API URL:   {os.environ.get('EXPO_PUBLIC_API_URL', '(não definida)')}", "info")
+    log(f"Meta App:  {os.environ.get('META_APP_ID', '(não definida)')} ({META_APP_NAME})", "info")
+    token = os.environ.get("META_CLIENT_TOKEN", "")
+    log("Meta SDK:  client token definido" if token else "Meta SDK:  client token AUSENTE", "info")
