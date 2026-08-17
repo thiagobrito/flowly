@@ -1,8 +1,9 @@
 import { ChevronLeft, Plus, Sparkles, Telescope } from 'lucide-react-native';
 import { useCallback, useState } from 'react';
-import { Pressable, ScrollView, Text, TextInput, useColorScheme, View } from 'react-native';
+import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 import { api } from '@/lib/network';
+import { ACCENT, useIsDark } from '@/lib/theme';
 
 import SectionTitle from '../../components/SectionTitle';
 import CycleDatesCard from '../components/CycleDatesCard';
@@ -16,10 +17,8 @@ type EditGoalsProps = {
   onSave: (data: Pick<GoalsData, 'vision' | 'cycle' | 'mainGoal' | 'secondaryGoals'>) => void;
 };
 
-const ACCENT = '#6366f1';
-
 export default function EditGoals({ data, onBack, onSave }: EditGoalsProps) {
-  const isDark = useColorScheme() === 'dark';
+  const isDark = useIsDark();
 
   const [vision, setVision] = useState(data.vision);
   const [startDate, setStartDate] = useState(data.cycle.startDate);

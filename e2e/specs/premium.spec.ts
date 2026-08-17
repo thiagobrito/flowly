@@ -24,9 +24,14 @@ test('trial expirado abre o funil de paywall', async ({ app }) => {
 
   await expect(app.page.getByText('Desbloqueie o Flowly Premium')).toBeVisible();
   await expect(app.page.getByRole('button', { name: 'Assinar agora' })).toBeVisible();
+  await expect(app.page.getByText(/Flowly Premium Anual · 12 meses/)).toBeVisible();
+  await expect(app.page.getByRole('link', { name: 'Termos de Uso (EULA)' })).toBeVisible();
+  await expect(app.page.getByRole('link', { name: 'Política de Privacidade' })).toBeVisible();
 
   await app.page.getByRole('button', { name: 'Agora não' }).click();
   await expect(app.page.getByText('Só hoje no plano anual')).toBeVisible();
+  await expect(app.page.getByText(/Flowly Premium Anual · 12 meses/)).toBeVisible();
+  await expect(app.page.getByRole('link', { name: 'Termos de Uso (EULA)' })).toBeVisible();
 
   await app.page.getByRole('button', { name: 'Não, obrigado' }).click();
   await expect(app.page.getByText('Nossa melhor oferta')).toBeVisible();

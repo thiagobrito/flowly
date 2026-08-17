@@ -1,6 +1,8 @@
 import { Check, Pencil, Telescope, X } from 'lucide-react-native';
 import { Pressable, Text, TextInput, View } from 'react-native';
 
+import { ACCENT, accentTint } from '@/lib/theme';
+
 import Card from '../../components/Card';
 
 type VisionCardProps = {
@@ -19,8 +21,8 @@ export default function VisionCard({ vision, isDark, isEditing, onEdit, onChange
       <View className="p-4">
         <View className="flex-row items-center justify-between">
           <View className="flex-row items-center">
-            <View className="size-9 items-center justify-center rounded-xl" style={{ backgroundColor: isDark ? 'rgba(99,102,241,0.18)' : 'rgba(99,102,241,0.1)' }}>
-              <Telescope size={18} color="#6366f1" />
+            <View className="size-9 items-center justify-center rounded-xl" style={{ backgroundColor: isDark ? accentTint(0.18) : accentTint(0.1) }}>
+              <Telescope size={18} color={ACCENT} />
             </View>
             <Text className="ml-3 text-base font-semibold text-zinc-900 dark:text-zinc-50">Visão de 1 Ano</Text>
           </View>
@@ -43,11 +45,11 @@ export default function VisionCard({ vision, isDark, isEditing, onEdit, onChange
                 accessibilityLabel="Salvar visão"
                 className="size-9 items-center justify-center rounded-full active:opacity-70"
                 style={{
-                  backgroundColor: isDark ? 'rgba(99,102,241,0.25)' : 'rgba(99,102,241,0.12)',
+                  backgroundColor: isDark ? accentTint(0.25) : accentTint(0.12),
                   opacity: vision.trim() ? 1 : 0.4,
                 }}
               >
-                <Check size={15} color="#6366f1" />
+                <Check size={15} color={ACCENT} />
               </Pressable>
             </View>
           ) : (

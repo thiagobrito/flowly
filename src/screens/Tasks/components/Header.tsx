@@ -1,15 +1,25 @@
-import { ListChecks, LogOut, SlidersHorizontal, Zap } from 'lucide-react-native';
+/**
+ * Cabeçalho da Home.
+ *
+ * A energia saiu daqui. Antes o header carregava "Sua energia corporal" com os
+ * dots, e o número competia com o `PeakEnergyCard` logo abaixo — dois lugares
+ * dizendo a mesma coisa em escalas diferentes (0–5 e 0–100). Agora o header só
+ * situa (marca, saudação, promessa do dia) e o cartão é o dono do número.
+ *
+ * O modo de energia continua acessível: quando está diferente de `ideal`, a
+ * pílula aparece ao lado da saudação, que é o único lugar onde o estado
+ * "estou em 30% hoje" ainda precisa ser visível sem rolar.
+ */
+
+import { ListChecks, LogOut, SlidersHorizontal } from 'lucide-react-native';
 import { Pressable, Text, View } from 'react-native';
 
-import { energyScoreToLevel } from '@/lib/energy';
+import DisplayText from '@/components/DisplayText';
 import type { EnergyMode } from '@/lib/energyMode';
-import { ACCENT, ENERGY } from '@/lib/theme';
-
-import LevelDots from './LevelDots';
+import { ACCENT, mutedText } from '@/lib/theme';
 
 type HeaderProps = {
   isDark: boolean;
-  energyScore: number;
   energyMode?: EnergyMode;
   onLogout?: () => void;
   onOpenConfig?: () => void;
@@ -23,54 +33,57 @@ const MODE_LABEL: Record<EnergyMode, string> = {
   rushed: 'Rushed',
 };
 
-function BatteryData({ energyScore, energyMode, onPress }: { energyScore: number; energyMode: EnergyMode; onPress?: () => void }) {
-  const energyLevel = energyScoreToLevel(energyScore);
+/** Saudação pelo horário local. Sem nome: o cadastro não coleta um. */
+export function greeting(date: Date = new Date()): string {
+  const hour = date.getHours();
+  if (hour < 12) return 'Bom dia';
+  if (hour < 18) return 'Boa tarde';
+  return 'Boa noite';
+}
+
+export default function Header({ isDark, energyMode = 'ideal', onLogout, onOpenConfig, onOpenFilter, onOpenEnergyMode }: HeaderProps) {
+  const muted = mutedText(isDark);
   const showMode = energyMode !== 'ideal';
 
   return (
-    <Pressable onPress={onPress} disabled={!onPress} accessibilityRole="button" accessibilityLabel="Ajustar modo de energia" className="flex flex-col active:opacity-80">
-      <View className="flex-row items-center">
-        <Text className="text-zinc-900 dark:text-zinc-50">Sua energia corporal</Text>
-        {showMode ? (
-          <View className="ml-2 rounded-full px-2 py-0.5" style={{ backgroundColor: 'rgba(99,102,241,0.15)' }}>
-            <Text className="text-[10px] font-semibold" style={{ color: ACCENT }}>
-              {MODE_LABEL[energyMode]}
-            </Text>
-          </View>
-        ) : null}
-      </View>
-      <View className="flex flex-row items-center">
-        <Zap size={22} color={ENERGY.high} style={{ marginRight: 6 }} />
-        <LevelDots value={energyLevel || 0} accent={ENERGY.high} isDark={false} big />
-      </View>
-    </Pressable>
-  );
-}
+    <View className="pt-2">
+      <View className="flex-row items-center justify-between">
+        <DisplayText weight="bold" className="text-[26px] leading-8 text-zinc-900 dark:text-zinc-50">
+          Flowly
+        </DisplayText>
 
-export default function Header({ isDark, energyScore, energyMode = 'ideal', onLogout, onOpenConfig, onOpenFilter, onOpenEnergyMode }: HeaderProps) {
-  return (
-    <View className="flex-row items-start justify-between pt-2">
-      <View className="flex-row items-center">
-        <Pressable onPress={onOpenFilter} accessibilityRole="button" accessibilityLabel="Filtros" className="size-10 items-center justify-center rounded-full bg-white/40 dark:bg-white/10">
-          <ListChecks size={18} color={isDark ? '#e4e4e7' : '#27272a'} />
-        </Pressable>
+        <View className="flex-row items-center" style={{ gap: 8 }}>
+          <Pressable onPress={onOpenFilter} accessibilityRole="button" accessibilityLabel="Filtros" className="size-10 items-center justify-center rounded-full bg-white/40 dark:bg-white/10">
+            <ListChecks size={18} color={isDark ? '#e4e4e7' : '#27272a'} />
+          </Pressable>
 
-        <View className="ml-3 flex-col">
-          <BatteryData energyScore={energyScore} energyMode={energyMode} onPress={onOpenEnergyMode} />
+          <Pressable onPress={onOpenConfig} accessibilityRole="button" accessibilityLabel="Configurações" className="size-10 items-center justify-center rounded-full bg-white/40 dark:bg-white/10">
+            <SlidersHorizontal size={18} color={isDark ? '#e4e4e7' : '#27272a'} />
+          </Pressable>
+
+          {onLogout ? (
+            <Pressable onPress={onLogout} accessibilityRole="button" accessibilityLabel="Sair" className="size-10 items-center justify-center rounded-full bg-white/40 dark:bg-white/10">
+              <LogOut size={18} color={isDark ? '#e4e4e7' : '#27272a'} />
+            </Pressable>
+          ) : null}
         </View>
       </View>
 
-      <View className="flex-row items-center" style={{ gap: 8 }}>
-        <Pressable onPress={onOpenConfig} accessibilityRole="button" accessibilityLabel="Configurações" className="size-10 items-center justify-center rounded-full bg-white/40 dark:bg-white/10">
-          <SlidersHorizontal size={18} color={isDark ? '#e4e4e7' : '#27272a'} />
-        </Pressable>
-
-        {onLogout ? (
-          <Pressable onPress={onLogout} accessibilityRole="button" accessibilityLabel="Sair" className="size-10 items-center justify-center rounded-full bg-white/40 dark:bg-white/10">
-            <LogOut size={18} color={isDark ? '#e4e4e7' : '#27272a'} />
-          </Pressable>
-        ) : null}
-      </View>
+      <Pressable onPress={onOpenEnergyMode} disabled={!onOpenEnergyMode} accessibilityRole="button" accessibilityLabel="Ajustar modo de energia" className="mt-2 active:opacity-80">
+        <View className="flex-row items-center">
+          <Text className="text-[15px] font-semibold text-zinc-900 dark:text-zinc-50">{greeting()}</Text>
+          {showMode ? (
+            <View className="ml-2 rounded-full px-2 py-0.5" style={{ backgroundColor: `${ACCENT}22` }}>
+              <Text className="text-[10px] font-semibold" style={{ color: ACCENT }}>
+                {MODE_LABEL[energyMode]}
+              </Text>
+            </View>
+          ) : null}
+        </View>
+        <Text className="mt-0.5 text-[13px]" style={{ color: muted }}>
+          Seu plano foi ajustado para você render melhor hoje.
+        </Text>
+      </Pressable>
     </View>
   );
 }

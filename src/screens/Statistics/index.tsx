@@ -1,11 +1,12 @@
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { BatteryFull, CalendarRange, CheckCircle, HandFist } from 'lucide-react-native';
 import { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, RefreshControl, ScrollView, Text, useColorScheme, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 
 import { startOfLocalDay, toLocalISOString } from '@/lib/date';
 import { flowlyInputFromMetrics, lastDaysRange, useEnergyScore } from '@/lib/energy';
 import { queryKeys } from '@/lib/query';
+import { ACCENT, accentTint, useIsDark } from '@/lib/theme';
 
 import ConcludedTasksTable from './components/ConcludedTasksTable';
 import DayChip from './components/DayChip';
@@ -23,7 +24,7 @@ type StatisticsProps = {
 };
 
 export default function Statistics({ autoOpenSleep, onSleepPromptHandled, onOpenWeeklyReview }: StatisticsProps = {}) {
-  const isDark = useColorScheme() === 'dark';
+  const isDark = useIsDark();
   const queryClient = useQueryClient();
   const [refreshing, setRefreshing] = useState(false);
   const [selectedDay, setSelectedDay] = useState<string>(() => toLocalISOString());
@@ -65,7 +66,7 @@ export default function Statistics({ autoOpenSleep, onSleepPromptHandled, onOpen
   if (reportQuery.isLoading || !data) {
     return (
       <View className="flex-1 items-center justify-center">
-        <ActivityIndicator color={isDark ? '#e4e4e7' : '#3b82f6'} />
+        <ActivityIndicator color={isDark ? '#e4e4e7' : ACCENT} />
       </View>
     );
   }
@@ -79,7 +80,7 @@ export default function Statistics({ autoOpenSleep, onSleepPromptHandled, onOpen
         className="mt-4 flex-1"
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 110 }}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={isDark ? '#e4e4e7' : '#3b82f6'} colors={['#3b82f6']} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={isDark ? '#e4e4e7' : ACCENT} colors={[ACCENT]} />}
       >
         <View className="flex-row items-center justify-between">
           {data.days.map((day) => (
@@ -94,12 +95,12 @@ export default function Statistics({ autoOpenSleep, onSleepPromptHandled, onOpen
             accessibilityLabel="Abrir revisão semanal"
             className="mt-4 flex-row items-center justify-center rounded-2xl border px-4 py-3 active:opacity-80"
             style={{
-              borderColor: isDark ? 'rgba(99,102,241,0.35)' : 'rgba(99,102,241,0.25)',
-              backgroundColor: isDark ? 'rgba(99,102,241,0.12)' : 'rgba(99,102,241,0.08)',
+              borderColor: isDark ? accentTint(0.35) : accentTint(0.25),
+              backgroundColor: isDark ? accentTint(0.12) : accentTint(0.08),
             }}
           >
-            <CalendarRange size={16} color="#6366f1" />
-            <Text className="ml-2 text-sm font-semibold" style={{ color: '#6366f1' }}>
+            <CalendarRange size={16} color={ACCENT} />
+            <Text className="ml-2 text-sm font-semibold" style={{ color: ACCENT }}>
               Ver revisão semanal
             </Text>
           </Pressable>
@@ -111,7 +112,7 @@ export default function Statistics({ autoOpenSleep, onSleepPromptHandled, onOpen
               <Text className="text-lg font-semibold text-zinc-700 dark:text-zinc-200">Tarefas concluídas</Text>
 
               <View className="flex-row items-center gap-2">
-                <CheckCircle size={24} color={isDark ? '#e4e4e7' : '#3b82f6'} />
+                <CheckCircle size={24} color={isDark ? '#e4e4e7' : ACCENT} />
                 <Text className="ml-2 text-xl font-extrabold text-zinc-900 dark:text-zinc-50">{data.daily.concludedTasks}</Text>
               </View>
             </View>
@@ -119,7 +120,7 @@ export default function Statistics({ autoOpenSleep, onSleepPromptHandled, onOpen
             <View className="min-w-full flex-1 rounded-2xl bg-white px-4 py-2 pr-3 dark:bg-white/10">
               <Text className="text-lg font-semibold text-zinc-700 dark:text-zinc-200">Pontos de Energia</Text>
               <View className="flex-row items-center gap-2">
-                <BatteryFull size={24} color={isDark ? '#e4e4e7' : '#3b82f6'} />
+                <BatteryFull size={24} color={isDark ? '#e4e4e7' : ACCENT} />
                 <Text className="ml-2 text-xl font-extrabold text-zinc-900 dark:text-zinc-50">{data.energyScore}</Text>
               </View>
             </View>
@@ -127,7 +128,7 @@ export default function Statistics({ autoOpenSleep, onSleepPromptHandled, onOpen
             <View className="min-w-full flex-1 rounded-2xl bg-white px-4 py-2 pr-3 dark:bg-white/10">
               <Text className="text-lg font-semibold text-zinc-700 dark:text-zinc-200">Pontos de Impacto</Text>
               <View className="flex-row items-center gap-2">
-                <HandFist size={24} color={isDark ? '#e4e4e7' : '#3b82f6'} />
+                <HandFist size={24} color={isDark ? '#e4e4e7' : ACCENT} />
                 <Text className="ml-2 text-xl font-extrabold text-zinc-900 dark:text-zinc-50">{data.impactScore}</Text>
               </View>
             </View>

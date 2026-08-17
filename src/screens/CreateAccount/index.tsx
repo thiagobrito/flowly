@@ -1,8 +1,9 @@
 import { Lock, Mail } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, useColorScheme, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 
 import { openLegalLink, PRIVACY_POLICY_URL, TERMS_OF_USE_URL } from '@/lib/legal';
+import { accentOn, useIsDark } from '@/lib/theme';
 
 import AuthField from '../Login/components/AuthField';
 import AuthHeader from '../Login/components/AuthHeader';
@@ -18,7 +19,7 @@ type CreateAccountProps = {
 };
 
 export default function CreateAccount({ onCreateAccount, onNavigateToLogin, pending = false }: CreateAccountProps) {
-  const isDark = useColorScheme() === 'dark';
+  const isDark = useIsDark();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -66,11 +67,11 @@ export default function CreateAccount({ onCreateAccount, onNavigateToLogin, pend
                 <Checkbox label="" checked={consentAccepted} onChange={setConsentAccepted} isDark={isDark} />
                 <Text className="-ml-1 flex-1 text-sm leading-5 text-zinc-600 dark:text-zinc-300">
                   Li e concordo com a{' '}
-                  <Text className="font-semibold text-[#6366f1]" onPress={() => openLegalLink(PRIVACY_POLICY_URL)} accessibilityRole="link">
+                  <Text className="font-semibold" style={{ color: accentOn(isDark) }} onPress={() => openLegalLink(PRIVACY_POLICY_URL)} accessibilityRole="link">
                     Política de Privacidade
                   </Text>{' '}
                   e os{' '}
-                  <Text className="font-semibold text-[#6366f1]" onPress={() => openLegalLink(TERMS_OF_USE_URL)} accessibilityRole="link">
+                  <Text className="font-semibold" style={{ color: accentOn(isDark) }} onPress={() => openLegalLink(TERMS_OF_USE_URL)} accessibilityRole="link">
                     Termos de Uso
                   </Text>
                   .
@@ -91,7 +92,9 @@ export default function CreateAccount({ onCreateAccount, onNavigateToLogin, pend
             <View className="mt-8 flex-row items-center justify-center">
               <Text className="text-sm text-zinc-500 dark:text-zinc-400">Já tem uma conta? </Text>
               <Pressable onPress={onNavigateToLogin} accessibilityRole="button" className="active:opacity-70">
-                <Text className="text-sm font-semibold text-[#6366f1]">Entrar</Text>
+                <Text className="text-sm font-semibold" style={{ color: accentOn(isDark) }}>
+                  Entrar
+                </Text>
               </Pressable>
             </View>
           </View>

@@ -1,11 +1,11 @@
 import { Text, View } from 'react-native';
 
+import { ACCENT, accentTint } from '@/lib/theme';
+
 import type { IntroStep as IntroStepData } from '../data';
 import { resolveIcon } from './icons';
 import NavFooter from './NavFooter';
 import StepShell from './StepShell';
-
-const ACCENT = '#6366f1';
 
 type IntroStepProps = {
   step: IntroStepData;
@@ -21,7 +21,7 @@ export default function IntroStep({ step, isDark, onNext }: IntroStepProps) {
           const Icon = resolveIcon(item.icon);
           return (
             <View key={item.title} className="flex-row items-center rounded-2xl border p-4" style={{ borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)', backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.7)' }}>
-              <View className="size-11 items-center justify-center rounded-xl" style={{ backgroundColor: isDark ? 'rgba(99,102,241,0.18)' : 'rgba(99,102,241,0.12)' }}>
+              <View className="size-11 items-center justify-center rounded-xl" style={{ backgroundColor: isDark ? accentTint(0.18) : accentTint(0.12) }}>
                 <Icon size={20} color={ACCENT} />
               </View>
               <View className="ml-3 flex-1">

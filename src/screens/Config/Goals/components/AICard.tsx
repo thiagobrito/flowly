@@ -2,6 +2,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Sparkles } from 'lucide-react-native';
 import { Pressable, Text, View } from 'react-native';
 
+import { accentTint } from '@/lib/theme';
+
 type AICardProps = {
   recommendation: string;
   isDark: boolean;
@@ -11,7 +13,7 @@ type AICardProps = {
 export default function AICard({ recommendation, isDark, onAskAI }: AICardProps) {
   return (
     <View className="overflow-hidden rounded-2xl border" style={{ borderColor: isDark ? 'rgba(168,85,247,0.35)' : 'rgba(168,85,247,0.25)' }}>
-      <LinearGradient colors={isDark ? ['rgba(99,102,241,0.16)', 'rgba(168,85,247,0.12)'] : ['rgba(99,102,241,0.08)', 'rgba(168,85,247,0.06)']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ padding: 16 }}>
+      <LinearGradient colors={isDark ? [accentTint(0.16), 'rgba(168,85,247,0.12)'] : [accentTint(0.08), 'rgba(168,85,247,0.06)']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ padding: 16 }}>
         <View className="flex-row items-center">
           <View className="size-9 items-center justify-center rounded-xl" style={{ backgroundColor: isDark ? 'rgba(168,85,247,0.2)' : 'rgba(168,85,247,0.12)' }}>
             <Sparkles size={18} color="#a855f7" />

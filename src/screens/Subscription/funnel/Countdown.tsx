@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Text, View } from 'react-native';
 
+import { ACCENT } from '@/lib/theme';
+
 type CountdownProps = {
   seconds: number;
   isDark: boolean;
@@ -76,8 +78,8 @@ export default function Countdown({ seconds, isDark, onExpire, variant = 'inline
   }
 
   return (
-    <View className="self-center rounded-full border px-3 py-1" style={{ borderColor: '#6366f1' }}>
-      <Text className="text-xs font-semibold" style={{ color: '#6366f1' }}>
+    <View className="self-center rounded-full border px-3 py-1" style={{ borderColor: ACCENT }}>
+      <Text className="text-xs font-semibold" style={{ color: ACCENT }}>
         expira em {pad(minutes)}:{pad(secs)}
       </Text>
     </View>

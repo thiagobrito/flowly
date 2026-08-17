@@ -7,11 +7,12 @@
  */
 import { GoalIcon } from 'lucide-react-native';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, Text, useColorScheme, View } from 'react-native';
+import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, Text, View } from 'react-native';
 
 import ModalScreen from '@/components/ModalScreen';
 import { api } from '@/lib/network';
 import { usePendingSync } from '@/lib/pendingSync';
+import { ACCENT, accentTint, useIsDark } from '@/lib/theme';
 import { llmParseArea, llmParseFrequency } from '@/lib/voice/llmParse';
 import { matchArea, matchIntent, parseFrequency } from '@/lib/voice/parse';
 import { useSpeechRecognition } from '@/lib/voice/useSpeechRecognition';
@@ -140,7 +141,7 @@ function ConfirmStep({ isDark, name, frequency, areaValue, areaLabel, submitting
       </View>
 
       <Pressable onPress={onConfirm} disabled={submitting} accessibilityRole="button" accessibilityState={{ disabled: submitting }} className="active:opacity-80">
-        <View className="items-center rounded-2xl py-3.5" style={{ backgroundColor: isDark ? '#fafafa' : '#6366f1' }}>
+        <View className="items-center rounded-2xl py-3.5" style={{ backgroundColor: isDark ? '#fafafa' : ACCENT }}>
           {submitting ? (
             <ActivityIndicator color={isDark ? '#18181b' : '#ffffff'} />
           ) : (
@@ -152,8 +153,8 @@ function ConfirmStep({ isDark, name, frequency, areaValue, areaLabel, submitting
       </Pressable>
 
       <Pressable onPress={onEdit} disabled={submitting} accessibilityRole="button" className="mt-3 active:opacity-70">
-        <View className="items-center rounded-2xl border py-3.5" style={{ borderColor: isDark ? 'rgba(255,255,255,0.16)' : 'rgba(99,102,241,0.4)' }}>
-          <Text className="text-base font-semibold" style={{ color: isDark ? '#e4e4e7' : '#6366f1' }}>
+        <View className="items-center rounded-2xl border py-3.5" style={{ borderColor: isDark ? 'rgba(255,255,255,0.16)' : accentTint(0.4) }}>
+          <Text className="text-base font-semibold" style={{ color: isDark ? '#e4e4e7' : ACCENT }}>
             Editar
           </Text>
         </View>
@@ -163,7 +164,7 @@ function ConfirmStep({ isDark, name, frequency, areaValue, areaLabel, submitting
 }
 
 export default function VoiceAssistant({ visible, onClose, onEdit, onCreated }: VoiceAssistantProps) {
-  const isDark = useColorScheme() === 'dark';
+  const isDark = useIsDark();
   const { enqueue } = usePendingSync();
   const { preferences } = useConfigPreferences();
 

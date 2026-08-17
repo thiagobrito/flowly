@@ -11,6 +11,7 @@ import { configureNotifications, ensureAndroidChannel, setupNotificationHandler,
 import { QueryProvider } from '@/lib/query';
 import { initTelemetry } from '@/lib/telemetry';
 import { useThemePreference } from '@/lib/theme';
+import { useDisplayFont } from '@/lib/theme/useDisplayFont';
 import { useTaskReminders } from '@/screens/Config/hooks/useTaskReminders';
 
 setupNotificationHandler();
@@ -43,6 +44,8 @@ export default Sentry.wrap(function Layout() {
   useNotifications();
   useTaskReminders();
   useThemePreference();
+  // Não bloqueia a árvore: até carregar, os títulos usam a fonte do sistema.
+  useDisplayFont();
 
   // Só liga o SDK para a instalação ser contada. O alerta do ATT fica para
   // depois do cadastro (`requestAttributionConsent`).

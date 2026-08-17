@@ -3,6 +3,8 @@ import { Calendar, CalendarCheck, Info } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { Modal, Platform, Pressable, Text, View } from 'react-native';
 
+import { ACCENT, accentTint } from '@/lib/theme';
+
 import SettingsToggle from '../../components/SettingsToggle';
 import { formatDate, parseIsoDate, toIsoDate } from '../dateUtils';
 
@@ -17,8 +19,6 @@ type CycleDatesCardProps = {
 };
 
 type PickerTarget = 'start' | 'end' | null;
-
-const ACCENT = '#6366f1';
 
 function borderColorForField(disabled: boolean | undefined, isDark: boolean): string {
   if (!disabled) return ACCENT;
@@ -78,8 +78,8 @@ export default function CycleDatesCard({ startDate, endDate, freeDates, isDark, 
     <View
       className="rounded-2xl border p-4"
       style={{
-        borderColor: isDark ? 'rgba(99,102,241,0.35)' : 'rgba(99,102,241,0.25)',
-        backgroundColor: isDark ? 'rgba(99,102,241,0.08)' : 'rgba(99,102,241,0.05)',
+        borderColor: isDark ? accentTint(0.35) : accentTint(0.25),
+        backgroundColor: isDark ? accentTint(0.08) : accentTint(0.05),
       }}
     >
       <View className="flex-row">
@@ -97,8 +97,8 @@ export default function CycleDatesCard({ startDate, endDate, freeDates, isDark, 
       </View>
 
       {freeDates ? (
-        <View className="mt-3 flex-row rounded-xl border p-3" style={{ borderColor: isDark ? 'rgba(59,130,246,0.3)' : 'rgba(59,130,246,0.2)', backgroundColor: isDark ? 'rgba(59,130,246,0.08)' : 'rgba(59,130,246,0.05)' }}>
-          <Info size={16} color="#3b82f6" style={{ marginTop: 1 }} />
+        <View className="mt-3 flex-row rounded-xl border p-3" style={{ borderColor: isDark ? accentTint(0.3) : accentTint(0.2), backgroundColor: isDark ? accentTint(0.08) : accentTint(0.05) }}>
+          <Info size={16} color={ACCENT} style={{ marginTop: 1 }} />
           <Text className="ml-2 flex-1 text-sm leading-5 text-zinc-600 dark:text-zinc-400">Recomendamos manter o período de 12 semanas para melhor execução das metas.</Text>
         </View>
       ) : (

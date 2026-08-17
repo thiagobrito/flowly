@@ -1,6 +1,8 @@
 import { Lock, Mail } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, useColorScheme, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
+
+import { accentOn, useIsDark } from '@/lib/theme';
 
 import AuthField from './components/AuthField';
 import AuthHeader from './components/AuthHeader';
@@ -14,7 +16,7 @@ type LoginProps = {
 };
 
 export default function Login({ onLogin, onNavigateToCreateAccount, pending = false }: LoginProps) {
-  const isDark = useColorScheme() === 'dark';
+  const isDark = useIsDark();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -44,7 +46,7 @@ export default function Login({ onLogin, onNavigateToCreateAccount, pending = fa
             <View className="mt-4 flex-row items-center justify-between">
               <Checkbox label="Lembrar de mim" checked={remember} onChange={setRemember} isDark={isDark} />
               <Pressable onPress={onForgotPassword} accessibilityRole="button" className="active:opacity-70">
-                <Text className="text-sm font-semibold text-[#6366f1]">Esqueceu a senha?</Text>
+                <Text className="text-sm font-semibold" style={{ color: accentOn(isDark) }}>Esqueceu a senha?</Text>
               </Pressable>
             </View>
             */}
@@ -62,7 +64,9 @@ export default function Login({ onLogin, onNavigateToCreateAccount, pending = fa
             <View className="mt-8 flex-row items-center justify-center">
               <Text className="text-sm text-zinc-500 dark:text-zinc-400">Não tem uma conta? </Text>
               <Pressable onPress={onNavigateToCreateAccount} accessibilityRole="button" className="active:opacity-70">
-                <Text className="text-sm font-semibold text-[#6366f1]">Criar conta</Text>
+                <Text className="text-sm font-semibold" style={{ color: accentOn(isDark) }}>
+                  Criar conta
+                </Text>
               </Pressable>
             </View>
           </View>

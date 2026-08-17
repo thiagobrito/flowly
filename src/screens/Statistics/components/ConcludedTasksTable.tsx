@@ -1,6 +1,8 @@
 import { Check, TrendingUp, Zap } from 'lucide-react-native';
 import { Text, View } from 'react-native';
 
+import { ACCENT } from '@/lib/theme';
+
 import type { Task } from '../../NewTask/data';
 import { getLifeArea } from '../../NewTask/data';
 
@@ -17,7 +19,7 @@ export default function ConcludedTasksTable({ tasks, isDark }: ConcludedTasksTab
       <View className="overflow-hidden rounded-2xl bg-white p-2 dark:bg-white/10">
         <View className="flex-row items-center gap-2.5 px-3 py-2">
           <View className="size-9 items-center justify-center rounded-full bg-green-500/15">
-            <Check size={18} color="#3b82f6" />
+            <Check size={18} color={ACCENT} />
           </View>
           <Text className="text-lg font-semibold text-zinc-700 dark:text-zinc-200">Tarefas Concluídas</Text>
         </View>
@@ -70,7 +72,7 @@ export default function ConcludedTasksTable({ tasks, isDark }: ConcludedTasksTab
                 </View>
 
                 <View className="w-10 flex-row items-center justify-center">
-                  <TrendingUp size={12} color="#3b82f6" style={{ marginRight: 3 }} />
+                  <TrendingUp size={12} color={ACCENT} style={{ marginRight: 3 }} />
                   <Text className="text-xs font-semibold text-zinc-700 dark:text-zinc-200">{task.impact ?? 0}</Text>
                 </View>
               </View>

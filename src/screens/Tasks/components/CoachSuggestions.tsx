@@ -2,7 +2,7 @@ import { CalendarClock, Check } from 'lucide-react-native';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 
 import type { CoachInsight } from '@/lib/coach';
-import { ACCENT, mutedText } from '@/lib/theme';
+import { ACCENT, accentTint, mutedText } from '@/lib/theme';
 
 type CoachSuggestionsProps = {
   insights: CoachInsight[];
@@ -35,12 +35,12 @@ export default function CoachSuggestions({ insights, loading = false, isDark, ap
               key={insight.id}
               className="mb-2 rounded-2xl border p-3"
               style={{
-                borderColor: isDark ? 'rgba(99,102,241,0.30)' : 'rgba(99,102,241,0.20)',
+                borderColor: isDark ? accentTint(0.3) : accentTint(0.2),
                 backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.75)',
               }}
             >
               <View className="flex-row items-start">
-                <View className="mr-2 mt-0.5 size-8 items-center justify-center rounded-full" style={{ backgroundColor: 'rgba(99,102,241,0.15)' }}>
+                <View className="mr-2 mt-0.5 size-8 items-center justify-center rounded-full" style={{ backgroundColor: accentTint(0.15) }}>
                   <CalendarClock size={16} color={accent} />
                 </View>
                 <View className="flex-1">

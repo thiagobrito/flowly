@@ -1,4 +1,4 @@
-import { AlignLeft, Check, ChevronDown, ChevronRight, Clock, GoalIcon, Pencil, Trash2, TrendingUp, Zap } from 'lucide-react-native';
+import { AlignLeft, Check, ChevronDown, ChevronRight, GoalIcon, Pencil, Trash2, TrendingUp, Zap } from 'lucide-react-native';
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -7,10 +7,12 @@ import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 
 import { toLocalISOString } from '@/lib/date';
 import { api } from '@/lib/network';
 import { cancelTaskRemindersFor } from '@/lib/taskReminders';
+import { ACCENT, energyBorder, energySurface, energyText, mutedText } from '@/lib/theme';
 
 import type { Subtask, Task } from '../../NewTask/data';
-import { describeFrequency, formatDuration, getFrequencyMeta, getLifeArea } from '../../NewTask/data';
+import { formatDuration, getLifeArea } from '../../NewTask/data';
 import LevelDots from './LevelDots';
+import { energyChipLabel, startTimeLabel, taskEnergyBand } from './taskCardMeta';
 
 const ACTION_WIDTH = 80;
 const OPEN_THRESHOLD = ACTION_WIDTH / 2;
@@ -62,9 +64,6 @@ export default function TaskCard({ highlight, task, selected, isDark, onComplete
   const area = getLifeArea(task.goal.name);
   const accent = area?.accent ?? '#71717a';
   const AreaIcon = area?.Icon;
-  const freqMeta = getFrequencyMeta(task.frequency.kind);
-  const FreqIcon = freqMeta?.Icon;
-
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,
     transform: [{ scale: scale.value }],
@@ -153,24 +152,30 @@ export default function TaskCard({ highlight, task, selected, isDark, onComplete
       else if (swipeLeft) runOnJS(onDelete)();
     });
 
-  let borderColor = isDark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.07)';
-  let backgroundColor = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.85)';
+  let borderColor = isDark ? 'rgba(255,255,255,0.10)' : 'rgba(28,27,24,0.07)';
+  let backgroundColor = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(255,253,249,0.9)';
 
   if (highlight) {
-    borderColor = '#3b82f6';
+    borderColor = ACCENT;
   }
 
   if (isSelected) {
     borderColor = accent;
     backgroundColor = `${accent}14`;
   }
-  const mutedColor = isDark ? '#a1a1aa' : '#71717a';
+
+  const mutedColor = mutedText(isDark);
+  const energyLevel = task.energy || 0;
+  const energyBand = taskEnergyBand(energyLevel);
+  const startTime = startTimeLabel(task);
+  const duration = task.estimatedMinutes ? formatDuration(task.estimatedMinutes) : null;
+
   return (
     <Animated.View className="mb-3" style={animatedStyle}>
       <View className="overflow-hidden rounded-2xl">
         <View className="absolute inset-0 min-h-[122px] w-full flex-row items-stretch justify-between">
           <Animated.View style={[{ width: ACTION_WIDTH }, editStyle]}>
-            <Pressable onPress={handleEdit} accessibilityRole="button" accessibilityLabel={`Editar ${task.name}`} className="flex-1 items-center justify-center rounded-l-2xl active:opacity-80" style={{ backgroundColor: '#3b82f6' }}>
+            <Pressable onPress={handleEdit} accessibilityRole="button" accessibilityLabel={`Editar ${task.name}`} className="flex-1 items-center justify-center rounded-l-2xl active:opacity-80" style={{ backgroundColor: ACCENT }}>
               <Pencil size={20} color="#ffffff" />
               <Text className="mt-1 text-xs font-semibold text-white">Editar</Text>
             </Pressable>
@@ -192,67 +197,49 @@ export default function TaskCard({ highlight, task, selected, isDark, onComplete
             <View className="active:opacity-80">
               <View className="overflow-hidden rounded-2xl" style={{ borderColor, backgroundColor, borderWidth: 1.5 }}>
                 <View className="flex-row items-center p-3">
-                  <View className="size-11 items-center justify-center rounded-2xl" style={{ backgroundColor: `${accent}22` }}>
-                    {AreaIcon ? <AreaIcon size={20} color={accent} /> : <GoalIcon size={20} color="#22c55e" />}
+                  {/* Coluna de horário: a primeira coisa que o olho procura numa
+                      lista do dia é "quando". Sem bloco agendado o espaço fica
+                      vazio — a tarefa existe, só não tem hora marcada. */}
+                  <View className="flex flex-col gap-2">
+                    {startTime ? (
+                      <View className="w-11 items-center">
+                        <Text className="text-[12px] font-bold tabular-nums" style={{ color: energyText(energyBand, isDark) }}>
+                          {startTime}
+                        </Text>
+                        {duration ? (
+                          <Text className="text-left text-[8px] tabular-nums" style={{ color: mutedColor }}>
+                            {duration}
+                          </Text>
+                        ) : null}
+                      </View>
+                    ) : null}
+
+                    <View className="size-11 items-center justify-center rounded-full" style={{ backgroundColor: `${accent}22` }}>
+                      {AreaIcon ? <AreaIcon size={20} color={accent} /> : <GoalIcon size={20} color={energyText('high', isDark)} />}
+                    </View>
                   </View>
 
                   <View className="ml-3 flex-1">
-                    <Text className="text-base font-semibold text-zinc-900 dark:text-zinc-50">{task.name}</Text>
+                    <Text className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">{task.name}</Text>
 
-                    <View className="mt-1.5 flex-row items-center">
-                      <View className="rounded-full px-2 py-0.5" style={{ backgroundColor: `${accent}22`, marginRight: 8 }}>
-                        <Text className="text-xs font-semibold" style={{ color: accent }}>
+                    <View className="mt-1.5 flex-row flex-wrap items-center" style={{ gap: 6 }}>
+                      <View className="rounded-full px-2 py-0.5" style={{ backgroundColor: `${accent}22` }}>
+                        <Text className="text-[11px] font-semibold" style={{ color: accent }}>
                           {area?.label.toUpperCase() || task.goal.name.toUpperCase()}
                         </Text>
                       </View>
 
-                      <View className="flex-1 flex-row items-center">
-                        {FreqIcon ? <FreqIcon size={13} color={mutedColor} style={{ marginRight: 5 }} /> : null}
-                        <Text className="flex-1 text-xs font-medium" style={{ color: mutedColor }} numberOfLines={1}>
-                          {describeFrequency(task)}
-                        </Text>
+                      {/* Chip no lugar dos cinco dots: quem já usa o app lê a
+                          escala 1–5, quem está decidindo instalar lê a palavra. */}
+                      <View className="flex-row items-center rounded-full border px-2 py-0.5" style={{ backgroundColor: energySurface(energyBand, isDark), borderColor: energyBorder(energyBand, isDark) }}>
+                        <Zap size={11} color={energyText(energyBand, isDark)} />
+                        <Text className="ml-1 text-[11px] font-semibold text-zinc-700 dark:text-zinc-200">{energyChipLabel(energyLevel)}</Text>
                       </View>
                     </View>
 
-                    <View className="mt-2.5 flex-row items-center">
-                      <View className="flex-row items-center" style={{ marginRight: 18 }}>
-                        <Zap size={13} color="#22c55e" style={{ marginRight: 6 }} />
-                        <LevelDots value={task.energy || 0} accent="#22c55e" isDark={isDark} />
-                      </View>
-
-                      <View className="flex-row items-center">
-                        <TrendingUp size={13} color="#3b82f6" style={{ marginRight: 6 }} />
-                        <LevelDots value={task.impact || 0} accent="#3b82f6" isDark={isDark} />
-                      </View>
-
-                      {task.estimatedMinutes ? (
-                        <View className="flex-row items-center" style={{ marginLeft: 18 }}>
-                          <Clock size={13} color="#14b8a6" style={{ marginRight: 5 }} />
-                          <Text className="text-xs font-semibold" style={{ color: '#14b8a6' }}>
-                            {formatDuration(task.estimatedMinutes)}
-                          </Text>
-                        </View>
-                      ) : null}
-
-                      {canExpand ? (
-                        <Pressable
-                          onPress={() => setExpanded((prev) => !prev)}
-                          accessibilityRole="button"
-                          accessibilityLabel="Mostrar detalhes"
-                          accessibilityState={{ expanded }}
-                          className="ml-auto flex-row items-center rounded-full px-2 py-1 active:opacity-70"
-                          style={{ backgroundColor: `${accent}1f` }}
-                        >
-                          {hasSubtasks ? (
-                            <Text className="text-xs font-semibold" style={{ color: accent, marginRight: 4 }}>
-                              {doneCount}/{localSubtasks.length}
-                            </Text>
-                          ) : (
-                            <AlignLeft size={14} color={accent} style={{ marginRight: 4 }} />
-                          )}
-                          {expanded ? <ChevronDown size={16} color={accent} /> : <ChevronRight size={16} color={accent} />}
-                        </Pressable>
-                      ) : null}
+                    <View className="mt-2 flex-row items-center">
+                      <TrendingUp size={13} color={mutedColor} style={{ marginRight: 6 }} />
+                      <LevelDots value={task.impact || 0} accent={ACCENT} isDark={isDark} />
                     </View>
                   </View>
 
@@ -261,6 +248,19 @@ export default function TaskCard({ highlight, task, selected, isDark, onComplete
                       <CheckIcon isSelected={isSelected} isDark={isDark} accent={accent} />
                     </View>
                   </Pressable>
+
+                  {canExpand ? (
+                    <Pressable onPress={() => setExpanded((prev) => !prev)} accessibilityRole="button" accessibilityLabel="Mostrar detalhes" accessibilityState={{ expanded }} className="ml-1 flex-row items-center rounded-full p-1 active:opacity-70">
+                      {hasSubtasks ? (
+                        <Text className="text-[11px] font-semibold" style={{ color: mutedColor }}>
+                          {doneCount}/{localSubtasks.length}
+                        </Text>
+                      ) : (
+                        <AlignLeft size={13} color={mutedColor} />
+                      )}
+                      {expanded ? <ChevronDown size={18} color={mutedColor} /> : <ChevronRight size={18} color={mutedColor} />}
+                    </Pressable>
+                  ) : null}
                 </View>
 
                 {canExpand && expanded ? (

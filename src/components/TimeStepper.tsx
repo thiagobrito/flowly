@@ -3,6 +3,7 @@ import type { ComponentType } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import { minutesToTimeString, timeStringToMinutes } from '@/lib/sleepProfile';
+import { ACCENT, accentTint } from '@/lib/theme';
 
 type TimeStepperProps = {
   label: string;
@@ -17,7 +18,7 @@ type TimeStepperProps = {
 };
 
 /** Seletor de horário com passos de N minutos (usado no onboarding e no SleepCard). */
-export default function TimeStepper({ label, Icon, value, onChange, isDark, stepMinutes = 15, accent = '#6366f1' }: TimeStepperProps) {
+export default function TimeStepper({ label, Icon, value, onChange, isDark, stepMinutes = 15, accent = ACCENT }: TimeStepperProps) {
   const minutes = timeStringToMinutes(value) ?? 7 * 60;
 
   const step = (delta: number) => {
@@ -25,7 +26,7 @@ export default function TimeStepper({ label, Icon, value, onChange, isDark, step
   };
 
   const buttonStyle = {
-    backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(99,102,241,0.10)',
+    backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : accentTint(0.1),
   } as const;
   const iconColor = isDark ? '#e4e4e7' : accent;
 

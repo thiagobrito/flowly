@@ -429,6 +429,23 @@ export function cycleWeeks(startDate: string, endDate: string): number {
   return Math.max(1, Math.round((end - start) / MS_PER_WEEK));
 }
 
+/**
+ * Semana em curso do ciclo, contando a partir de 1.
+ *
+ * `weeksCompleted` conta as semanas que ficaram para trás; quem está no meio da
+ * oitava semana tem sete concluídas. "Semana 8 de 12" situa a pessoa no ciclo,
+ * enquanto "7 de 12 concluídas" descreve o passado — a primeira é a leitura que
+ * a tela de metas precisa dar.
+ */
+export function currentCycleWeek(goal: Pick<Goal, 'weeksCompleted' | 'totalWeeks'>): number {
+  return Math.min(goal.weeksCompleted + 1, Math.max(goal.totalWeeks, 1));
+}
+
+/** `Semana 8 de 12`, o rótulo de ciclo usado na aba Metas. */
+export function cycleWeekLabel(goal: Pick<Goal, 'weeksCompleted' | 'totalWeeks'>): string {
+  return `Semana ${currentCycleWeek(goal)} de ${goal.totalWeeks}`;
+}
+
 /** Cria uma anamnese vazia para iniciar o fluxo da tela `NewGoals`. */
 export function createEmptyGoalSetup(): GoalSetup {
   const start = new Date();

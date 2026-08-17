@@ -103,3 +103,16 @@ export function startOfLocalDay(value: string | Date, timeZone = APP_TIME_ZONE):
 
   return midnightOf(year, month, day, timeZone);
 }
+
+/**
+ * Data por extenso em pt-BR: `sexta-feira, 16 de maio`.
+ *
+ * Sai minúscula — o pt-BR não capitaliza dia da semana. Quem quiser a inicial
+ * maiúscula aplica `capitalize` no estilo, e não uma segunda formatação.
+ */
+export function formatLongDate(date: Date | string = new Date(), timeZone = APP_TIME_ZONE): string {
+  const parsed = typeof date === 'string' ? startOfLocalDay(date, timeZone) : date;
+  if (Number.isNaN(parsed.getTime())) return '';
+
+  return new Intl.DateTimeFormat('pt-BR', { timeZone, weekday: 'long', day: '2-digit', month: 'long' }).format(parsed);
+}

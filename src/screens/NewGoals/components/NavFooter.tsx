@@ -1,6 +1,6 @@
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 
-const ACCENT = '#6366f1';
+import { ACCENT } from '@/lib/theme';
 
 type NavFooterProps = {
   label: string;

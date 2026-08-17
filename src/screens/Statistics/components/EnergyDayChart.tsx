@@ -5,11 +5,11 @@ import Svg, { Circle, Defs, G, Line, LinearGradient, Path, Rect, Stop, Text as S
 
 import { startOfLocalDay } from '@/lib/date';
 import { anchorInputToDay, computeEnergyAtMoment, type FlowlyEngineInput } from '@/lib/energy';
+import { ACCENT, accentTint, ENERGY } from '@/lib/theme';
 
 import type { Task } from '../../NewTask/data';
 
-const ACCENT = '#3b82f6';
-const MARKER_COLOR = '#22c55e';
+const MARKER_COLOR = ENERGY.high;
 
 const CHART_HEIGHT = 220;
 const PADDING = { top: 20, right: 14, bottom: 26, left: 30 } as const;
@@ -187,7 +187,7 @@ export default function EnergyDayChart({ input, tasks, selectedDay, isDark }: En
 
   const header = (
     <View className="flex-row items-center gap-2.5 px-3 py-2">
-      <View className="size-9 items-center justify-center rounded-full bg-blue-500/15">
+      <View className="size-9 items-center justify-center rounded-full" style={{ backgroundColor: accentTint(0.15) }}>
         <Zap size={18} color={ACCENT} />
       </View>
       <Text className="text-lg font-semibold text-zinc-700 dark:text-zinc-200">Energia ao longo do dia</Text>

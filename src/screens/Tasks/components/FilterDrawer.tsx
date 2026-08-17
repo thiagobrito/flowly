@@ -5,6 +5,8 @@ import { Dimensions, Modal, Pressable, ScrollView, Text, View } from 'react-nati
 import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
+import { ACCENT, accentTint } from '@/lib/theme';
+
 import type { DateFilterId } from '../taskDateFilter';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -111,7 +113,7 @@ export default function FilterDrawer({ visible, isDark, dateFilters, selectedDat
 
   const hasFilter = selectedAreas.length > 0 || selectedDateFilter !== null;
   let allRowBackgroundColor = 'transparent';
-  if (!hasFilter) allRowBackgroundColor = isDark ? 'rgba(59,130,246,0.18)' : 'rgba(59,130,246,0.1)';
+  if (!hasFilter) allRowBackgroundColor = isDark ? accentTint(0.18) : accentTint(0.1);
 
   return (
     <Modal visible transparent animationType="none" onRequestClose={onClose}>
@@ -129,7 +131,7 @@ export default function FilterDrawer({ visible, isDark, dateFilters, selectedDat
               <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
                 <View className="flex-row items-center justify-between px-4 pb-3 pt-2">
                   <View className="flex-row items-center">
-                    <ListChecks size={24} color="#3b82f6" style={{ marginRight: 10 }} />
+                    <ListChecks size={24} color={ACCENT} style={{ marginRight: 10 }} />
                     <Text className="text-lg font-bold text-zinc-900 dark:text-zinc-50">Filtrar</Text>
                   </View>
 
@@ -148,11 +150,11 @@ export default function FilterDrawer({ visible, isDark, dateFilters, selectedDat
 
                 <ScrollView className="flex-1 px-3" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 16 }}>
                   <Pressable onPress={onClear} accessibilityRole="button" accessibilityLabel="Mostrar todas" className="mb-1 flex-row items-center justify-between rounded-2xl p-3 active:opacity-70" style={{ backgroundColor: allRowBackgroundColor }}>
-                    <Text className="text-[15px] font-semibold" style={{ color: '#3b82f6' }}>
+                    <Text className="text-[15px] font-semibold" style={{ color: ACCENT }}>
                       Todas
                     </Text>
                     {!hasFilter ? (
-                      <View className="size-5 items-center justify-center rounded-full" style={{ backgroundColor: '#3b82f6' }}>
+                      <View className="size-5 items-center justify-center rounded-full" style={{ backgroundColor: ACCENT }}>
                         <Check size={13} color="#ffffff" />
                       </View>
                     ) : null}

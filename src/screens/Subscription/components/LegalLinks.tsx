@@ -1,6 +1,7 @@
 import { Pressable, Text, View } from 'react-native';
 
 import { openLegalLink, PRIVACY_POLICY_URL, TERMS_OF_USE_URL } from '@/lib/legal';
+import { ACCENT, ACCENT_LIGHT } from '@/lib/theme';
 
 type LegalLinksProps = {
   isDark: boolean;
@@ -15,7 +16,7 @@ type LegalLinksProps = {
  */
 export default function LegalLinks({ isDark }: LegalLinksProps) {
   const mutedColor = isDark ? '#71717a' : '#a1a1aa';
-  const linkColor = isDark ? '#93c5fd' : '#3b82f6';
+  const linkColor = isDark ? ACCENT_LIGHT : ACCENT;
 
   return (
     <View className="mt-2">

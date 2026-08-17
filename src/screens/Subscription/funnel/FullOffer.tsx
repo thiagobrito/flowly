@@ -7,11 +7,12 @@ import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import FloatingCloseButton from '@/components/FloatingCloseButton';
 import { useFeatureFlags } from '@/lib/featureFlags';
 import type { OfferStep, SubscriptionPlanId } from '@/lib/subscription';
-import { ENERGY } from '@/lib/theme';
+import { ACCENT, ACCENT_LIGHT, accentTint, BACKGROUND, ENERGY } from '@/lib/theme';
 
 import LegalLinks from '../components/LegalLinks';
 import PlanToggle from '../components/PlanToggle';
 import TrialTimeline from '../components/TrialTimeline';
+import { subscriptionDetailsLine } from '../planCopy';
 import type { PurchaseFlow } from '../usePurchaseFlow';
 import { PREMIUM_BENEFITS } from './benefits';
 import Countdown from './Countdown';
@@ -27,7 +28,7 @@ type FullOfferProps = {
 };
 
 function Background() {
-  return <LinearGradient colors={['#0b1220', '#070b14', '#000000']} locations={[0, 0.45, 1]} style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 }} />;
+  return <LinearGradient colors={BACKGROUND.dark} locations={[0, 0.45, 1]} style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 }} />;
 }
 
 /** Oferta em tela cheia: primeiro contato (preço cheio) e oferta final. */
@@ -78,7 +79,7 @@ export default function FullOffer({ step, flow, basePriceLabel, onSubscribe, onD
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
             <View className="px-6 pt-6">
               {step.badge ? (
-                <View className="mb-3 self-center rounded-full px-3 py-1" style={{ backgroundColor: '#6366f1' }}>
+                <View className="mb-3 self-center rounded-full px-3 py-1" style={{ backgroundColor: ACCENT }}>
                   <Text className="text-[11px] font-bold tracking-wide text-white">{step.badge}</Text>
                 </View>
               ) : null}
@@ -107,8 +108,8 @@ export default function FullOffer({ step, flow, basePriceLabel, onSubscribe, onD
 
               <View className="mt-6 items-center">
                 {step.discountLabel ? (
-                  <View className="mb-2 rounded-full px-3 py-1" style={{ backgroundColor: 'rgba(99,102,241,0.15)' }}>
-                    <Text className="text-sm font-bold" style={{ color: '#6366f1' }}>
+                  <View className="mb-2 rounded-full px-3 py-1" style={{ backgroundColor: accentTint(0.15) }}>
+                    <Text className="text-sm font-bold" style={{ color: ACCENT }}>
                       {step.discountLabel}
                     </Text>
                   </View>
@@ -130,6 +131,10 @@ export default function FullOffer({ step, flow, basePriceLabel, onSubscribe, onD
                     {perMonthLabel}/mês
                   </Text>
                 ) : null}
+
+                <Text className="mt-3 text-center text-xs leading-4" style={{ color: mutedColor }}>
+                  {subscriptionDetailsLine(plan, priceLabel, perMonthLabel)}
+                </Text>
               </View>
 
               {isDiscounted ? (
@@ -161,7 +166,7 @@ export default function FullOffer({ step, flow, basePriceLabel, onSubscribe, onD
 
             <Pressable onPress={() => onSubscribe(plan)} disabled={ctaDisabled} accessibilityRole="button" className="active:opacity-90" style={{ opacity: ctaDisabled ? 0.7 : 1 }}>
               <LinearGradient
-                colors={['#3b82f6', '#6366f1']}
+                colors={[ACCENT_LIGHT, ACCENT]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={{
@@ -169,7 +174,7 @@ export default function FullOffer({ step, flow, basePriceLabel, onSubscribe, onD
                   borderRadius: 999,
                   alignItems: 'center',
                   justifyContent: 'center',
-                  shadowColor: '#6366f1',
+                  shadowColor: ACCENT,
                   shadowOffset: { width: 0, height: 6 },
                   shadowOpacity: 0.35,
                   shadowRadius: 14,

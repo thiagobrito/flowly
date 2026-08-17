@@ -2,6 +2,11 @@ import { ArrowBigDownDash, ArrowBigUp } from 'lucide-react-native';
 import { Text, View } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 
+import { ACCENT, ENERGY } from '@/lib/theme';
+
+/** Semana abaixo da média: terracota, não vermelho. Cair não é erro. */
+const DOWN_COLOR = ENERGY.low;
+
 type ProgressRingProps = {
   /** 0–100. */
   totalScore: number;
@@ -13,7 +18,7 @@ type ProgressRingProps = {
 
 function TrendIcon({ totalScore, averageFromLast7Days, accent }: { totalScore: number; averageFromLast7Days: number; accent: string }) {
   const trend = totalScore > averageFromLast7Days ? 'up' : 'down';
-  const color = trend === 'up' ? accent : 'rgba(239,68,68,0.90)';
+  const color = trend === 'up' ? accent : DOWN_COLOR;
   return (
     <View className="items-center justify-center rounded-full p-2" style={{ backgroundColor: color }}>
       {trend === 'up' ? <ArrowBigUp size={15} color="white" /> : <ArrowBigDownDash size={15} color="white" />}
@@ -21,7 +26,7 @@ function TrendIcon({ totalScore, averageFromLast7Days, accent }: { totalScore: n
   );
 }
 
-export default function ProgressRing({ totalScore, averageFromLast7Days, isDark, size = 168, accent = '#2f80ff' }: ProgressRingProps) {
+export default function ProgressRing({ totalScore, averageFromLast7Days, isDark, size = 168, accent = ACCENT }: ProgressRingProps) {
   const stroke = 12;
   const radius = (size - stroke) / 2;
   const circumference = 2 * Math.PI * radius;
@@ -30,12 +35,12 @@ export default function ProgressRing({ totalScore, averageFromLast7Days, isDark,
   const innerSize = size - stroke * 2 - 18;
 
   const trend = totalScore > averageFromLast7Days ? 'up' : 'down';
-  const color = trend === 'up' ? accent : 'rgba(239,68,68,0.90)';
+  const color = trend === 'up' ? accent : DOWN_COLOR;
 
   return (
     <View style={{ width: size, height: size }} className="items-center justify-center">
       <Svg width={size} height={size}>
-        <Circle cx={center} cy={center} r={dashedRadius} stroke={isDark ? 'rgba(255,255,255,0.22)' : 'rgba(20,30,55,0.28)'} strokeWidth={1} strokeDasharray="2 5" fill="none" />
+        <Circle cx={center} cy={center} r={dashedRadius} stroke={isDark ? 'rgba(255,255,255,0.22)' : 'rgba(42,36,25,0.26)'} strokeWidth={1} strokeDasharray="2 5" fill="none" />
         <Circle cx={center} cy={center} r={radius} stroke={color} strokeWidth={stroke} strokeLinecap="round" fill="none" strokeDasharray={circumference} strokeDashoffset={0} transform={`rotate(-90 ${center} ${center})`} />
       </Svg>
 

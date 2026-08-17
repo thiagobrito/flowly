@@ -1,6 +1,8 @@
 import { Lightbulb } from 'lucide-react-native';
 import { Text, TextInput, View } from 'react-native';
 
+import { ACCENT, accentTint } from '@/lib/theme';
+
 import type { AnamnesisStep } from '../data';
 
 type TextStepProps = {
@@ -33,8 +35,8 @@ export default function TextStep({ step, value, isDark, multiline, onChange }: T
       />
 
       {step.helper ? (
-        <View className="mt-3 flex-row items-start rounded-xl px-3 py-2.5" style={{ backgroundColor: isDark ? 'rgba(99,102,241,0.1)' : 'rgba(99,102,241,0.07)' }}>
-          <Lightbulb size={15} color="#6366f1" style={{ marginTop: 1 }} />
+        <View className="mt-3 flex-row items-start rounded-xl px-3 py-2.5" style={{ backgroundColor: isDark ? accentTint(0.1) : accentTint(0.07) }}>
+          <Lightbulb size={15} color={ACCENT} style={{ marginTop: 1 }} />
           <Text className="ml-2 flex-1 text-sm leading-5 text-zinc-600 dark:text-zinc-300">{step.helper}</Text>
         </View>
       ) : null}

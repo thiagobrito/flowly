@@ -1,6 +1,7 @@
 import { Pencil } from 'lucide-react-native';
 import { Pressable, Text, View } from 'react-native';
 
+import { ACCENT, accentOn, ENERGY } from '@/lib/theme';
 import { GetLifeArea } from '@/screens/common';
 
 import type { Goal } from '../data';
@@ -20,9 +21,9 @@ type GoalCardProps = {
 };
 
 const STATUS_COLOR: Record<Goal['status'], string> = {
-  active: '#22c55e',
-  completed: '#3b82f6',
-  paused: '#eab308',
+  active: ENERGY.high,
+  completed: ACCENT,
+  paused: ENERGY.medium,
   archived: '#a1a1aa',
 };
 
@@ -46,7 +47,7 @@ function Divider({ isDark }: { isDark: boolean }) {
 
 export default function GoalCard({ goal, isDark, onEdit }: GoalCardProps) {
   const area = GetLifeArea(goal.areaId);
-  const accent = area?.accent ?? '#3b82f6';
+  const accent = area?.accent ?? accentOn(isDark);
   const AreaIcon = area?.Icon;
 
   return (
@@ -66,7 +67,7 @@ export default function GoalCard({ goal, isDark, onEdit }: GoalCardProps) {
         <View className="flex-1">
           <Text className="text-lg font-bold leading-6 text-zinc-900 dark:text-zinc-50">{goal.name}</Text>
           <View className="mt-2 flex-row flex-wrap gap-1.5">
-            <Chip label={TYPE_LABELS[goal.type]} color={goal.type === 'primary' ? '#6366f1' : '#a855f7'} />
+            <Chip label={TYPE_LABELS[goal.type]} color={goal.type === 'primary' ? ACCENT : '#a855f7'} />
             <Chip label={STATUS_LABELS[goal.status]} color={STATUS_COLOR[goal.status]} />
             {area ? <Chip label={area.label} color={accent} /> : null}
           </View>

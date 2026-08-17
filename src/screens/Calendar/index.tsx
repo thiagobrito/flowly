@@ -3,21 +3,23 @@ import { CalendarBody, CalendarContainer } from '@howljs/calendar-kit';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { CircleCheckIcon, TrendingUp, Zap } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, StyleSheet, Text, useColorScheme, View } from 'react-native';
+import { ActivityIndicator, Alert, StyleSheet, Text, View } from 'react-native';
 
-import { APP_TIME_ZONE, localDateKey, startOfLocalDay, toLocalISOString } from '@/lib/date';
+import { APP_TIME_ZONE, formatLongDate, localDateKey, startOfLocalDay, toLocalISOString } from '@/lib/date';
 import { hasGoogleClientIds, useGoogleCalendarSync } from '@/lib/googleCalendar';
 import { api } from '@/lib/network';
 import { queryKeys } from '@/lib/query';
 import { cancelTaskRemindersFor, syncTaskReminders } from '@/lib/taskReminders';
-import { ENERGY } from '@/lib/theme';
+import { ACCENT, ACCENT_LIGHT, energyText, useIsDark } from '@/lib/theme';
 
 import { useConfigPreferences } from '../Config/hooks/useConfigPreferences';
 import type { ScheduledSlot, Subtask, Task } from '../NewTask/data';
 import { formatDuration, getLifeArea } from '../NewTask/data';
 import LevelDots from '../Tasks/components/LevelDots';
+import CalendarEnergyRow from './components/CalendarEnergyRow';
 import CalendarHeaderBar from './components/CalendarHeaderBar';
 import CalendarHourLabel from './components/CalendarHourLabel';
+import CalendarWeekStrip from './components/CalendarWeekStrip';
 import TaskDetailModal from './components/TaskDetailModal';
 import UnscheduledTray from './components/UnscheduledTray';
 import type { CalendarTaskEvent } from './eventMapping';
@@ -42,6 +44,16 @@ const DAY_BAR_HEIGHT = 61;
 /** Espaço entre a barra de dias e a primeira linha de hora (`spaceFromTop` do calendar-kit). */
 const SPACE_FROM_TOP = 16;
 /**
+ * Passo e altura de um slot da grade.
+ *
+ * Passados explicitamente ao `CalendarContainer` (e não deixados no default)
+ * porque `CalendarEnergyRow` precisa pintar exatamente uma hora: a faixa é
+ * desenhada por cima da linha divisória, que não tem altura própria. Com o
+ * pinch desligado, os dois números não se descolam em runtime.
+ */
+const SLOT_MINUTES = 60;
+const SLOT_HEIGHT = 60;
+/**
  * Distância vertical exata entre o topo do calendário (`calendarWrapRef`) e a
  * linha da hora inicial da grade. Substitui a antiga constante aproximada que
  * causava desvio na identificação do horário ao arrastar/soltar.
@@ -58,6 +70,12 @@ const GHOST_OFFSET_X = GHOST_WIDTH / 2;
  * que a tarefa seja agendada exatamente onde o usuário a enxerga.
  */
 const GHOST_OFFSET_Y = 28;
+
+/** Assinatura de `renderCustomHorizontalLine`, que o calendar-kit não exporta. */
+type HorizontalLineProps = {
+  index: number;
+  borderColor: string;
+};
 
 type DragState = {
   task: Task;
@@ -104,7 +122,7 @@ function organizeTasks(tasks: unknown): Task[] {
 }
 
 export default function Calendar({ onEdit, onCreateAt }: CalendarProps) {
-  const isDark = useColorScheme() === 'dark';
+  const isDark = useIsDark();
   const { preferences } = useConfigPreferences();
   const remindersEnabled = preferences.taskRemindersEnabled ?? true;
   const remindersEnabledRef = useRef(remindersEnabled);
@@ -189,9 +207,31 @@ export default function Calendar({ onEdit, onCreateAt }: CalendarProps) {
 
   const { events, unscheduled } = useMemo(() => buildCalendarEvents(tasks, visibleDateKeys), [tasks, visibleDateKeys]);
   const theme = useMemo(() => buildCalendarTheme(isDark), [isDark]);
-  const { getLevel, hasData } = useDayEnergyLevels(visibleDate);
+  const { getLevel, extremes, hasData } = useDayEnergyLevels(visibleDate);
 
   const renderHour = useCallback(({ hourStr, minutes, style }: RenderHourProps) => <CalendarHourLabel hourStr={hourStr} style={style} level={hasData ? getLevel(minutes) : undefined} isDark={isDark} />, [getLevel, hasData, isDark]);
+
+  /**
+   * O `index` da linha horizontal conta slots de `timeInterval` a partir de
+   * `start`, que aqui são as horas cheias da meia-noite — o mesmo passo de
+   * `useDayEnergyLevels`. Se o intervalo do calendário mudar, esta conta muda
+   * junto.
+   */
+  const renderEnergyRow = useCallback(
+    (line: HorizontalLineProps) => {
+      const minutes = line.index * SLOT_MINUTES;
+      let marker: 'peak' | 'dip' | undefined;
+      if (extremes?.peakMinutes === minutes) marker = 'peak';
+      else if (extremes?.dipMinutes === minutes) marker = 'dip';
+
+      return <CalendarEnergyRow level={hasData ? getLevel(minutes) : undefined} slotHeight={SLOT_HEIGHT} borderColor={line.borderColor} isDark={isDark} marker={marker} />;
+    },
+    [extremes, getLevel, hasData, isDark],
+  );
+
+  const goToDate = useCallback((dateISO: string) => {
+    calendarRef.current?.setVisibleDate(dateISO);
+  }, []);
 
   const renderCalendarEvent = useCallback(
     (event: PackedEvent) => {
@@ -205,6 +245,12 @@ export default function Calendar({ onEdit, onCreateAt }: CalendarProps) {
               {event.title}
             </Text>
             {task.done ? <CircleCheckIcon className="my-auto flex justify-end" size={22} color="white" /> : null}
+          </View>
+
+          {/* `allowDragToEdit` está ligado desde sempre, mas nada dizia isso:
+              o usuário descobria arrastando sem querer. O grip é a placa. */}
+          <View pointerEvents="none" style={{ position: 'absolute', bottom: -2, left: 0, right: 0, alignItems: 'center' }}>
+            <View style={{ width: 22, height: 3, borderRadius: 999, backgroundColor: isDark ? 'rgba(255,255,255,0.45)' : 'rgba(255,255,255,0.7)' }} />
           </View>
 
           {showEnergyAndImpact ? (
@@ -221,13 +267,13 @@ export default function Calendar({ onEdit, onCreateAt }: CalendarProps) {
               }}
             >
               <View className="flex-row items-center" style={{ marginRight: 14 }}>
-                <Zap size={13} color={ENERGY.high} style={{ marginRight: 6 }} />
-                <LevelDots value={task.energy || 0} accent={ENERGY.high} isDark={isDark} />
+                <Zap size={13} color={energyText('high', isDark)} style={{ marginRight: 6 }} />
+                <LevelDots value={task.energy || 0} accent={energyText('high', isDark)} isDark={isDark} />
               </View>
 
               <View className="flex-row items-center">
-                <TrendingUp size={13} color="#3b82f6" style={{ marginRight: 6 }} />
-                <LevelDots value={task.impact || 0} accent="#3b82f6" isDark={isDark} />
+                <TrendingUp size={13} color={ACCENT_LIGHT} style={{ marginRight: 6 }} />
+                <LevelDots value={task.impact || 0} accent={ACCENT_LIGHT} isDark={isDark} />
               </View>
             </View>
           ) : null}
@@ -237,12 +283,7 @@ export default function Calendar({ onEdit, onCreateAt }: CalendarProps) {
     [isDark],
   );
 
-  const dateLabel = useMemo(() => {
-    const date = new Date(visibleDate);
-    if (Number.isNaN(date.getTime())) return '';
-    const formatter = new Intl.DateTimeFormat('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' });
-    return formatter.format(date);
-  }, [visibleDate]);
+  const dateLabel = useMemo(() => formatLongDate(visibleDate), [visibleDate]);
 
   const syncCalendarBounds = useCallback(() => {
     calendarWrapRef.current?.measureInWindow((x, y, width, height) => {
@@ -631,12 +672,12 @@ export default function Calendar({ onEdit, onCreateAt }: CalendarProps) {
   if (loading) {
     return (
       <View className="flex-1 items-center justify-center">
-        <ActivityIndicator color={isDark ? '#e4e4e7' : '#3b82f6'} />
+        <ActivityIndicator color={isDark ? '#e4e4e7' : ACCENT} />
       </View>
     );
   }
 
-  const ghostAccent = drag ? (getLifeArea(drag.task.goal.name)?.accent ?? '#6366f1') : '#6366f1';
+  const ghostAccent = drag ? (getLifeArea(drag.task.goal.name)?.accent ?? ACCENT) : ACCENT;
   const modalTask = tasks.find((item) => item.id === selectedTask?.id) ?? selectedTask;
   const modalDurationMin = (() => {
     if (!modalTask) return 30;
@@ -660,6 +701,8 @@ export default function Calendar({ onEdit, onCreateAt }: CalendarProps) {
         onSync={handleGoogleSync}
       />
 
+      <CalendarWeekStrip visibleDate={visibleDate} isDark={isDark} onSelect={goToDate} />
+
       <UnscheduledTray tasks={unscheduled} isDark={isDark} scrollEnabled={!drag} onDragStart={handleDragStart} onDragMove={handleDragMove} onDragEnd={handleDragEnd} />
 
       <View ref={calendarWrapRef} className="flex-1 overflow-hidden rounded-2xl" onLayout={syncCalendarBounds}>
@@ -677,6 +720,9 @@ export default function Calendar({ onEdit, onCreateAt }: CalendarProps) {
           minRegularEventMinutes={MIN_EVENT_MINUTES}
           useAllDayEvent={false}
           allowDragToEdit
+          allowPinchToZoom={false}
+          timeInterval={SLOT_MINUTES}
+          initialTimeIntervalHeight={SLOT_HEIGHT}
           dragStep={DRAG_STEP_MIN}
           spaceFromTop={SPACE_FROM_TOP}
           spaceFromBottom={80}
@@ -686,7 +732,7 @@ export default function Calendar({ onEdit, onCreateAt }: CalendarProps) {
           onLongPressBackground={handleLongPressBackground}
           onDateChanged={setVisibleDate}
         >
-          <CalendarBody showNowIndicator renderEvent={renderCalendarEvent} renderHour={renderHour} />
+          <CalendarBody showNowIndicator renderEvent={renderCalendarEvent} renderHour={renderHour} renderCustomHorizontalLine={renderEnergyRow} />
         </CalendarContainer>
       </View>
 

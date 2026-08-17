@@ -1,10 +1,10 @@
 import type { ReactNode } from 'react';
 import { Text, View } from 'react-native';
 
+import { ACCENT, accentTint } from '@/lib/theme';
+
 import type { AnamnesisStep } from '../data';
 import { resolveIcon } from './icons';
-
-const ACCENT = '#6366f1';
 
 type StepShellProps = {
   step: AnamnesisStep;
@@ -17,7 +17,7 @@ export default function StepShell({ step, isDark, children }: StepShellProps) {
 
   return (
     <View className="flex-1">
-      <View className="mt-2 size-14 items-center justify-center rounded-2xl" style={{ backgroundColor: isDark ? 'rgba(99,102,241,0.18)' : 'rgba(99,102,241,0.12)' }}>
+      <View className="mt-2 size-14 items-center justify-center rounded-2xl" style={{ backgroundColor: isDark ? accentTint(0.18) : accentTint(0.12) }}>
         <Icon size={26} color={ACCENT} strokeWidth={2.2} />
       </View>
 

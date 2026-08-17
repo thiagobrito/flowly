@@ -1,5 +1,5 @@
 /**
- * Onboarding: 12 passos, retomada e degradação graciosa.
+ * Onboarding: 11 passos, retomada e degradação graciosa.
  *
  * `GET /onboarding` não existe no backend. O app trata isso em silêncio e usa o
  * roteiro padrão de `src/screens/Onboarding/data.ts` — comportamento verificado
@@ -22,8 +22,8 @@ const STEPS: { title: string; clicks: (string | RegExp)[] }[] = [
   { title: 'Ative as notificações', clicks: ['Agora não'] },
   { title: 'Fale com o Flowly', clicks: ['Agora não'] },
   // Sem dispositivo de sono, o passo pede os horários usuais antes de avançar.
-  { title: 'Sua energia ao longo do dia', clicks: [/^Não uso/, 'Salvar e continuar'] },
-  { title: 'Seu ritmo de hoje', clicks: ['Continuar'] },
+  // A prévia da curva mora nesta mesma tela: não há passo separado depois dela.
+  { title: 'Como foi seu sono?', clicks: [/^Não uso/, 'Salvar e continuar'] },
   { title: 'Pequenas ações repetidas', clicks: ['Continuar'] },
   { title: 'Defina seus objetivos', clicks: ['Pular por agora'] },
   { title: 'Crie suas atividades', clicks: ['Pular por agora'] },
@@ -33,12 +33,12 @@ const STEPS: { title: string; clicks: (string | RegExp)[] }[] = [
 
 const pending = { onboardingCompleted: false } as const;
 
-test('percorre os 12 passos e entra no app', async ({ app }) => {
+test('percorre os 11 passos e entra no app', async ({ app }) => {
   await app.launch({ route: '/onboarding', state: pending, waitForTabs: false });
 
   for (const [index, step] of STEPS.entries()) {
     await expect(app.page.getByText(step.title, { exact: false }).first(), `passo ${index + 1}: ${step.title}`).toBeVisible();
-    await expect(app.page.getByText(`Etapa ${index + 1} de 12`)).toBeVisible();
+    await expect(app.page.getByText(`Etapa ${index + 1} de 11`)).toBeVisible();
 
     for (const name of step.clicks) {
       await app.page
@@ -75,8 +75,8 @@ test('voltar retorna ao passo anterior', async ({ app }) => {
 test('o progresso é retomado de onde parou', async ({ app }) => {
   await app.launch({ route: '/onboarding', state: { ...pending, onboardingStep: 5 }, waitForTabs: false });
 
-  await expect(app.page.getByText('Etapa 6 de 12')).toBeVisible();
-  await expect(app.page.getByText('Sua energia ao longo do dia')).toBeVisible();
+  await expect(app.page.getByText('Etapa 6 de 11')).toBeVisible();
+  await expect(app.page.getByText('Como foi seu sono?')).toBeVisible();
 });
 
 test('a escolha de idioma persiste', async ({ app }) => {
@@ -90,7 +90,7 @@ test('a escolha de idioma persiste', async ({ app }) => {
 });
 
 test('o paywall do onboarding abre e pode ser dispensado', async ({ app }) => {
-  await app.launch({ route: '/onboarding', state: { ...pending, onboardingStep: 10 }, waitForTabs: false });
+  await app.launch({ route: '/onboarding', state: { ...pending, onboardingStep: 9 }, waitForTabs: false });
 
   await expect(app.page.getByText('Desbloqueie todo o Flowly')).toBeVisible();
   await app.page.getByRole('button', { name: 'Ver planos' }).click();
@@ -103,7 +103,7 @@ test('o paywall do onboarding abre e pode ser dispensado', async ({ app }) => {
 });
 
 test('criar meta a partir do onboarding usa a anamnese', async ({ app }) => {
-  await app.launch({ route: '/onboarding', state: { ...pending, onboardingStep: 8 }, waitForTabs: false });
+  await app.launch({ route: '/onboarding', state: { ...pending, onboardingStep: 7 }, waitForTabs: false });
 
   await expect(app.page.getByText('Defina seus objetivos')).toBeVisible();
   await app.page.getByRole('button', { name: 'Definir meus objetivos' }).click();

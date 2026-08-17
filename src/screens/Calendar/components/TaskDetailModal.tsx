@@ -2,7 +2,7 @@ import { GoalIcon, Pencil, TrendingUp, X, Zap } from 'lucide-react-native';
 import { type ReactNode, useCallback, useEffect, useState } from 'react';
 import { Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
-import { ENERGY } from '@/lib/theme';
+import { ACCENT, energyText } from '@/lib/theme';
 
 import { EstimatedTimePicker, SubtaskEditor } from '../../NewTask/components';
 import type { Subtask, Task } from '../../NewTask/data';
@@ -102,7 +102,7 @@ export default function TaskDetailModal({ visible, task, isDark, durationMin, on
   const mutedColor = isDark ? '#a1a1aa' : '#71717a';
   const panelBackground = isDark ? '#18181b' : '#fafafa';
   const secondaryButtonBg = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
-  const editButtonBg = '#3b82f6';
+  const editButtonBg = ACCENT;
   const completeDisabled = !!task.done;
   const destructiveBg = '#ef4444';
   const inputBorder = isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)';
@@ -219,8 +219,8 @@ export default function TaskDetailModal({ visible, task, isDark, durationMin, on
 
             <DetailRow label="Energia gasta" isDark={isDark}>
               <View className="flex-row items-center">
-                <Zap size={16} color={ENERGY.high} style={{ marginRight: 8 }} />
-                <LevelDots value={task.energy || 0} accent={ENERGY.high} isDark={isDark} big />
+                <Zap size={16} color={energyText('high', isDark)} style={{ marginRight: 8 }} />
+                <LevelDots value={task.energy || 0} accent={energyText('high', isDark)} isDark={isDark} big />
                 <Text className="ml-3 text-sm font-medium" style={{ color: mutedColor }}>
                   {levelLabel(task.energy)}
                 </Text>
@@ -229,8 +229,8 @@ export default function TaskDetailModal({ visible, task, isDark, durationMin, on
 
             <DetailRow label="Impacto esperado" isDark={isDark}>
               <View className="flex-row items-center">
-                <TrendingUp size={16} color="#3b82f6" style={{ marginRight: 8 }} />
-                <LevelDots value={task.impact || 0} accent="#3b82f6" isDark={isDark} big />
+                <TrendingUp size={16} color={ACCENT} style={{ marginRight: 8 }} />
+                <LevelDots value={task.impact || 0} accent={ACCENT} isDark={isDark} big />
                 <Text className="ml-3 text-sm font-medium" style={{ color: mutedColor }}>
                   {levelLabel(task.impact)}
                 </Text>

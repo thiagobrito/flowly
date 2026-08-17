@@ -3,7 +3,7 @@ import { useEffect } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
 
-const ACCENT = '#6366f1';
+import { ACCENT, accentTint } from '@/lib/theme';
 
 type ListeningIndicatorProps = {
   listening: boolean;
@@ -38,7 +38,7 @@ export function ListeningIndicator({ listening, processing, isDark, onPress }: L
     return 'Toque para falar';
   })();
 
-  const idleBackground = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(99,102,241,0.12)';
+  const idleBackground = isDark ? 'rgba(255,255,255,0.1)' : accentTint(0.12);
 
   return (
     <View className="items-center">

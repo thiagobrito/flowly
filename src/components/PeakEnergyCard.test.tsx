@@ -60,6 +60,25 @@ describe('PeakEnergyCard', () => {
     expect(screen.getByText('Texto do onboarding')).toBeTruthy();
   });
 
+  it('marca a janela de pico sobre a curva, não só no texto de apoio', () => {
+    render(<PeakEnergyCard input={input} currentScore={70} isDark={false} />);
+
+    expect(screen.getByText(/^\d{1,2}h às \d{1,2}h$/)).toBeTruthy();
+  });
+
+  // Sem eixo, a curva vira enfeite: o usuário precisa saber a que horas atacar.
+  it('rotula o eixo de horas com o começo e o fim do dia acordado', () => {
+    render(<PeakEnergyCard input={input} currentScore={70} isDark={false} />);
+
+    expect(screen.getAllByText(/^\d{1,2}h$/).length).toBeGreaterThanOrEqual(5);
+  });
+
+  it('nomeia a faixa de cada período além do número', () => {
+    render(<PeakEnergyCard input={input} currentScore={70} isDark={false} />);
+
+    expect(screen.getAllByText(/^(Alta|Média|Baixa)$/)).toHaveLength(3);
+  });
+
   it('descreve o score para leitores de tela, com a faixa de energia', () => {
     render(<PeakEnergyCard input={input} currentScore={70} isDark={false} />);
 

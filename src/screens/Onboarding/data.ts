@@ -13,7 +13,7 @@ import type { OnboardingLanguage } from '@/lib/onboarding';
  */
 
 /** Tipo de tela renderizada em cada passo. */
-export type OnboardingStepKind = 'language' | 'intro' | 'quote' | 'goals' | 'activities' | 'notifications' | 'microphone' | 'sleepProfile' | 'energyPreview' | 'payment' | 'completed';
+export type OnboardingStepKind = 'language' | 'intro' | 'quote' | 'goals' | 'activities' | 'notifications' | 'microphone' | 'sleepProfile' | 'payment' | 'completed';
 
 /** Campos comuns a todos os passos. */
 type BaseStep = {
@@ -108,11 +108,6 @@ export type SleepProfileStep = BaseStep & {
   skipLabel: string;
 };
 
-export type EnergyPreviewStep = BaseStep & {
-  kind: 'energyPreview';
-  ctaLabel: string;
-};
-
 export type PaymentStep = BaseStep & {
   kind: 'payment';
   benefits: string[];
@@ -131,7 +126,7 @@ export type CompletedStep = BaseStep & {
   ctaLabel: string;
 };
 
-export type OnboardingStep = LanguageStep | IntroStep | QuoteStep | GoalsStep | ActivitiesStep | NotificationsStep | MicrophoneStep | SleepProfileStep | EnergyPreviewStep | PaymentStep | CompletedStep;
+export type OnboardingStep = LanguageStep | IntroStep | QuoteStep | GoalsStep | ActivitiesStep | NotificationsStep | MicrophoneStep | SleepProfileStep | PaymentStep | CompletedStep;
 
 export type OnboardingConfig = {
   steps: OnboardingStep[];
@@ -199,18 +194,10 @@ export const DEFAULT_ONBOARDING: OnboardingConfig = {
     {
       id: 'sleep-profile',
       kind: 'sleepProfile',
-      icon: 'BatteryCharging',
-      title: 'Sua energia ao longo do dia',
+      icon: 'Moon',
+      title: 'Como foi seu sono?',
       subtitle: 'O Flowly organiza suas atividades pela sua energia biológica. Para isso, precisamos saber quando você dorme e acorda.',
       skipLabel: 'Pular por agora',
-    },
-    {
-      id: 'energy-preview',
-      kind: 'energyPreview',
-      icon: 'Zap',
-      title: 'Seu ritmo de hoje',
-      subtitle: 'Com base no seu sono, já dá para ver quando você rende mais — e é aí que o Flowly encaixa o que importa.',
-      ctaLabel: 'Continuar',
     },
     {
       id: 'quote-habits',

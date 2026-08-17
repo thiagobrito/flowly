@@ -162,6 +162,9 @@ export const test = base.extend<{ app: App }>({
       },
 
       async swipe(target, direction) {
+        // O arrasto é feito com coordenadas de viewport: fora dela, o mouse cai
+        // sobre outro elemento e o gesto vai para o card errado.
+        await target.scrollIntoViewIfNeeded();
         const box = await target.boundingBox();
         if (!box) throw new Error('Elemento sem caixa para arrastar');
 

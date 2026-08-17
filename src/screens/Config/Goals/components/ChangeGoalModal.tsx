@@ -2,6 +2,8 @@ import { Check, X } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { Modal, Pressable, Text, View } from 'react-native';
 
+import { ACCENT, accentTint } from '@/lib/theme';
+
 import { CHANGE_ACTIONS, CHANGE_REASONS } from '../data';
 
 type ChangeGoalModalProps = {
@@ -21,9 +23,9 @@ type OptionRowProps = {
 function optionColors(selected: boolean, isDark: boolean) {
   if (selected) {
     return {
-      border: '#6366f1',
-      background: isDark ? 'rgba(99,102,241,0.15)' : 'rgba(99,102,241,0.08)',
-      text: '#6366f1',
+      border: ACCENT,
+      background: isDark ? accentTint(0.15) : accentTint(0.08),
+      text: ACCENT,
     };
   }
   return {
@@ -47,7 +49,7 @@ function OptionRow({ label, selected, isDark, onPress }: OptionRowProps) {
       <Text className="flex-1 pr-3 text-[15px] font-medium" style={{ color: colors.text }}>
         {label}
       </Text>
-      {selected ? <Check size={18} color="#6366f1" /> : null}
+      {selected ? <Check size={18} color={ACCENT} /> : null}
     </Pressable>
   );
 }
@@ -100,7 +102,7 @@ export default function ChangeGoalModal({ visible, isDark, onClose, onConfirm }:
             ? CHANGE_REASONS.map((item) => <OptionRow key={item.id} label={item.label} selected={reason === item.id} isDark={isDark} onPress={() => setReason(item.id)} />)
             : CHANGE_ACTIONS.map((item) => <OptionRow key={item.id} label={item.label} selected={action === item.id} isDark={isDark} onPress={() => setAction(item.id)} />)}
 
-          <Pressable onPress={handlePrimary} disabled={!canContinue} accessibilityRole="button" className="mt-3 items-center rounded-2xl py-3.5 active:opacity-85" style={{ backgroundColor: '#6366f1', opacity: canContinue ? 1 : 0.4 }}>
+          <Pressable onPress={handlePrimary} disabled={!canContinue} accessibilityRole="button" className="mt-3 items-center rounded-2xl py-3.5 active:opacity-85" style={{ backgroundColor: ACCENT, opacity: canContinue ? 1 : 0.4 }}>
             <Text className="text-base font-semibold text-white">{step === 1 ? 'Continuar' : 'Confirmar'}</Text>
           </Pressable>
 

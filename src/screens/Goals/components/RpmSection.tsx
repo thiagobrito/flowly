@@ -2,6 +2,8 @@ import type { LucideIcon } from 'lucide-react-native';
 import { Heart, Sparkles, Target } from 'lucide-react-native';
 import { Text, View } from 'react-native';
 
+import { ACCENT } from '@/lib/theme';
+
 import type { Goal } from '../data';
 
 type RpmSectionProps = {
@@ -27,7 +29,7 @@ function RpmBlock({ Icon, title, text, accent }: { Icon: LucideIcon; title: stri
 export default function RpmSection({ rpm }: RpmSectionProps) {
   return (
     <View className="gap-3">
-      <RpmBlock Icon={Target} title="Resultado" text={rpm.result} accent="#3b82f6" />
+      <RpmBlock Icon={Target} title="Resultado" text={rpm.result} accent={ACCENT} />
       <RpmBlock Icon={Heart} title="Propósito" text={rpm.purpose} accent="#ec4899" />
       <RpmBlock Icon={Sparkles} title="Impacto" text={rpm.impact} accent="#a855f7" />
     </View>

@@ -3,8 +3,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 import type { LucideIcon } from 'lucide-react-native';
 import { BarChart3, CalendarDays, Flag, Lock, Plus, ScrollText } from 'lucide-react-native';
 import { useEffect } from 'react';
-import { Pressable, useColorScheme, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+
+import { ACCENT, ACCENT_LIGHT, accentOn, mutedText, useIsDark } from '@/lib/theme';
 
 const AnimatedLinearGradient = Animated.createAnimatedComponent(LinearGradient);
 
@@ -20,27 +22,40 @@ type BottomTabBarProps = {
   lockedTabs?: readonly TabKey[];
 };
 
+/**
+ * Cada tab tem dois nomes.
+ *
+ * `label` é o que cabe embaixo do ícone; `accessibilityLabel` é o nome completo,
+ * que o leitor de tela anuncia e que os testes E2E usam para navegar. Eles
+ * divergem de propósito: "Progresso" cabe na barra, "Gráficos de andamento"
+ * explica a tela.
+ *
+ * A tab do calendário é "Agenda" e não "Calendário" para não repetir o título
+ * da própria tela — dois "Calendário" visíveis ao mesmo tempo confundem tanto o
+ * olho quanto qualquer busca por texto.
+ */
 type SideTab = {
   key: TabKey;
   label: string;
+  accessibilityLabel: string;
   Icon: LucideIcon;
 };
 
-const NEW_TAB: SideTab = { key: 'new', label: 'Nova atividade', Icon: Plus };
-const CALENDAR_TAB: SideTab = { key: 'calendar', label: 'Calendário', Icon: CalendarDays };
-const HOME_TAB: SideTab = { key: 'home', label: 'Home', Icon: ScrollText };
-const GOALS_TAB: SideTab = { key: 'goals', label: 'Metas', Icon: Flag };
+const NEW_TAB: SideTab = { key: 'new', label: 'Nova', accessibilityLabel: 'Nova atividade', Icon: Plus };
+const CALENDAR_TAB: SideTab = { key: 'calendar', label: 'Agenda', accessibilityLabel: 'Calendário', Icon: CalendarDays };
+const HOME_TAB: SideTab = { key: 'home', label: 'Hoje', accessibilityLabel: 'Home', Icon: ScrollText };
+const GOALS_TAB: SideTab = { key: 'goals', label: 'Metas', accessibilityLabel: 'Metas', Icon: Flag };
 
 const PROGRESS_TAB: SideTab = {
   key: 'progress',
-  label: 'Gráficos de andamento',
+  label: 'Progresso',
+  accessibilityLabel: 'Gráficos de andamento',
   Icon: BarChart3,
 };
 
 function SideTabButton({ tab, active, locked, isDark, onPress }: { tab: SideTab; active: boolean; locked: boolean; isDark: boolean; onPress: () => void }) {
-  const activeColor = '#3b82f6';
-  const inactiveColor = isDark ? '#52525b' : '#a1a1aa';
-  const color = active ? activeColor : inactiveColor;
+  const inactiveColor = isDark ? '#6B655B' : '#A8A196';
+  const iconColor = active ? '#ffffff' : inactiveColor;
 
   const progress = useSharedValue(active ? 1 : 0);
 
@@ -57,68 +72,75 @@ function SideTabButton({ tab, active, locked, isDark, onPress }: { tab: SideTab;
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={locked ? `${tab.label} (bloqueado)` : tab.label}
+      accessibilityLabel={locked ? `${tab.accessibilityLabel} (bloqueado)` : tab.accessibilityLabel}
       accessibilityState={{ selected: active }}
-      className="size-16 items-center justify-center"
+      className="w-16 items-center justify-center"
       style={({ pressed }) => (pressed && !active ? { opacity: 0.7 } : undefined)}
     >
-      <AnimatedLinearGradient
-        colors={['#3b82f6', '#6366f1']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        pointerEvents="none"
-        style={[
-          {
-            position: 'absolute',
-            height: 64,
-            width: 64,
-            borderRadius: 32,
-            shadowColor: '#3b82f6',
-            shadowOffset: { width: 0, height: 6 },
-            shadowOpacity: 0.5,
-            shadowRadius: 14,
-            elevation: 10,
-          },
-          gradientStyle,
-        ]}
-      />
-      <View style={{ opacity: locked && !active ? 0.55 : 1 }}>
-        <tab.Icon size={active ? 30 : 24} color={active ? '#ffffff' : color} strokeWidth={active ? 2.6 : 2} />
-      </View>
-      {locked ? (
-        <View
+      <View className="size-11 items-center justify-center">
+        <AnimatedLinearGradient
+          colors={[ACCENT, ACCENT_LIGHT]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
           pointerEvents="none"
-          className="absolute items-center justify-center rounded-full"
-          style={{
-            right: 10,
-            top: 10,
-            height: 18,
-            width: 18,
-            backgroundColor: isDark ? '#27272a' : '#ffffff',
-            borderWidth: 1,
-            borderColor: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)',
-          }}
-        >
-          <Lock size={10} color="#6366f1" strokeWidth={2.6} />
+          style={[
+            {
+              position: 'absolute',
+              height: 44,
+              width: 44,
+              borderRadius: 22,
+              shadowColor: ACCENT,
+              shadowOffset: { width: 0, height: 5 },
+              shadowOpacity: 0.4,
+              shadowRadius: 12,
+              elevation: 8,
+            },
+            gradientStyle,
+          ]}
+        />
+        <View style={{ opacity: locked && !active ? 0.55 : 1 }}>
+          <tab.Icon size={active ? 22 : 21} color={iconColor} strokeWidth={active ? 2.6 : 2} />
         </View>
-      ) : null}
+        {locked ? (
+          <View
+            pointerEvents="none"
+            className="absolute items-center justify-center rounded-full"
+            style={{
+              right: -1,
+              top: -1,
+              height: 16,
+              width: 16,
+              backgroundColor: isDark ? '#27272a' : '#FFFDF9',
+              borderWidth: 1,
+              borderColor: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(28,27,24,0.08)',
+            }}
+          >
+            <Lock size={9} color={accentOn(isDark)} strokeWidth={2.6} />
+          </View>
+        ) : null}
+      </View>
+
+      <Text numberOfLines={1} className="mt-1 text-[10px]" style={{ color: active ? accentOn(isDark) : mutedText(isDark), fontWeight: active ? '700' : '500' }}>
+        {tab.label}
+      </Text>
     </Pressable>
   );
 }
 
 export default function BottomTabBar({ active, onChange, lockedTabs = [] }: BottomTabBarProps) {
-  const isDark = useColorScheme() === 'dark';
+  const isDark = useIsDark();
   const locked = new Set(lockedTabs);
 
   return (
-    <BlurView pointerEvents="box-none" intensity={10} tint={isDark ? 'dark' : 'light'} className="absolute inset-x-0 -bottom-5 px-6">
+    <BlurView pointerEvents="box-none" intensity={10} tint={isDark ? 'dark' : 'light'} className="absolute inset-x-0 bottom-0 px-4">
       <View
-        className="flex-row items-center justify-between rounded-3xl bg-white px-4 dark:bg-zinc-900"
+        className="flex-row items-center justify-between rounded-3xl px-2 dark:bg-zinc-900"
         style={{
-          height: 68,
-          shadowColor: '#1e3a8a',
+          height: 74,
+          backgroundColor: isDark ? undefined : '#FFFDF9',
+          shadowColor: '#2A2419',
           shadowOffset: { width: 0, height: 8 },
-          shadowOpacity: isDark ? 0.35 : 0.12,
+          shadowOpacity: isDark ? 0.35 : 0.14,
           shadowRadius: 16,
           elevation: 12,
         }}

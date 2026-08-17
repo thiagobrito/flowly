@@ -2,6 +2,7 @@ import type { LucideIcon } from 'lucide-react-native';
 import { CalendarClock, CalendarRange, CalendarX, Sun } from 'lucide-react-native';
 
 import { APP_TIME_ZONE, localDateKey, startOfLocalDay } from '@/lib/date';
+import { ACCENT } from '@/lib/theme';
 
 import type { Task } from '../NewTask/data';
 
@@ -17,7 +18,7 @@ export type DateFilterOption = {
 export const DATE_FILTERS: DateFilterOption[] = [
   { id: 'today', label: 'Hoje', Icon: Sun, accent: '#f59e0b' },
   { id: 'tomorrow', label: 'Amanhã', Icon: CalendarClock, accent: '#8b5cf6' },
-  { id: 'thisWeek', label: 'Esta semana', Icon: CalendarRange, accent: '#3b82f6' },
+  { id: 'thisWeek', label: 'Esta semana', Icon: CalendarRange, accent: ACCENT },
   { id: 'nodate', label: 'Sem data', Icon: CalendarX, accent: '#ef4444' },
 ];
 

@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { Share2, Zap } from 'lucide-react-native';
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, Text, useColorScheme, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from 'react-native';
 import Svg, { Circle, G } from 'react-native-svg';
 
 import ModalScreen from '@/components/ModalScreen';
@@ -14,7 +14,7 @@ import { shareViewAsImage } from '@/lib/share';
 import type { SleepProfile } from '@/lib/sleepProfile';
 import { applySleepProfile, useSleepProfile } from '@/lib/sleepProfile';
 import { track } from '@/lib/telemetry';
-import { ACCENT, ENERGY, mutedText } from '@/lib/theme';
+import { ACCENT, accentTint, ENERGY, mutedText, useIsDark } from '@/lib/theme';
 import { averageDayEnergy, dayInputFor, weekDateKeys } from '@/lib/weeklyReview';
 
 type WeeklyReviewProps = {
@@ -97,7 +97,7 @@ async function fetchEnergyInput(profile: SleepProfile | null): Promise<FlowlyEng
 }
 
 export default function WeeklyReview({ visible, onClose }: WeeklyReviewProps) {
-  const isDark = useColorScheme() === 'dark';
+  const isDark = useIsDark();
   const { profile } = useSleepProfile();
 
   // Só busca com o modal aberto: a revisão é uma tela de destino, não vale
@@ -183,8 +183,8 @@ export default function WeeklyReview({ visible, onClose }: WeeklyReviewProps) {
             <View
               className="mb-3 rounded-2xl border px-4 py-3"
               style={{
-                borderColor: isDark ? 'rgba(99,102,241,0.35)' : 'rgba(99,102,241,0.25)',
-                backgroundColor: isDark ? 'rgba(99,102,241,0.12)' : 'rgba(99,102,241,0.08)',
+                borderColor: isDark ? accentTint(0.35) : accentTint(0.25),
+                backgroundColor: isDark ? accentTint(0.12) : accentTint(0.08),
               }}
             >
               <View className="flex-row items-center">

@@ -1,9 +1,10 @@
 import { AlignLeft, Clock, GoalIcon, HeartPulse, ListChecks, Timer, TrendingUp, Zap } from 'lucide-react-native';
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, useColorScheme, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 import { api } from '@/lib/network';
 import { usePendingSync } from '@/lib/pendingSync';
+import { ACCENT, useIsDark } from '@/lib/theme';
 
 import { LIFE_AREAS } from '../common';
 import { useConfigPreferences } from '../Config/hooks/useConfigPreferences';
@@ -25,7 +26,7 @@ type NewTaskProps = {
 };
 
 export default function NewTask({ task, initialName, initialFrequency, initialArea, onCreate, onSuccess }: NewTaskProps) {
-  const isDark = useColorScheme() === 'dark';
+  const isDark = useIsDark();
   const isEditing = !!task;
   const { preferences } = useConfigPreferences();
 
@@ -53,7 +54,7 @@ export default function NewTask({ task, initialName, initialFrequency, initialAr
   let buttonTextColor = isDark ? '#71717a' : '#a1a1aa';
 
   if (canSubmit) {
-    buttonBackground = isDark ? '#fafafa' : '#6366f1';
+    buttonBackground = isDark ? '#fafafa' : ACCENT;
     buttonTextColor = isDark ? '#18181b' : '#ffffff';
   }
 
@@ -108,7 +109,7 @@ export default function NewTask({ task, initialName, initialFrequency, initialAr
       <Text className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">{isEditing ? 'Editar atividade' : 'Nova atividade'}</Text>
       <Text className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">Defina o essencial para começar com clareza.</Text>
 
-      <ScrollView className="mt-5 flex-1" showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 60 }}>
+      <ScrollView className="mt-5 flex-1" showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 100 }}>
         <Text className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Nome</Text>
         <TextInput
           value={name}
@@ -137,8 +138,8 @@ export default function NewTask({ task, initialName, initialFrequency, initialAr
         </View>
 
         <View className="mt-6">
-          <SectionHeader label="Impacto esperado" Icon={TrendingUp} accent="#3b82f6" />
-          <LevelScale value={impact} onChange={setImpact} Icon={TrendingUp} accent="#3b82f6" isDark={isDark} />
+          <SectionHeader label="Impacto esperado" Icon={TrendingUp} accent={ACCENT} />
+          <LevelScale value={impact} onChange={setImpact} Icon={TrendingUp} accent={ACCENT} isDark={isDark} />
         </View>
 
         <View className="mt-6">

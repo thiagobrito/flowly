@@ -4,7 +4,7 @@ import { ScrollView, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
 
-import { ENERGY } from '@/lib/theme';
+import { ACCENT, energyText } from '@/lib/theme';
 
 import type { Task } from '../../NewTask/data';
 import { formatDuration, getLifeArea } from '../../NewTask/data';
@@ -33,7 +33,7 @@ function TaskChip({
   onDragMove: (x: number, y: number) => void;
   onDragEnd: (task: Task, x: number, y: number) => void;
 }) {
-  const accent = getLifeArea(task.goal.name)?.accent ?? '#6366f1';
+  const accent = getLifeArea(task.goal.name)?.accent ?? ACCENT;
   const background = isDark ? 'rgba(39,39,42,0.7)' : 'rgba(255,255,255,0.8)';
   const titleColor = isDark ? '#fafafa' : '#18181b';
   const metaColor = isDark ? '#a1a1aa' : '#71717a';
@@ -72,12 +72,12 @@ function TaskChip({
             </Text>
           </View>
           <View className="flex flex-row">
-            <Zap size={13} color={ENERGY.high} style={{ marginRight: 6 }} />
-            <LevelDots value={task.energy || 0} accent={ENERGY.high} isDark={isDark} />
+            <Zap size={13} color={energyText('high', isDark)} style={{ marginRight: 6 }} />
+            <LevelDots value={task.energy || 0} accent={energyText('high', isDark)} isDark={isDark} />
           </View>
           <View className="flex flex-row">
-            <TrendingUp size={13} color="#3b82f6" style={{ marginRight: 6 }} />
-            <LevelDots value={task.impact || 0} accent="#3b82f6" isDark={isDark} />
+            <TrendingUp size={13} color={ACCENT} style={{ marginRight: 6 }} />
+            <LevelDots value={task.impact || 0} accent={ACCENT} isDark={isDark} />
           </View>
         </View>
       </View>

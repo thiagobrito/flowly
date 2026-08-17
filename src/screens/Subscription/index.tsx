@@ -5,13 +5,14 @@ import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-nati
 import FloatingCloseButton from '@/components/FloatingCloseButton';
 import { useFeatureFlags } from '@/lib/featureFlags';
 import type { SubscriptionPlanId } from '@/lib/subscription';
-import { SUBSCRIPTION_PLANS } from '@/lib/subscription';
 import { track } from '@/lib/telemetry';
+import { ACCENT, ACCENT_LIGHT, BACKGROUND } from '@/lib/theme';
 
 import IllustrationHeader from './components/IllustrationHeader';
 import LegalLinks from './components/LegalLinks';
 import PlanToggle from './components/PlanToggle';
 import TrialTimeline from './components/TrialTimeline';
+import { subscriptionDetailsLine } from './planCopy';
 import { usePurchaseFlow } from './usePurchaseFlow';
 
 type SubscriptionProps = {
@@ -22,7 +23,7 @@ type SubscriptionProps = {
 };
 
 function Background() {
-  return <LinearGradient colors={['#0b1220', '#070b14', '#000000']} locations={[0, 0.45, 1]} style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 }} />;
+  return <LinearGradient colors={BACKGROUND.dark} locations={[0, 0.45, 1]} style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 }} />;
 }
 
 export default function Subscription({ onClose, onDevBypass, source = 'onboarding' }: SubscriptionProps) {
@@ -35,9 +36,6 @@ export default function Subscription({ onClose, onDevBypass, source = 'onboardin
   useEffect(() => {
     track('paywall_viewed', { step_id: 'default', source });
   }, [source]);
-
-  const yearly = SUBSCRIPTION_PLANS.flowly_yearly;
-  const monthly = SUBSCRIPTION_PLANS.flowly_montly;
 
   const introInfo = introFor(selectedPlan);
   const showFreeTrial = showsFreeTrialFor(selectedPlan);
@@ -54,12 +52,10 @@ export default function Subscription({ onClose, onDevBypass, source = 'onboardin
     return `${trialPrefix || 'Assine por '}${monthlyPriceLabel}/mês`;
   }, [introInfo, monthlyPriceLabel, selectedPlan, showFreeTrial, yearlyPerMonth, yearlyPriceLabel]);
 
-  const planDetails = useMemo(() => {
-    if (selectedPlan === 'flowly_yearly') {
-      return `Flowly Premium ${yearly.title} · 12 meses · ${yearlyPriceLabel}/ano (${yearlyPerMonth}/mês)`;
-    }
-    return `Flowly Premium ${monthly.title} · 1 mês · ${monthlyPriceLabel}/mês`;
-  }, [monthly.title, monthlyPriceLabel, selectedPlan, yearly.title, yearlyPerMonth, yearlyPriceLabel]);
+  const planDetails = useMemo(
+    () => subscriptionDetailsLine(selectedPlan, selectedPlan === 'flowly_yearly' ? yearlyPriceLabel : monthlyPriceLabel, yearlyPerMonth),
+    [monthlyPriceLabel, selectedPlan, yearlyPerMonth, yearlyPriceLabel],
+  );
 
   const ctaLabel = showFreeTrial ? 'Começar teste grátis' : 'Assinar agora';
   const headerTitle = showFreeTrial ? 'Como o teste funciona' : 'Desbloqueie o Flowly Premium';
@@ -123,7 +119,7 @@ export default function Subscription({ onClose, onDevBypass, source = 'onboardin
 
         <Pressable onPress={handleSubscribe} disabled={busy} accessibilityRole="button" className="active:opacity-90" style={{ opacity: busy ? 0.7 : 1 }}>
           <LinearGradient
-            colors={['#3b82f6', '#6366f1']}
+            colors={[ACCENT_LIGHT, ACCENT]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={{
@@ -131,7 +127,7 @@ export default function Subscription({ onClose, onDevBypass, source = 'onboardin
               borderRadius: 999,
               alignItems: 'center',
               justifyContent: 'center',
-              shadowColor: '#6366f1',
+              shadowColor: ACCENT,
               shadowOffset: { width: 0, height: 6 },
               shadowOpacity: 0.35,
               shadowRadius: 14,

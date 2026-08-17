@@ -1,6 +1,8 @@
 import { Minus, TrendingDown, TrendingUp } from 'lucide-react-native';
 import { Text, View } from 'react-native';
 
+import { ENERGY } from '@/lib/theme';
+
 import type { ExecutionTrend } from '../data';
 import { TREND_LABELS } from '../data';
 
@@ -11,9 +13,9 @@ type MomentumCardProps = {
 };
 
 const TREND_CONFIG = {
-  improving: { Icon: TrendingUp, color: '#22c55e' },
-  stable: { Icon: Minus, color: '#eab308' },
-  declining: { Icon: TrendingDown, color: '#ef4444' },
+  improving: { Icon: TrendingUp, color: ENERGY.high },
+  stable: { Icon: Minus, color: ENERGY.medium },
+  declining: { Icon: TrendingDown, color: ENERGY.low },
 } as const;
 
 function TrendBadge({ trend }: { trend: ExecutionTrend }) {

@@ -11,6 +11,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useColorScheme } from 'nativewind';
 import { useCallback, useEffect, useSyncExternalStore } from 'react';
+import { Platform, useColorScheme as useSystemColorScheme } from 'react-native';
 
 export type ThemeMode = 'system' | 'light' | 'dark';
 
@@ -43,9 +44,25 @@ async function hydrate(): Promise<void> {
   }
 }
 
+/**
+ * No web as variantes `dark:` viram CSS preso à classe do `<html>`
+ * (`darkMode: 'class'` no Tailwind), e o NativeWind só escreve essa classe
+ * quando o modo é explícito. Com `system`, ele apaga a classe e passa a
+ * resolver a cor pelo esquema do aparelho — as duas metades do estilo
+ * discordam, e o app fica com superfície escura e texto escuro.
+ *
+ * No nativo não existe classe: o próprio NativeWind resolve `dark:` pelo
+ * esquema em vigor, então isto é um ajuste só do web.
+ */
+function syncWebDarkClass(effective: 'light' | 'dark'): void {
+  if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+  document.documentElement.classList.toggle('dark', effective === 'dark');
+}
+
 /** Modo atual e setter. Aplica o modo no NativeWind sempre que ele muda. */
 export function useThemePreference() {
   const { setColorScheme } = useColorScheme();
+  const systemScheme = useSystemColorScheme();
   const current = useSyncExternalStore(subscribe, () => mode);
 
   useEffect(() => {
@@ -56,7 +73,8 @@ export function useThemePreference() {
 
   useEffect(() => {
     setColorScheme(current);
-  }, [current, setColorScheme]);
+    syncWebDarkClass(current === 'system' ? (systemScheme ?? 'light') : current);
+  }, [current, systemScheme, setColorScheme]);
 
   const setMode = useCallback((next: ThemeMode) => {
     emit(next);

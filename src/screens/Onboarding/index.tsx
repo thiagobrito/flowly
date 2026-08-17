@@ -18,7 +18,6 @@ import Subscription from '@/screens/Subscription';
 import ActivitiesStep, { type OnboardingActivity } from './components/ActivitiesStep';
 import Background from './components/Background';
 import CompletedStep from './components/CompletedStep';
-import EnergyPreviewStep from './components/EnergyPreviewStep';
 import GoalsStep from './components/GoalsStep';
 import IntroStep from './components/IntroStep';
 import LanguageStep from './components/LanguageStep';
@@ -163,8 +162,6 @@ export default function Onboarding({ isDark, onComplete }: OnboardingProps) {
         return <MicrophoneStep step={step} isDark={isDark} onNext={goNext} />;
       case 'sleepProfile':
         return <SleepProfileStep step={step} isDark={isDark} onNext={goNext} />;
-      case 'energyPreview':
-        return <EnergyPreviewStep step={step} isDark={isDark} onNext={goNext} />;
       case 'payment':
         return <PaymentStep step={step} isDark={isDark} onOpenPaywall={() => setShowPaywall(true)} onSkip={skipStep} />;
       case 'completed':

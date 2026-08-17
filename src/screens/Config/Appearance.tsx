@@ -1,7 +1,7 @@
 import { Monitor, Moon, Sun } from 'lucide-react-native';
 import { Pressable, Text, View } from 'react-native';
 
-import { ACCENT, mutedText, type ThemeMode, useThemePreference } from '@/lib/theme';
+import { accentOn, accentTint, mutedText, type ThemeMode, useThemePreference } from '@/lib/theme';
 
 import Card from './components/Card';
 import SectionTitle from './components/SectionTitle';
@@ -21,6 +21,9 @@ const OPTIONS: Option[] = [
 export default function AppearanceSection({ isDark }: { isDark: boolean }) {
   const { mode, setMode } = useThemePreference();
   const inactiveColor = mutedText(isDark);
+  // O verde escuro do acento some contra o fundo escuro — justamente na tela
+  // onde se escolhe o modo escuro.
+  const activeColor = accentOn(isDark);
 
   return (
     <>
@@ -38,13 +41,13 @@ export default function AppearanceSection({ isDark }: { isDark: boolean }) {
                 accessibilityLabel={label}
                 className="flex-1 items-center justify-center rounded-xl py-3 active:opacity-80"
                 style={{
-                  backgroundColor: selected ? `${ACCENT}1a` : 'transparent',
+                  backgroundColor: selected ? accentTint(isDark ? 0.2 : 0.1) : 'transparent',
                   borderWidth: 1,
-                  borderColor: selected ? ACCENT : 'transparent',
+                  borderColor: selected ? activeColor : 'transparent',
                 }}
               >
-                <Icon size={22} color={selected ? ACCENT : inactiveColor} />
-                <Text className="mt-1.5 text-sm font-medium" style={{ color: selected ? ACCENT : inactiveColor }}>
+                <Icon size={22} color={selected ? activeColor : inactiveColor} />
+                <Text className="mt-1.5 text-sm font-medium" style={{ color: selected ? activeColor : inactiveColor }}>
                   {label}
                 </Text>
               </Pressable>

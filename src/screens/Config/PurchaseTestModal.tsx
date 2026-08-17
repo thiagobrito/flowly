@@ -1,6 +1,8 @@
 import { Crown, X } from 'lucide-react-native';
 import { ActivityIndicator, Modal, Pressable, Text, View } from 'react-native';
 
+import { ACCENT } from '@/lib/theme';
+
 type PurchaseTestModalProps = {
   visible: boolean;
   busy: boolean;
@@ -52,7 +54,7 @@ export default function PurchaseTestModal({ visible, busy, isDark, onClose, onSh
 
           <View className="mb-4 flex-row items-center justify-between">
             <Text className="flex-1 pr-3 text-lg font-bold text-zinc-900 dark:text-zinc-50">Testar compra</Text>
-            {busy ? <ActivityIndicator color={isDark ? '#e4e4e7' : '#6366f1'} /> : null}
+            {busy ? <ActivityIndicator color={isDark ? '#e4e4e7' : ACCENT} /> : null}
             <Pressable
               onPress={onClose}
               accessibilityRole="button"

@@ -6,7 +6,10 @@ import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-na
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { OfferStep, SubscriptionPlanId } from '@/lib/subscription';
+import { ACCENT, ACCENT_LIGHT, accentTint } from '@/lib/theme';
 
+import LegalLinks from '../components/LegalLinks';
+import { subscriptionDetailsLine } from '../planCopy';
 import type { PurchaseFlow } from '../usePurchaseFlow';
 import Countdown from './Countdown';
 
@@ -68,8 +71,8 @@ export default function DownsellSheet({ step, flow, basePriceLabel, onSubscribe,
             </View>
 
             <View className="mt-5 flex-row items-center justify-center">
-              <View className="size-12 items-center justify-center rounded-full" style={{ backgroundColor: 'rgba(99,102,241,0.15)' }}>
-                <Flame size={24} color="#6366f1" />
+              <View className="size-12 items-center justify-center rounded-full" style={{ backgroundColor: accentTint(0.15) }}>
+                <Flame size={24} color={ACCENT} />
               </View>
               <Text className="ml-3 text-4xl font-extrabold" style={{ color: titleColor }}>
                 {step.discountLabel}
@@ -83,7 +86,7 @@ export default function DownsellSheet({ step, flow, basePriceLabel, onSubscribe,
               {step.subtitle}
             </Text>
 
-            <View className="mt-5 flex-row items-center justify-between rounded-2xl border px-4 py-3" style={{ borderColor: '#6366f1' }}>
+            <View className="mt-5 flex-row items-center justify-between rounded-2xl border px-4 py-3" style={{ borderColor: ACCENT }}>
               <Text className="text-xs font-bold tracking-wide" style={{ color: mutedColor }}>
                 12 MESES
               </Text>
@@ -104,13 +107,13 @@ export default function DownsellSheet({ step, flow, basePriceLabel, onSubscribe,
             </View>
 
             <Pressable onPress={() => onSubscribe(step.plan)} disabled={ctaDisabled} accessibilityRole="button" className="mt-5 active:opacity-90" style={{ opacity: ctaDisabled ? 0.7 : 1 }}>
-              <LinearGradient colors={['#3b82f6', '#6366f1']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ height: 52, borderRadius: 999, alignItems: 'center', justifyContent: 'center' }}>
+              <LinearGradient colors={[ACCENT_LIGHT, ACCENT]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ height: 52, borderRadius: 999, alignItems: 'center', justifyContent: 'center' }}>
                 {flow.busy || !flow.offeringReady ? <ActivityIndicator color="#ffffff" /> : <Text className="text-base font-bold uppercase text-white">{step.ctaLabel}</Text>}
               </LinearGradient>
             </Pressable>
 
             <Text className="mt-3 text-center text-xs leading-4" style={{ color: mutedColor }}>
-              Total anual: {priceLabel} cobrados hoje. Renova todo ano. Cancele quando quiser.
+              {subscriptionDetailsLine(step.plan, priceLabel, perMonthLabel)}. Cobrados hoje. Renova todo ano. Cancele quando quiser.
             </Text>
 
             <Pressable onPress={onDismiss} disabled={flow.busy} accessibilityRole="button" className="mt-3 active:opacity-70">
@@ -122,6 +125,8 @@ export default function DownsellSheet({ step, flow, basePriceLabel, onSubscribe,
             <Text className="mt-3 text-center text-[11px] leading-4" style={{ color: mutedColor }}>
               Com o desconto, o período de teste grátis não se aplica: a cobrança começa hoje pela App Store ou Google Play.
             </Text>
+
+            <LegalLinks isDark={isDark} />
           </View>
         </SafeAreaView>
       </Animated.View>

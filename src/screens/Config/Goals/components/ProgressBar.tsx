@@ -1,5 +1,7 @@
 import { View } from 'react-native';
 
+import { ACCENT } from '@/lib/theme';
+
 type ProgressBarProps = {
   progress: number;
   isDark: boolean;
@@ -7,7 +9,7 @@ type ProgressBarProps = {
   height?: number;
 };
 
-export default function ProgressBar({ progress, isDark, color = '#6366f1', height = 6 }: ProgressBarProps) {
+export default function ProgressBar({ progress, isDark, color = ACCENT, height = 6 }: ProgressBarProps) {
   const clamped = Math.min(100, Math.max(0, progress));
 
   return (

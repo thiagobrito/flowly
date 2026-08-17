@@ -1,6 +1,9 @@
 import { ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react-native';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 
+import DisplayText from '@/components/DisplayText';
+import { ACCENT } from '@/lib/theme';
+
 export type CalendarViewMode = 'day' | 'week';
 
 type CalendarHeaderBarProps = {
@@ -20,10 +23,12 @@ export default function CalendarHeaderBar({ dateLabel, isDark, onPrev, onNext, o
   return (
     <View className="mb-2">
       <View className="flex-row items-center gap-2">
-        <Text className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">Calendário</Text>
+        <DisplayText weight="bold" className="text-[22px] leading-7 text-zinc-900 dark:text-zinc-50">
+          Calendário
+        </DisplayText>
         {showSyncButton ? (
           <Pressable onPress={onSync} disabled={syncPending} accessibilityRole="button" accessibilityLabel="Sincronizar com Google Calendar" className="size-9 items-center justify-center rounded-full active:opacity-60">
-            {syncPending ? <ActivityIndicator size="small" color={isDark ? '#e4e4e7' : '#3b82f6'} /> : <RefreshCw size={20} color={iconColor} />}
+            {syncPending ? <ActivityIndicator size="small" color={isDark ? '#e4e4e7' : ACCENT} /> : <RefreshCw size={20} color={iconColor} />}
           </Pressable>
         ) : null}
       </View>

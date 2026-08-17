@@ -1,6 +1,8 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { Text, View } from 'react-native';
 
+import { ACCENT, ACCENT_LIGHT } from '@/lib/theme';
+
 import Logo from '../../../../assets/logo.svg';
 
 type AuthHeaderProps = {
@@ -10,7 +12,7 @@ type AuthHeaderProps = {
 
 export default function AuthHeader({ title, subtitle }: AuthHeaderProps) {
   return (
-    <LinearGradient colors={['#3b82f6', '#6366f1']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ borderBottomLeftRadius: 32, borderBottomRightRadius: 32, height: 300 }}>
+    <LinearGradient colors={[ACCENT_LIGHT, ACCENT]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ borderBottomLeftRadius: 32, borderBottomRightRadius: 32, height: 300 }}>
       <View className="items-center px-6 pb-14 pt-20">
         <View className="flex-row items-center">
           <Logo width={72} height={72} />

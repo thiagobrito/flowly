@@ -1,15 +1,16 @@
 import { Redirect, useRouter } from 'expo-router';
-import { ActivityIndicator, useColorScheme, View } from 'react-native';
+import { ActivityIndicator, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useSession } from '@/lib/auth';
 import { useOnboarding } from '@/lib/onboarding';
+import { useIsDark } from '@/lib/theme';
 import Onboarding from '@/screens/Onboarding';
 import Background from '@/screens/Onboarding/components/Background';
 
 export default function OnboardingRoute() {
   const router = useRouter();
-  const isDark = useColorScheme() === 'dark';
+  const isDark = useIsDark();
   const { isHydrated, isAuthenticated } = useSession();
   const { markCompleted } = useOnboarding();
 

@@ -1,6 +1,8 @@
 import { Star } from 'lucide-react-native';
 import { Text, View } from 'react-native';
 
+import { ACCENT, accentTint } from '@/lib/theme';
+
 import type { Goal } from '../data';
 import ProgressBar from './ProgressBar';
 
@@ -35,15 +37,15 @@ export default function CycleCard({ currentWeek, totalWeeks, mainGoal, secondary
     <View
       className="overflow-hidden rounded-2xl border"
       style={{
-        borderColor: isDark ? 'rgba(99,102,241,0.35)' : 'rgba(99,102,241,0.25)',
-        backgroundColor: isDark ? 'rgba(99,102,241,0.08)' : 'rgba(99,102,241,0.05)',
+        borderColor: isDark ? accentTint(0.35) : accentTint(0.25),
+        backgroundColor: isDark ? accentTint(0.08) : accentTint(0.05),
       }}
     >
       {/* Progresso do ciclo */}
       <View className="p-4">
         <View className="flex-row items-baseline justify-between">
           <Text className="text-base font-semibold text-zinc-900 dark:text-zinc-50">Ciclo Atual</Text>
-          <Text className="text-sm font-semibold" style={{ color: '#6366f1' }}>
+          <Text className="text-sm font-semibold" style={{ color: ACCENT }}>
             Semana {currentWeek} de {totalWeeks}
           </Text>
         </View>
@@ -66,7 +68,7 @@ export default function CycleCard({ currentWeek, totalWeeks, mainGoal, secondary
               {mainGoal.name}
             </Text>
           </View>
-          <Text className="my-auto flex self-center text-xl font-semibold" style={{ color: '#6366f1' }}>
+          <Text className="my-auto flex self-center text-xl font-semibold" style={{ color: ACCENT }}>
             {mainGoal.points} pontos
           </Text>
         </View>
@@ -83,7 +85,7 @@ export default function CycleCard({ currentWeek, totalWeeks, mainGoal, secondary
 
         <Text className="mt-3 text-base leading-6 text-zinc-700 dark:text-zinc-300">{mainGoal.description}</Text>
 
-        {/* <Pressable onPress={() => onViewGoal(mainGoal)} accessibilityRole="button" className="mt-3.5 items-center rounded-xl py-2.5 active:opacity-85" style={{ backgroundColor: '#6366f1' }}>
+        {/* <Pressable onPress={() => onViewGoal(mainGoal)} accessibilityRole="button" className="mt-3.5 items-center rounded-xl py-2.5 active:opacity-85" style={{ backgroundColor: ACCENT }}>
           <Text className="text-sm font-semibold text-white">Ver Meta</Text>
         </Pressable>
         */}

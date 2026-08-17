@@ -3,6 +3,7 @@ import { Pressable, Text, View } from 'react-native';
 
 import BottomSheetModal from '@/components/BottomSheetModal';
 import { ENERGY_MODE_OPTIONS, type EnergyMode } from '@/lib/energyMode';
+import { ACCENT, accentTint } from '@/lib/theme';
 
 type EnergyModeSheetProps = {
   visible: boolean;
@@ -23,7 +24,7 @@ export default function EnergyModeSheet({ visible, isDark, currentMode, engineSc
   const iconColor = isDark ? '#e4e4e7' : '#27272a';
   const muted = isDark ? '#a1a1aa' : '#71717a';
   const idleBorder = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)';
-  const selectedBackground = isDark ? 'rgba(99,102,241,0.16)' : 'rgba(99,102,241,0.08)';
+  const selectedBackground = isDark ? accentTint(0.16) : accentTint(0.08);
 
   return (
     <BottomSheetModal visible={visible} onClose={onClose} isDark={isDark}>
@@ -46,12 +47,12 @@ export default function EnergyModeSheet({ visible, isDark, currentMode, engineSc
             accessibilityLabel={option.label}
             className="mb-2 flex-row items-center rounded-2xl border px-4 py-3 active:opacity-80"
             style={{
-              borderColor: selected ? 'rgba(99,102,241,0.55)' : idleBorder,
+              borderColor: selected ? accentTint(0.55) : idleBorder,
               backgroundColor: selected ? selectedBackground : 'transparent',
             }}
           >
             <View className="mr-3 size-10 items-center justify-center rounded-full bg-white/40 dark:bg-white/10">
-              <Icon size={18} color={selected ? '#6366f1' : iconColor} />
+              <Icon size={18} color={selected ? ACCENT : iconColor} />
             </View>
             <View className="flex-1">
               <Text className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">{option.label}</Text>
@@ -59,7 +60,7 @@ export default function EnergyModeSheet({ visible, isDark, currentMode, engineSc
                 {option.description}
               </Text>
             </View>
-            {selected ? <Check size={18} color="#6366f1" /> : null}
+            {selected ? <Check size={18} color={ACCENT} /> : null}
           </Pressable>
         );
       })}

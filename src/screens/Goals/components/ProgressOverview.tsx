@@ -1,6 +1,8 @@
 import { Text, View } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 
+import { currentCycleWeek } from '../data';
+
 type ProgressOverviewProps = {
   progress: number;
   daysRemaining: number;
@@ -48,7 +50,9 @@ export default function ProgressOverview({ progress, daysRemaining, weeksComplet
       <ProgressRing progress={progress} isDark={isDark} accent={accent} />
       <View className="flex-1 gap-3">
         <Stat value={`${daysRemaining}`} label="Dias restantes" />
-        <Stat value={`${weeksCompleted} de ${totalWeeks}`} label="Semanas concluídas" />
+        {/* Mesma leitura do cartão de destaque: onde estou no ciclo, e não
+            quantas semanas ficaram para trás. */}
+        <Stat value={`${currentCycleWeek({ weeksCompleted, totalWeeks })} de ${totalWeeks}`} label="Semana do ciclo" />
       </View>
 
       <View className="flex-1 items-center justify-center rounded-full bg-green-400/20 p-2 dark:bg-green-400/15">

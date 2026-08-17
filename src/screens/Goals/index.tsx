@@ -1,15 +1,19 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus } from 'lucide-react-native';
 import { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, Text, useColorScheme, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 
+import DisplayText from '@/components/DisplayText';
 import { api } from '@/lib/network';
 import { queryKeys } from '@/lib/query';
+import { ACCENT, accentOn, mutedText, useIsDark } from '@/lib/theme';
 import NewGoals from '@/screens/NewGoals';
 
 import EmptyState from './components/EmptyState';
 import GoalCard from './components/GoalCard';
 import GoalEditor from './components/GoalEditor';
+import GoalHeroCard from './components/GoalHeroCard';
+import GoalRow from './components/GoalRow';
 import type { Goal, GoalSetup } from './data';
 import { goalSetupToGoals, normalizeGoal, secondarySetupToGoal } from './data';
 
@@ -21,13 +25,23 @@ async function fetchGoals(): Promise<Goal[]> {
 type EditorState = { goal: Goal; isNew: boolean } | null;
 
 export default function Goals() {
-  const isDark = useColorScheme() === 'dark';
+  const isDark = useIsDark();
   const queryClient = useQueryClient();
   const goalsQuery = useQuery<Goal[]>({ queryKey: queryKeys.goals(), queryFn: fetchGoals });
   const goals = useMemo(() => goalsQuery.data ?? [], [goalsQuery.data]);
   const [editor, setEditor] = useState<EditorState>(null);
   const [setupMode, setSetupMode] = useState(false);
   const [addSecondaryMode, setAddSecondaryMode] = useState(false);
+  /**
+   * Meta com o card completo aberto. Uma de cada vez: a lista existe para dar a
+   * visão do ciclo, e com dois cards abertos ela vira scroll infinito de novo.
+   */
+  const [openId, setOpenId] = useState<string | null>(null);
+
+  const primary = useMemo(() => goals.find((goal) => goal.type === 'primary') ?? goals[0], [goals]);
+  const others = useMemo(() => goals.filter((goal) => goal.id !== primary?.id), [goals, primary]);
+
+  const toggleGoal = useCallback((id: string) => setOpenId((current) => (current === id ? null : id)), []);
 
   const setGoalsCache = useCallback(
     (updater: (prev: Goal[]) => Goal[]) => {
@@ -54,14 +68,14 @@ export default function Goals() {
 
   const handleAddSecondaryComplete = useCallback(
     (setup: GoalSetup) => {
-      const primary = goals.find((goal) => goal.type === 'primary');
+      const parent = goals.find((goal) => goal.type === 'primary');
       const secondary = setup.secondaryGoals[0];
-      if (!primary || !secondary) {
+      if (!parent || !secondary) {
         setAddSecondaryMode(false);
         return;
       }
 
-      setGoalsCache((prev) => [...prev, secondarySetupToGoal(secondary, primary)]);
+      setGoalsCache((prev) => [...prev, secondarySetupToGoal(secondary, parent)]);
       queryClient.invalidateQueries({ queryKey: queryKeys.goals() });
       setAddSecondaryMode(false);
     },
@@ -92,7 +106,7 @@ export default function Goals() {
   if (goalsQuery.isLoading) {
     return (
       <View className="flex-1 items-center justify-center">
-        <ActivityIndicator color={isDark ? '#e4e4e7' : '#3b82f6'} />
+        <ActivityIndicator color={isDark ? '#e4e4e7' : ACCENT} />
       </View>
     );
   }
@@ -120,23 +134,43 @@ export default function Goals() {
     <View className="flex-1">
       <View className="flex-row items-start justify-between pt-2">
         <View className="flex-1 pr-3">
-          <Text className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">Metas</Text>
-          <Text className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">Seu centro de comando: transforme visão em progresso visível.</Text>
+          <DisplayText weight="bold" className="text-[22px] leading-7 text-zinc-900 dark:text-zinc-50">
+            Metas
+          </DisplayText>
+          <Text className="mt-1 text-sm" style={{ color: mutedText(isDark) }}>
+            Seu centro de comando: transforme visão em progresso visível.
+          </Text>
         </View>
         <Pressable
           onPress={handleAddSecondary}
           accessibilityRole="button"
           accessibilityLabel="Adicionar meta secundária"
           className="size-11 items-center justify-center rounded-full active:opacity-80"
-          style={{ backgroundColor: isDark ? 'rgba(59,130,246,0.2)' : 'rgba(59,130,246,0.12)' }}
+          style={{ backgroundColor: `${ACCENT}${isDark ? '33' : '1f'}` }}
         >
-          <Plus size={22} color="#3b82f6" strokeWidth={2.6} />
+          <Plus size={22} color={accentOn(isDark)} strokeWidth={2.6} />
         </Pressable>
       </View>
 
-      <ScrollView className="mt-4 flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 110, gap: 16 }}>
-        {goals.map((goal) => (
-          <GoalCard key={goal.id} goal={goal} isDark={isDark} onEdit={() => handleEdit(goal)} />
+      <ScrollView className="mt-4 flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 110, gap: 12 }}>
+        {primary ? (
+          <>
+            <GoalHeroCard goal={primary} isDark={isDark} expanded={openId === primary.id} onToggle={() => toggleGoal(primary.id)} />
+            {openId === primary.id ? <GoalCard goal={primary} isDark={isDark} onEdit={() => handleEdit(primary)} /> : null}
+          </>
+        ) : null}
+
+        {others.length > 0 ? (
+          <Text className="mt-2 text-xs font-semibold uppercase tracking-wide" style={{ color: mutedText(isDark) }}>
+            Outras metas
+          </Text>
+        ) : null}
+
+        {others.map((goal) => (
+          <View key={goal.id} style={{ gap: 12 }}>
+            <GoalRow goal={goal} isDark={isDark} expanded={openId === goal.id} onToggle={() => toggleGoal(goal.id)} />
+            {openId === goal.id ? <GoalCard goal={goal} isDark={isDark} onEdit={() => handleEdit(goal)} /> : null}
+          </View>
         ))}
       </ScrollView>
     </View>

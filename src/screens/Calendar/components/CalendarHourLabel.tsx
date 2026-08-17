@@ -2,7 +2,7 @@ import { Zap } from 'lucide-react-native';
 import type { TextStyle } from 'react-native';
 import { Text, View } from 'react-native';
 
-import { ENERGY } from '@/lib/theme';
+import { energyText } from '@/lib/theme';
 
 import LevelDots from '../../Tasks/components/LevelDots';
 
@@ -22,8 +22,8 @@ export default function CalendarHourLabel({ hourStr, style, level, isDark }: Cal
     <View className="flex min-h-10 flex-col self-end">
       <Text style={style}>{hourStr}</Text>
       <View className="mt-2 flex flex-row gap-1">
-        <Zap size={12} color={ENERGY.high} />
-        <LevelDots value={level} accent={ENERGY.high} isDark={isDark} />
+        <Zap size={12} color={energyText('high', isDark)} />
+        <LevelDots value={level} accent={energyText('high', isDark)} isDark={isDark} />
       </View>
     </View>
   );

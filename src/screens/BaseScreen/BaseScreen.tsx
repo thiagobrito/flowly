@@ -1,8 +1,10 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { useCallback, useState } from 'react';
-import { useColorScheme, View } from 'react-native';
+import { View } from 'react-native';
 import { GestureDetector } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+import { BACKGROUND, useIsDark } from '@/lib/theme';
 
 import { CARD_HEIGHT, PEEK } from './constants';
 import { DeckCard } from './DeckCard';
@@ -14,8 +16,7 @@ import { useDeckGesture } from './useDeckGesture';
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
 
 export default function TodayFocusScreen<T>({ items, initialIndex = 0, keyExtractor, renderItem, onIndexChange }: TodayFocusScreenProps<T>) {
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
+  const isDark = useIsDark();
 
   const lastIndex = Math.max(0, items.length - 1);
   const startIndex = clamp(initialIndex, 0, lastIndex);
@@ -39,7 +40,7 @@ export default function TodayFocusScreen<T>({ items, initialIndex = 0, keyExtrac
 
   return (
     <View className="flex-1 bg-white dark:bg-black">
-      <LinearGradient colors={isDark ? ['#0b1220', '#070b14', '#000000'] : ['#cfe3f5', '#eaf1f8', '#f7f8fa']} locations={[0, 0.45, 1]} style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 }} />
+      <LinearGradient colors={isDark ? BACKGROUND.dark : BACKGROUND.light} locations={[0, 0.45, 1]} style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 }} />
 
       <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
         <View className="flex-1 px-3">

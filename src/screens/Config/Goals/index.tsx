@@ -1,6 +1,8 @@
 import { ChevronLeft, RefreshCw } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, Text, useColorScheme, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
+
+import { ACCENT, useIsDark } from '@/lib/theme';
 
 import SectionTitle from '../components/SectionTitle';
 import CycleCard from './components/CycleCard';
@@ -14,7 +16,7 @@ type GoalsProps = {
 };
 
 export default function Goals({ onBack }: GoalsProps) {
-  const isDark = useColorScheme() === 'dark';
+  const isDark = useIsDark();
   const emptyGoals = useMemo(() => createEmptyGoalsData(), []);
 
   const [loading, setLoading] = useState(true);
@@ -84,7 +86,7 @@ export default function Goals({ onBack }: GoalsProps) {
   if (loading) {
     return (
       <View className="flex-1 items-center justify-center">
-        <ActivityIndicator color={isDark ? '#e4e4e7' : '#3b82f6'} />
+        <ActivityIndicator color={isDark ? '#e4e4e7' : ACCENT} />
       </View>
     );
   }

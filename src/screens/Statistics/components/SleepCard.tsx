@@ -7,8 +7,8 @@ import TimeStepper from '@/components/TimeStepper';
 import { localDateKey } from '@/lib/date';
 import type { UseEnergyScoreResult } from '@/lib/energy';
 import { DEFAULT_BED_TIME, DEFAULT_WAKE_TIME, useSleepProfile } from '@/lib/sleepProfile';
+import { ACCENT, ACCENT_LIGHT, accentOn, accentTint } from '@/lib/theme';
 
-const ACCENT = '#8b5cf6';
 const IDEAL_SLEEP_HOURS = 8;
 
 function formatHours(hours: number): string {
@@ -79,9 +79,9 @@ function SleepEditModal({ visible, isDark, initialWake, initialBed, onSave, onCl
 
 function SleepTile({ Icon, label, value, isDark }: { Icon: ComponentType<{ size?: number; color?: string }>; label: string; value: string | null; isDark: boolean }) {
   return (
-    <View className="min-w-[47%] flex-1 rounded-xl bg-violet-500/5 px-3 py-2.5 dark:bg-white/5">
+    <View className="min-w-[47%] flex-1 rounded-xl px-3 py-2.5" style={{ backgroundColor: accentTint(isDark ? 0.1 : 0.06) }}>
       <View className="flex-row items-center gap-1.5">
-        <Icon size={15} color={isDark ? '#c4b5fd' : ACCENT} />
+        <Icon size={15} color={isDark ? ACCENT_LIGHT : ACCENT} />
         <Text className="text-xs font-medium text-zinc-500 dark:text-zinc-400">{label}</Text>
       </View>
       <Text className={`mt-1 text-base font-bold ${value ? 'text-zinc-900 dark:text-zinc-50' : 'text-zinc-400 dark:text-zinc-500'}`}>{value ?? 'Indisponível'}</Text>
@@ -101,7 +101,7 @@ export default function SleepCard({ energyInfo, isDark, selectedDay, autoOpenEdi
   }, [autoOpenEdit, onAutoOpenHandled]);
 
   const cardShadow = {
-    shadowColor: '#1e3a8a',
+    shadowColor: '#2A2419',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: isDark ? 0.25 : 0.08,
     shadowRadius: 12,
@@ -124,16 +124,23 @@ export default function SleepCard({ energyInfo, isDark, selectedDay, autoOpenEdi
 
   const header = (
     <View className="flex-row items-center gap-2.5">
-      <View className="size-9 items-center justify-center rounded-full bg-violet-500/15">
-        <MoonStar size={18} color={isDark ? '#c4b5fd' : ACCENT} />
+      <View className="size-9 items-center justify-center rounded-full" style={{ backgroundColor: accentTint(isDark ? 0.22 : 0.12) }}>
+        <MoonStar size={18} color={isDark ? ACCENT_LIGHT : ACCENT} />
       </View>
       <Text className="text-lg font-semibold text-zinc-700 dark:text-zinc-200">Sono</Text>
     </View>
   );
 
   const editButton = (
-    <Pressable onPress={() => setEditing(true)} accessibilityRole="button" accessibilityLabel="Ajustar horários de sono" hitSlop={8} className="size-8 items-center justify-center rounded-full bg-violet-500/10 active:opacity-70 dark:bg-white/10">
-      <Pencil size={14} color={isDark ? '#c4b5fd' : ACCENT} />
+    <Pressable
+      onPress={() => setEditing(true)}
+      accessibilityRole="button"
+      accessibilityLabel="Ajustar horários de sono"
+      hitSlop={8}
+      className="size-8 items-center justify-center rounded-full active:opacity-70"
+      style={{ backgroundColor: accentTint(isDark ? 0.18 : 0.1) }}
+    >
+      <Pencil size={14} color={isDark ? ACCENT_LIGHT : ACCENT} />
     </Pressable>
   );
 
@@ -142,7 +149,7 @@ export default function SleepCard({ energyInfo, isDark, selectedDay, autoOpenEdi
       <View className="rounded-2xl bg-white p-4 dark:bg-white/10" style={cardShadow}>
         {header}
         <View className="items-center py-6">
-          <ActivityIndicator color={isDark ? '#c4b5fd' : ACCENT} />
+          <ActivityIndicator color={isDark ? ACCENT_LIGHT : ACCENT} />
         </View>
       </View>
     );
@@ -176,8 +183,8 @@ export default function SleepCard({ energyInfo, isDark, selectedDay, autoOpenEdi
         {header}
         <View className="flex-row items-center" style={{ gap: 8 }}>
           {sleepQuality?.available ? (
-            <View className="rounded-full bg-violet-500/15 px-3 py-1">
-              <Text className="text-xs font-bold" style={{ color: isDark ? '#c4b5fd' : ACCENT }}>
+            <View className="rounded-full px-3 py-1" style={{ backgroundColor: accentTint(isDark ? 0.22 : 0.12) }}>
+              <Text className="text-xs font-bold" style={{ color: isDark ? ACCENT_LIGHT : ACCENT }}>
                 Qualidade {Math.round(sleepQuality.value)}
               </Text>
             </View>
@@ -199,8 +206,8 @@ export default function SleepCard({ energyInfo, isDark, selectedDay, autoOpenEdi
         )}
 
         {sleepPercent != null && (
-          <View className="mt-2 h-2 overflow-hidden rounded-full bg-violet-500/10 dark:bg-white/10">
-            <View className="h-full rounded-full" style={{ width: `${sleepPercent}%`, backgroundColor: ACCENT }} />
+          <View className="mt-2 h-2 overflow-hidden rounded-full" style={{ backgroundColor: accentTint(isDark ? 0.18 : 0.1) }}>
+            <View className="h-full rounded-full" style={{ width: `${sleepPercent}%`, backgroundColor: accentOn(isDark) }} />
           </View>
         )}
       </View>

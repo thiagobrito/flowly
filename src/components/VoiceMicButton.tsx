@@ -1,6 +1,8 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { Mic } from 'lucide-react-native';
-import { Pressable, useColorScheme } from 'react-native';
+import { Pressable } from 'react-native';
+
+import { ACCENT, ACCENT_LIGHT, useIsDark } from '@/lib/theme';
 
 type VoiceMicButtonProps = {
   /** Abre o assistente de voz (toque ou segurar). */
@@ -12,7 +14,7 @@ type VoiceMicButtonProps = {
  * (ou tocar) abre o assistente de voz para criar tarefas falando.
  */
 export default function VoiceMicButton({ onActivate }: VoiceMicButtonProps) {
-  const isDark = useColorScheme() === 'dark';
+  const isDark = useIsDark();
 
   return (
     <Pressable
@@ -25,7 +27,7 @@ export default function VoiceMicButton({ onActivate }: VoiceMicButtonProps) {
       style={{ zIndex: 20 }}
     >
       <LinearGradient
-        colors={['#6366f1', '#8b5cf6']}
+        colors={[ACCENT_LIGHT, ACCENT]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={{
@@ -34,7 +36,7 @@ export default function VoiceMicButton({ onActivate }: VoiceMicButtonProps) {
           borderRadius: 28,
           alignItems: 'center',
           justifyContent: 'center',
-          shadowColor: '#6366f1',
+          shadowColor: ACCENT,
           shadowOffset: { width: 0, height: 6 },
           shadowOpacity: isDark ? 0.6 : 0.4,
           shadowRadius: 12,

@@ -1,14 +1,14 @@
 import { Check } from 'lucide-react-native';
 import { Pressable, Text, View } from 'react-native';
 
+import { ACCENT } from '@/lib/theme';
+
 type CheckboxProps = {
   label: string;
   checked: boolean;
   onChange: (checked: boolean) => void;
   isDark: boolean;
 };
-
-const ACCENT = '#6366f1';
 
 export default function Checkbox({ label, checked, onChange, isDark }: CheckboxProps) {
   let borderColor = isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.18)';

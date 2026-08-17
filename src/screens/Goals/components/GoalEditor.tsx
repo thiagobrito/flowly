@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 import { api } from '@/lib/network';
+import { ACCENT } from '@/lib/theme';
 import { isKnownLifeAreaId, LIFE_AREAS } from '@/screens/common';
 
 import type { Goal, GoalHealth, GoalMetric, MetricUnitKind } from '../data';
@@ -16,8 +17,6 @@ type GoalEditorProps = {
   onSave: (goal: Goal) => void;
   onDelete?: () => void;
 };
-
-const ACCENT = '#3b82f6';
 
 function optionBorder(selected: boolean, accent: string, isDark: boolean) {
   if (selected) return accent;

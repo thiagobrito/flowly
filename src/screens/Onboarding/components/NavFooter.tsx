@@ -1,6 +1,8 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 
+import { ACCENT, ACCENT_LIGHT } from '@/lib/theme';
+
 type NavFooterProps = {
   label: string;
   enabled?: boolean;
@@ -18,7 +20,7 @@ export default function NavFooter({ label, enabled = true, loading = false, skip
     <View className="pb-2 pt-3">
       <Pressable onPress={onPress} disabled={disabled} accessibilityRole="button" accessibilityState={{ disabled }} className="active:opacity-90" style={{ opacity: disabled ? 0.5 : 1 }}>
         <LinearGradient
-          colors={['#3b82f6', '#6366f1']}
+          colors={[ACCENT_LIGHT, ACCENT]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={{
@@ -26,7 +28,7 @@ export default function NavFooter({ label, enabled = true, loading = false, skip
             borderRadius: 999,
             alignItems: 'center',
             justifyContent: 'center',
-            shadowColor: '#6366f1',
+            shadowColor: ACCENT,
             shadowOffset: { width: 0, height: 6 },
             shadowOpacity: 0.35,
             shadowRadius: 14,

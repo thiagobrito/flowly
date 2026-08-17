@@ -3,10 +3,9 @@ import { CalendarCheck, CalendarClock, Info } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { Modal, Platform, Pressable, Text, View } from 'react-native';
 
+import { ACCENT, accentTint } from '@/lib/theme';
 import { formatDate, parseIsoDate, toIsoDate } from '@/screens/Config/Goals/dateUtils';
 import { cycleWeeks } from '@/screens/Goals/data';
-
-const ACCENT = '#6366f1';
 
 type PickerTarget = 'start' | 'end' | null;
 
@@ -20,7 +19,7 @@ type DateRangeStepProps = {
 function DateField({ label, value, Icon, isDark, onPress }: { label: string; value: string; Icon: typeof CalendarClock; isDark: boolean; onPress: () => void }) {
   return (
     <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={label} className="flex-1 active:opacity-80">
-      <View className="rounded-2xl border p-3.5" style={{ borderColor: ACCENT, backgroundColor: isDark ? 'rgba(99,102,241,0.1)' : 'rgba(99,102,241,0.06)' }}>
+      <View className="rounded-2xl border p-3.5" style={{ borderColor: ACCENT, backgroundColor: isDark ? accentTint(0.1) : accentTint(0.06) }}>
         <View className="flex-row items-center gap-2">
           <Icon size={18} color={ACCENT} />
           <View className="min-w-0 flex-1">
@@ -63,15 +62,15 @@ export default function DateRangeStep({ startDate, endDate, isDark, onChange }: 
         <DateField label="Término" value={endDate} Icon={CalendarCheck} isDark={isDark} onPress={() => setTarget('end')} />
       </View>
 
-      <View className="mt-4 items-center rounded-2xl py-3" style={{ backgroundColor: isDark ? 'rgba(99,102,241,0.1)' : 'rgba(99,102,241,0.06)' }}>
+      <View className="mt-4 items-center rounded-2xl py-3" style={{ backgroundColor: isDark ? accentTint(0.1) : accentTint(0.06) }}>
         <Text className="text-3xl font-bold" style={{ color: ACCENT }}>
           {weeks}
         </Text>
         <Text className="text-sm text-zinc-500 dark:text-zinc-400">{weeks === 1 ? 'semana de ciclo' : 'semanas de ciclo'}</Text>
       </View>
 
-      <View className="mt-3 flex-row rounded-xl border p-3" style={{ borderColor: isDark ? 'rgba(59,130,246,0.3)' : 'rgba(59,130,246,0.2)', backgroundColor: isDark ? 'rgba(59,130,246,0.08)' : 'rgba(59,130,246,0.05)' }}>
-        <Info size={16} color="#3b82f6" style={{ marginTop: 1 }} />
+      <View className="mt-3 flex-row rounded-xl border p-3" style={{ borderColor: isDark ? accentTint(0.3) : accentTint(0.2), backgroundColor: isDark ? accentTint(0.08) : accentTint(0.05) }}>
+        <Info size={16} color={ACCENT} style={{ marginTop: 1 }} />
         <Text className="ml-2 flex-1 text-sm leading-5 text-zinc-600 dark:text-zinc-400">Segundo o método The 12 Week Year, ciclos de 12 semanas mantêm o foco e transformam objetivos em resultados.</Text>
       </View>
 

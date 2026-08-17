@@ -1,12 +1,12 @@
 import { Check, Plus } from 'lucide-react-native';
 import { Pressable, Text, View } from 'react-native';
 
+import { ACCENT, accentTint } from '@/lib/theme';
+
 import type { ActivitiesStep as ActivitiesStepData } from '../data';
 import { resolveIcon } from './icons';
 import NavFooter from './NavFooter';
 import StepShell from './StepShell';
-
-const ACCENT = '#6366f1';
 
 /** Quantidade sugerida de atividades no onboarding (recomendação, não bloqueio). */
 const RECOMMENDED_ACTIVITIES = 3;
@@ -26,7 +26,7 @@ export default function ActivitiesStep({ step, isDark, goalName, activities, onA
   return (
     <StepShell icon={step.icon} title={step.title} subtitle={step.subtitle} isDark={isDark}>
       {goalName ? (
-        <View className="mb-4 self-start rounded-full px-3 py-1.5" style={{ backgroundColor: isDark ? 'rgba(99,102,241,0.18)' : 'rgba(99,102,241,0.12)' }}>
+        <View className="mb-4 self-start rounded-full px-3 py-1.5" style={{ backgroundColor: isDark ? accentTint(0.18) : accentTint(0.12) }}>
           <Text className="text-xs font-semibold" style={{ color: ACCENT }}>
             Objetivo: {goalName}
           </Text>
@@ -43,7 +43,7 @@ export default function ActivitiesStep({ step, isDark, goalName, activities, onA
                 className="flex-row items-center rounded-2xl border p-4"
                 style={{ borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)', backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.7)' }}
               >
-                <View className="size-11 items-center justify-center rounded-xl" style={{ backgroundColor: isDark ? 'rgba(99,102,241,0.18)' : 'rgba(99,102,241,0.12)' }}>
+                <View className="size-11 items-center justify-center rounded-xl" style={{ backgroundColor: isDark ? accentTint(0.18) : accentTint(0.12) }}>
                   <Icon size={20} color={ACCENT} />
                 </View>
                 <View className="ml-3 flex-1">
@@ -82,7 +82,7 @@ export default function ActivitiesStep({ step, isDark, goalName, activities, onA
         onPress={onAddActivity}
         accessibilityRole="button"
         className="mt-3 flex-row items-center justify-center rounded-2xl border border-dashed py-4 active:opacity-70"
-        style={{ borderColor: ACCENT, backgroundColor: isDark ? 'rgba(99,102,241,0.08)' : 'rgba(99,102,241,0.05)' }}
+        style={{ borderColor: ACCENT, backgroundColor: isDark ? accentTint(0.08) : accentTint(0.05) }}
       >
         <Plus size={18} color={ACCENT} strokeWidth={2.6} />
         <Text className="ml-2 text-[15px] font-semibold" style={{ color: ACCENT }}>

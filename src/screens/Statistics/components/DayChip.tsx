@@ -1,11 +1,13 @@
 import { Pressable, Text } from 'react-native';
 
+import { ACCENT } from '@/lib/theme';
+
 import type { ProgressDay } from '../types';
 
 export default function DayChip({ day, onPress }: { day: ProgressDay; onPress: () => void }) {
   if (day.isToday) {
     return (
-      <Pressable onPress={onPress} className="rounded-full bg-blue-500 px-4 py-3">
+      <Pressable onPress={onPress} className="rounded-full px-4 py-3" style={{ backgroundColor: ACCENT }}>
         <Text className="text-sm font-semibold text-white">{day.label ?? day.day}</Text>
       </Pressable>
     );

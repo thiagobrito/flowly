@@ -1,5 +1,7 @@
 import { Text, View } from 'react-native';
 
+import { accentOn } from '@/lib/theme';
+
 import { GetLifeArea } from '../../common';
 import type { ProgressStat } from '../types';
 
@@ -11,9 +13,11 @@ export default function StatCard({ stat, isDark }: { stat: ProgressStat; isDark:
 
   return (
     <View
-      className={`flex-1 rounded-2xl bg-white px-4 py-3 dark:bg-white/10 ${stat.highlighted ? 'border border-blue-500 dark:border-blue-500/20' : ''}`}
+      className="flex-1 rounded-2xl bg-white px-4 py-3 dark:bg-white/10"
       style={{
-        shadowColor: '#1e3a8a',
+        borderWidth: stat.highlighted ? 1 : 0,
+        borderColor: stat.highlighted ? accentOn(isDark) : undefined,
+        shadowColor: '#2A2419',
         shadowOffset: { width: 0, height: 6 },
         shadowOpacity: isDark ? 0.25 : 0.08,
         shadowRadius: 12,

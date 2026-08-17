@@ -4,6 +4,7 @@ import { ActivityIndicator, Alert, Linking, Platform } from 'react-native';
 
 import { getHealthProvider } from '@/lib/energy';
 import { hasGoogleClientIds, type SyncResult, useGoogleCalendarSync } from '@/lib/googleCalendar';
+import { ACCENT } from '@/lib/theme';
 
 import Card from './components/Card';
 import SectionTitle from './components/SectionTitle';
@@ -128,7 +129,7 @@ export default function IntegrationSection({ isDark }: { isDark: boolean }) {
           isDark={isDark}
           trailing={
             pending && !isConnected ? (
-              <ActivityIndicator color={isDark ? '#e4e4e7' : '#3b82f6'} />
+              <ActivityIndicator color={isDark ? '#e4e4e7' : ACCENT} />
             ) : (
               <SettingsToggle label="Sincronizar com Google Calendar" value={isConnected} onValueChange={handleGoogleCalendarToggle} disabled={!isReady || pending} isDark={isDark} />
             )
@@ -140,7 +141,7 @@ export default function IntegrationSection({ isDark }: { isDark: boolean }) {
             description="Importar novos eventos do calendário"
             isDark={isDark}
             onPress={pending ? undefined : () => syncNow()}
-            trailing={pending ? <ActivityIndicator color={isDark ? '#e4e4e7' : '#3b82f6'} /> : <RefreshCw size={20} color={isDark ? '#a1a1aa' : '#71717a'} />}
+            trailing={pending ? <ActivityIndicator color={isDark ? '#e4e4e7' : ACCENT} /> : <RefreshCw size={20} color={isDark ? '#a1a1aa' : '#71717a'} />}
           />
         ) : null}
         <SettingsRow

@@ -1,6 +1,8 @@
 import { Lightbulb } from 'lucide-react-native';
 import { Text, View } from 'react-native';
 
+import { ENERGY, energyText } from '@/lib/theme';
+
 type ConfidenceMeterProps = {
   confidence: number;
   isDark: boolean;
@@ -9,9 +11,9 @@ type ConfidenceMeterProps = {
 const LOW_CONFIDENCE_TIPS = ['Reduzir o escopo', 'Aumentar o foco', 'Recomprometer-se com as ações semanais'];
 
 function confidenceColor(value: number) {
-  if (value >= 8) return '#22c55e';
-  if (value >= 5) return '#eab308';
-  return '#ef4444';
+  if (value >= 8) return ENERGY.high;
+  if (value >= 5) return ENERGY.medium;
+  return ENERGY.low;
 }
 
 export default function ConfidenceMeter({ confidence, isDark }: ConfidenceMeterProps) {
@@ -39,7 +41,7 @@ export default function ConfidenceMeter({ confidence, isDark }: ConfidenceMeterP
       {showTips ? (
         <View className="mt-1 gap-1.5 rounded-xl p-3" style={{ backgroundColor: isDark ? 'rgba(234,179,8,0.1)' : 'rgba(234,179,8,0.12)' }}>
           <View className="flex-row items-center gap-1.5">
-            <Lightbulb size={14} color="#eab308" />
+            <Lightbulb size={14} color={energyText('medium', isDark)} />
             <Text className="text-xs font-semibold text-zinc-700 dark:text-zinc-200">Sugestões para recuperar confiança</Text>
           </View>
           {LOW_CONFIDENCE_TIPS.map((tip) => (

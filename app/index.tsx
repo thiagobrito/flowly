@@ -1,7 +1,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { Redirect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, useColorScheme, View } from 'react-native';
+import { ActivityIndicator, Alert, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { TabKey } from '@/components/BottomTabBar';
@@ -15,6 +15,7 @@ import { useSleepLogSync } from '@/lib/sleepLog';
 import { isSleepProfileConfigured, useSleepProfile } from '@/lib/sleepProfile';
 import { useSubscription } from '@/lib/subscription';
 import { track } from '@/lib/telemetry';
+import { BACKGROUND, useIsDark } from '@/lib/theme';
 import { ensureWeeklyReviewNotification, WEEKLY_REVIEW_DATA_TYPE } from '@/lib/weeklyReview';
 import Calendar from '@/screens/Calendar';
 import { onceFrequencyFromISO } from '@/screens/Calendar/scheduleSync';
@@ -63,11 +64,11 @@ function ActiveScreen({ tab, onLogout, onOpenConfig, editingTask, newTaskDraft, 
 }
 
 function Background({ isDark }: { isDark: boolean }) {
-  return <LinearGradient colors={isDark ? ['#0b1220', '#070b14', '#000000'] : ['#cfe3f5', '#eaf1f8', '#f7f8fa']} locations={[0, 0.45, 1]} style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 }} />;
+  return <LinearGradient colors={isDark ? BACKGROUND.dark : BACKGROUND.light} locations={[0, 0.45, 1]} style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 }} />;
 }
 
 function Home() {
-  const isDark = useColorScheme() === 'dark';
+  const isDark = useIsDark();
   const [tab, setTab] = useState<TabKey>('home');
   const [showConfig, setShowConfig] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);

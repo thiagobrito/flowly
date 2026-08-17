@@ -2,6 +2,8 @@ import type { LucideIcon } from 'lucide-react-native';
 import { Bell, LockOpen, Star } from 'lucide-react-native';
 import { Text, View } from 'react-native';
 
+import { ACCENT } from '@/lib/theme';
+
 type TrialStep = {
   Icon: LucideIcon;
   title: string;
@@ -56,7 +58,7 @@ export default function TrialTimeline({ isDark, trialDays, hasFreeTrial }: Trial
         return (
           <View key={step.title} className="flex-row">
             <View className="mr-4 items-center">
-              <View className="size-10 items-center justify-center rounded-full" style={{ backgroundColor: '#3b82f6' }}>
+              <View className="size-10 items-center justify-center rounded-full" style={{ backgroundColor: ACCENT }}>
                 <step.Icon size={18} color="white" />
               </View>
               {!isLast ? <View className="my-1 w-0.5 flex-1" style={{ backgroundColor: lineColor, minHeight: 36 }} /> : null}

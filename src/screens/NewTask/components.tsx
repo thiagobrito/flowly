@@ -3,6 +3,8 @@ import { Check, Minus, Plus, Trash2 } from 'lucide-react-native';
 import { useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 
+import { ACCENT } from '@/lib/theme';
+
 import type { Subtask } from './data';
 import { formatDuration, LEVEL_LABELS, WEEKDAYS } from './data';
 
@@ -96,7 +98,7 @@ type OptionChipProps = {
   className?: string;
 };
 
-export function OptionChip({ label, isGoal, Icon, selected, accent = '#3b82f6', isDark, onPress, className = '' }: OptionChipProps) {
+export function OptionChip({ label, isGoal, Icon, selected, accent = ACCENT, isDark, onPress, className = '' }: OptionChipProps) {
   let iconColor = isDark ? '#a1a1aa' : '#71717a';
   let borderColor = isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)';
   let backgroundColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.7)';

@@ -1,6 +1,7 @@
 import { Check } from 'lucide-react-native';
 import { Text, View } from 'react-native';
 
+import { energySurface, energyText } from '@/lib/theme';
 import ProgressBar from '@/screens/Config/Goals/components/ProgressBar';
 
 import { computeMetricProgress, formatMetricValue, type GoalMetric, resolveMetricDirection, resolveMetricUnit } from '../data';
@@ -13,9 +14,9 @@ type MetricRowProps = {
 
 function MetricSuccess({ message, isDark }: { message: string; isDark: boolean }) {
   return (
-    <View className="flex-row items-center gap-2 rounded-xl px-3 py-2" style={{ backgroundColor: isDark ? 'rgba(34,197,94,0.12)' : 'rgba(34,197,94,0.08)' }}>
-      <Check size={14} color="#22c55e" />
-      <Text className="text-xs font-medium text-green-700 dark:text-green-400">{message}</Text>
+    <View className="flex-row items-center gap-2 rounded-xl px-3 py-2" style={{ backgroundColor: energySurface('high', isDark) }}>
+      <Check size={14} color={energyText('high', isDark)} />
+      <Text className="text-xs font-medium text-zinc-700 dark:text-zinc-200">{message}</Text>
     </View>
   );
 }

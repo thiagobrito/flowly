@@ -15,6 +15,22 @@ function stored(app: { page: Page }, key: string) {
   return app.page.evaluate((name: string) => window.localStorage.getItem(name), key);
 }
 
+/**
+ * Cor do gradiente de fundo do app.
+ *
+ * A metade do estilo que vem de `style={{ ... }}` calculado em JS não aparece
+ * na classe do `<html>`, e é justamente ela que já ficou clara enquanto as
+ * classes `dark:` iam para o escuro. O fundo é o representante mais barato
+ * desse grupo: se ele virou, o `isDark` do app virou junto.
+ */
+function backgroundGradient(app: { page: Page }) {
+  return app.page.evaluate(() => {
+    const nodes = Array.from(document.querySelectorAll<HTMLElement>('div'));
+    const gradient = nodes.map((node) => getComputedStyle(node).backgroundImage).find((image) => image.includes('linear-gradient'));
+    return gradient ?? '';
+  });
+}
+
 test('abre as configurações e volta para a Home', async ({ app }) => {
   await app.launch();
   await app.page.getByRole('button', { name: 'Configurações' }).click();
@@ -25,7 +41,7 @@ test('abre as configurações e volta para a Home', async ({ app }) => {
   await expect(app.page.getByText('INTEGRAÇÕES')).toBeVisible();
 
   await app.page.getByRole('button', { name: 'Voltar' }).click();
-  await expect(app.page.getByText('Sua energia corporal')).toBeVisible();
+  await expect(app.page.getByText('Ordenado pela sua energia')).toBeVisible();
 });
 
 test('escolher o tema escuro persiste a preferência', async ({ app }) => {
@@ -38,6 +54,19 @@ test('escolher o tema escuro persiste a preferência', async ({ app }) => {
   // O NativeWind aplica o modo escuro pela classe no `<html>`: é o efeito
   // visível de ter salvado a preferência, não só o valor no storage.
   await expect.poll(() => app.page.evaluate(() => document.documentElement.classList.contains('dark'))).toBe(true);
+  // E as cores calculadas em JS têm que ter ido junto: o creme (#F6F1E7) sai,
+  // o neutro quente escuro (#151310) entra.
+  await expect.poll(() => backgroundGradient(app)).toContain('rgb(21, 19, 16)');
+});
+
+test('o tema do sistema vale quando a preferência é Sistema', async ({ app }) => {
+  await app.page.emulateMedia({ colorScheme: 'dark' });
+  await app.launch({ state: { theme: 'system' } });
+
+  // As duas metades do estilo seguem o aparelho: a classe do `<html>`, que
+  // resolve as variantes `dark:`, e o gradiente, que vem de `isDark`.
+  await expect.poll(() => app.page.evaluate(() => document.documentElement.classList.contains('dark'))).toBe(true);
+  await expect.poll(() => backgroundGradient(app)).toContain('rgb(21, 19, 16)');
 });
 
 test('desligar os lembretes de tarefas persiste a preferência', async ({ app }) => {

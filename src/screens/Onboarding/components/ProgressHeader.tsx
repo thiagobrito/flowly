@@ -1,7 +1,7 @@
 import { ChevronLeft } from 'lucide-react-native';
 import { Pressable, Text, View } from 'react-native';
 
-const ACCENT = '#6366f1';
+import { ACCENT } from '@/lib/theme';
 
 type ProgressHeaderProps = {
   current: number;

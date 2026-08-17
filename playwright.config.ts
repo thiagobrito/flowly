@@ -53,5 +53,7 @@ export default defineConfig({
     // sozinha; os seus testes são independentes e rodam em paralelo como os
     // demais, um por tela de entrada.
     { name: 'sweep', testMatch: /sweep\.spec\.ts/ },
+    // Prints da ficha da loja: rodam só com `E2E_STORE_SHOTS=1` (`npm run store:shots`).
+    { name: 'store', testMatch: /store\/.*\.spec\.ts/ },
   ],
 });

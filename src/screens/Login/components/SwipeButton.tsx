@@ -1,6 +1,8 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { Pressable, Text } from 'react-native';
 
+import { ACCENT, ACCENT_LIGHT } from '@/lib/theme';
+
 type SwipeButtonProps = {
   label: string;
   onPress: () => void;
@@ -11,7 +13,7 @@ export default function SwipeButton({ label, onPress, disabled = false }: SwipeB
   return (
     <Pressable onPress={onPress} disabled={disabled} accessibilityRole="button" accessibilityState={{ disabled }} className="active:opacity-90" style={{ opacity: disabled ? 0.5 : 1 }}>
       <LinearGradient
-        colors={['#3b82f6', '#6366f1']}
+        colors={[ACCENT_LIGHT, ACCENT]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={{
@@ -20,7 +22,7 @@ export default function SwipeButton({ label, onPress, disabled = false }: SwipeB
           padding: 6,
           flexDirection: 'row',
           alignItems: 'center',
-          shadowColor: '#6366f1',
+          shadowColor: ACCENT,
           shadowOffset: { width: 0, height: 6 },
           shadowOpacity: 0.35,
           shadowRadius: 14,

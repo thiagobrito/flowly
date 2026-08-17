@@ -1,6 +1,8 @@
 import { Bell, X } from 'lucide-react-native';
 import { Modal, Pressable, Text, View } from 'react-native';
 
+import { ACCENT, accentTint } from '@/lib/theme';
+
 type NotificationTestModalProps = {
   visible: boolean;
   isDark: boolean;
@@ -59,8 +61,8 @@ export default function NotificationTestModal({ visible, isDark, onClose, onShow
           </View>
 
           <View className="mb-4 flex-row items-center rounded-2xl border px-4 py-3.5" style={{ borderColor: isDark ? 'rgba(255,255,255,0.12)' : '#e4e4e7', backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.7)' }}>
-            <View className="mr-3 size-10 items-center justify-center rounded-full" style={{ backgroundColor: isDark ? 'rgba(99,102,241,0.15)' : 'rgba(99,102,241,0.08)' }}>
-              <Bell size={20} color="#6366f1" />
+            <View className="mr-3 size-10 items-center justify-center rounded-full" style={{ backgroundColor: isDark ? accentTint(0.15) : accentTint(0.08) }}>
+              <Bell size={20} color={ACCENT} />
             </View>
             <Text className="flex-1 text-sm text-zinc-500 dark:text-zinc-400">Dispara uma notificação local de teste, sem afetar os lembretes de tarefas.</Text>
           </View>

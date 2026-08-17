@@ -1,10 +1,10 @@
 import { CircleCheck } from 'lucide-react-native';
 import { Text, View } from 'react-native';
 
+import { ACCENT, accentTint } from '@/lib/theme';
+
 import type { CompletedStep as CompletedStepData } from '../data';
 import NavFooter from './NavFooter';
-
-const ACCENT = '#6366f1';
 
 type CompletedStepProps = {
   step: CompletedStepData;
@@ -17,7 +17,7 @@ export default function CompletedStep({ step, isDark, loading, onFinish }: Compl
   return (
     <View className="flex-1">
       <View className="flex-1 items-center justify-center px-2">
-        <View className="size-20 items-center justify-center rounded-full" style={{ backgroundColor: isDark ? 'rgba(99,102,241,0.18)' : 'rgba(99,102,241,0.12)' }}>
+        <View className="size-20 items-center justify-center rounded-full" style={{ backgroundColor: isDark ? accentTint(0.18) : accentTint(0.12) }}>
           <CircleCheck size={40} color={ACCENT} strokeWidth={2.2} />
         </View>
 

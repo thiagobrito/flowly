@@ -1,6 +1,8 @@
 import type { LucideIcon } from 'lucide-react-native';
 import { Bird, BookOpen, Briefcase, GoalIcon, HeartPulse, Home, Smile, Sparkles, Users, Wallet } from 'lucide-react-native';
 
+import { ACCENT } from '@/lib/theme';
+
 export type LifeArea = {
   id: string;
   label: string;
@@ -11,7 +13,7 @@ export type LifeArea = {
 export const LIFE_AREAS: LifeArea[] = [
   { id: 'health', label: 'Saúde', Icon: HeartPulse, accent: '#22c55e' },
   { id: 'finance', label: 'Financeiro', Icon: Wallet, accent: '#eab308' },
-  { id: 'work', label: 'Trabalho', Icon: Briefcase, accent: '#3b82f6' },
+  { id: 'work', label: 'Trabalho', Icon: Briefcase, accent: ACCENT },
   { id: 'relationships', label: 'Relacionamentos', Icon: Users, accent: '#ec4899' },
   { id: 'studies', label: 'Estudos', Icon: BookOpen, accent: '#8b5cf6' },
   { id: 'leisure', label: 'Lazer', Icon: Smile, accent: '#f97316' },

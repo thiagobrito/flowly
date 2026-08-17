@@ -1,9 +1,11 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { Crown, GoalIcon } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, AppState, Platform, Pressable, RefreshControl, ScrollView, Text, useColorScheme, View } from 'react-native';
+import { ActivityIndicator, Alert, AppState, Platform, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 
+import LastNightSleepCard from '@/components/LastNightSleepCard';
 import ModalScreen from '@/components/ModalScreen';
+import PeakEnergyCard from '@/components/PeakEnergyCard';
 import { type CoachInsight, loadDismissedForToday, MAX_RECOMMENDATIONS, saveDismissedForToday, sendCoachSuggestionFeedback, useAiCoachSuggestions } from '@/lib/coach';
 import { localDateKey, startOfLocalDay, toLocalISOString } from '@/lib/date';
 import { computeEnergyAtMoment, type FlowlyEngineInput, flowlyInputFromMetrics, getHealthProvider, loadLastEnergyLevel, saveLastEnergyLevel } from '@/lib/energy';
@@ -14,6 +16,7 @@ import { queryKeys } from '@/lib/query';
 import { applySleepProfile, useSleepProfile } from '@/lib/sleepProfile';
 import { useSubscription } from '@/lib/subscription';
 import { track } from '@/lib/telemetry';
+import { ACCENT, accentOn, useIsDark } from '@/lib/theme';
 
 import { syncTaskScheduleToServer } from '../Calendar/scheduleSync';
 import { useNotificationTest } from '../Config/hooks/useNotificationTest';
@@ -28,6 +31,7 @@ import FilterDrawer from './components/FilterDrawer';
 import Header from './components/Header';
 import RushedEmptyState from './components/RushedEmptyState';
 import TaskCard from './components/TaskCard';
+import TodayHeading from './components/TodayHeading';
 import { moveTask, removeTaskFromLists, type TasksData } from './taskCache';
 import { DATE_FILTERS, type DateFilterId, getTomorrowDate, taskMatchesDateFilter } from './taskDateFilter';
 
@@ -58,7 +62,7 @@ function energyInputFingerprint(input: FlowlyEngineInput | null): string {
 }
 
 export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
-  const isDark = useColorScheme() === 'dark';
+  const isDark = useIsDark();
   const queryClient = useQueryClient();
   const [refreshing, setRefreshing] = useState(false);
   const [energyScore, setEnergyScore] = useState<number>(0);
@@ -113,6 +117,15 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
   const { profile: sleepProfile } = useSleepProfile();
   const sleepProfileRef = useRef(sleepProfile);
   sleepProfileRef.current = sleepProfile;
+
+  // O que muda o resultado do motor: os horários usuais e a correção do dia.
+  // Serve de gatilho para recalcular quando o perfil chega do disco depois da
+  // primeira coleta — sem isso a Home mostra por até um minuto uma curva feita
+  // sem a noite do usuário.
+  const sleepFingerprint = useMemo(() => {
+    const override = sleepProfile.overrides?.[localDateKey()];
+    return [sleepProfile.loaded, sleepProfile.usualWakeTime, sleepProfile.usualBedTime, override?.wakeTime, override?.bedTime].join('|');
+  }, [sleepProfile]);
 
   // Trial/assinatura: permite assinar a qualquer momento (dia 0 inclusive).
   // Os dias restantes vêm do banco, via `GET /subscription`.
@@ -448,17 +461,23 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
     };
   }, [refreshEnergy]);
 
+  // Perfil de sono hidratado (ou editado em Estatísticas) depois da primeira
+  // coleta: recalcula na hora em vez de esperar o próximo tick de 60s.
+  useEffect(() => {
+    refreshEnergy().catch(() => undefined);
+  }, [sleepFingerprint, refreshEnergy]);
+
   if (loading) {
     return (
       <View className="flex-1 items-center justify-center">
-        <ActivityIndicator color={isDark ? '#e4e4e7' : '#3b82f6'} />
+        <ActivityIndicator color={isDark ? '#e4e4e7' : ACCENT} />
       </View>
     );
   }
 
   return (
     <View className="flex-1">
-      <Header isDark={isDark} energyScore={energyScore} energyMode={energyMode} onLogout={onLogout} onOpenConfig={onOpenConfig} onOpenFilter={() => setFilterOpen(true)} onOpenEnergyMode={() => setEnergyModeOpen(true)} />
+      <Header isDark={isDark} energyMode={energyMode} onLogout={onLogout} onOpenConfig={onOpenConfig} onOpenFilter={() => setFilterOpen(true)} onOpenEnergyMode={() => setEnergyModeOpen(true)} />
 
       {showTrialBanner ? (
         <Pressable
@@ -466,13 +485,13 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
           accessibilityRole="button"
           accessibilityLabel="Assinar o Flowly Premium"
           className="mt-3 flex-row items-center rounded-2xl border px-4 py-3 active:opacity-80"
-          style={{ borderColor: isDark ? 'rgba(99,102,241,0.35)' : 'rgba(99,102,241,0.25)', backgroundColor: isDark ? 'rgba(99,102,241,0.12)' : 'rgba(99,102,241,0.08)' }}
+          style={{ borderColor: `${ACCENT}${isDark ? '59' : '40'}`, backgroundColor: `${ACCENT}${isDark ? '1f' : '14'}` }}
         >
-          <Crown size={16} color="#6366f1" />
+          <Crown size={16} color={accentOn(isDark)} />
           <Text className="ml-2 flex-1 text-sm text-zinc-700 dark:text-zinc-200">
             Período de avaliação: {trialDaysLeft} {trialDaysLeft === 1 ? 'dia restante' : 'dias restantes'}
           </Text>
-          <Text className="text-sm font-semibold" style={{ color: '#6366f1' }}>
+          <Text className="text-sm font-semibold" style={{ color: accentOn(isDark) }}>
             Assinar
           </Text>
         </Pressable>
@@ -484,11 +503,11 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
           accessibilityRole="button"
           accessibilityLabel="Desbloquear recursos Premium"
           className="mt-3 flex-row items-center rounded-2xl border px-4 py-3 active:opacity-80"
-          style={{ borderColor: isDark ? 'rgba(99,102,241,0.35)' : 'rgba(99,102,241,0.25)', backgroundColor: isDark ? 'rgba(99,102,241,0.12)' : 'rgba(99,102,241,0.08)' }}
+          style={{ borderColor: `${ACCENT}${isDark ? '59' : '40'}`, backgroundColor: `${ACCENT}${isDark ? '1f' : '14'}` }}
         >
-          <Crown size={16} color="#6366f1" />
+          <Crown size={16} color={accentOn(isDark)} />
           <Text className="ml-2 flex-1 text-sm text-zinc-700 dark:text-zinc-200">Calendário, metas e gráficos estão bloqueados</Text>
-          <Text className="text-sm font-semibold" style={{ color: '#6366f1' }}>
+          <Text className="text-sm font-semibold" style={{ color: accentOn(isDark) }}>
             Desbloquear
           </Text>
         </Pressable>
@@ -497,18 +516,21 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
       <ScrollView
         className="mt-2 flex-1"
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 70 }}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={isDark ? '#e4e4e7' : '#3b82f6'} colors={['#3b82f6']} />}
+        contentContainerStyle={{ paddingBottom: 110 }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={isDark ? '#e4e4e7' : ACCENT} colors={[ACCENT]} />}
       >
-        {/* <View className="mb-3">
+        <View className="mb-4" style={{ gap: 10 }}>
           <PeakEnergyCard input={energyInput} currentScore={engineScore} isDark={isDark} />
-        </View> */}
+          <LastNightSleepCard input={energyInput} isDark={isDark} />
+        </View>
 
         <CoachSuggestions insights={coachInsights} loading={coachQueryEnabled && coachPending} isDark={isDark} applyingId={applyingInsightId} onApply={handleApplyInsight} onDismiss={dismissInsight} />
 
+        <TodayHeading isDark={isDark} />
+
         {futureLoading ? (
           <View className="items-center justify-center py-10">
-            <ActivityIndicator color={isDark ? '#e4e4e7' : '#3b82f6'} />
+            <ActivityIndicator color={isDark ? '#e4e4e7' : ACCENT} />
           </View>
         ) : (
           filteredVisible.map((task, index) => (

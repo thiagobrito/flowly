@@ -1,8 +1,9 @@
 import { useCallback, useState } from 'react';
-import { Alert, Pressable, ScrollView, Text, useColorScheme, View } from 'react-native';
+import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
 
 import { useSession } from '@/lib/auth';
 import { api } from '@/lib/network';
+import { useIsDark } from '@/lib/theme';
 
 import AppearanceSection from './Appearance';
 import ConfigHeader from './components/ConfigHeader';
@@ -16,7 +17,7 @@ type ConfigProps = {
 };
 
 export default function Config({ onBack }: ConfigProps) {
-  const isDark = useColorScheme() === 'dark';
+  const isDark = useIsDark();
   const [showGoals, setShowGoals] = useState(false);
   const { signOut } = useSession();
 

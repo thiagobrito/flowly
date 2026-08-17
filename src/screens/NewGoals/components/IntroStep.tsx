@@ -2,7 +2,7 @@ import type { LucideIcon } from 'lucide-react-native';
 import { CalendarRange, Gauge, Target } from 'lucide-react-native';
 import { Text, View } from 'react-native';
 
-const ACCENT = '#6366f1';
+import { ACCENT, accentTint } from '@/lib/theme';
 
 const HIGHLIGHTS: { Icon: LucideIcon; title: string; description: string }[] = [
   { Icon: CalendarRange, title: 'Defina seu ciclo', description: 'Um período curto e focado para executar.' },
@@ -16,7 +16,7 @@ export default function IntroStep({ isDark, total }: { isDark: boolean; total: n
       <View className="gap-3">
         {HIGHLIGHTS.map((item) => (
           <View key={item.title} className="flex-row items-center rounded-2xl border p-4" style={{ borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)', backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.7)' }}>
-            <View className="size-11 items-center justify-center rounded-xl" style={{ backgroundColor: isDark ? 'rgba(99,102,241,0.18)' : 'rgba(99,102,241,0.12)' }}>
+            <View className="size-11 items-center justify-center rounded-xl" style={{ backgroundColor: isDark ? accentTint(0.18) : accentTint(0.12) }}>
               <item.Icon size={20} color={ACCENT} />
             </View>
             <View className="ml-3 flex-1">

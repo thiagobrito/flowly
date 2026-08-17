@@ -2,12 +2,11 @@ import { Check } from 'lucide-react-native';
 import { Pressable, Text, View } from 'react-native';
 
 import type { OnboardingLanguage } from '@/lib/onboarding';
+import { ACCENT, accentTint } from '@/lib/theme';
 
 import type { LanguageStep as LanguageStepData } from '../data';
 import NavFooter from './NavFooter';
 import StepShell from './StepShell';
-
-const ACCENT = '#6366f1';
 
 type LanguageStepProps = {
   step: LanguageStepData;
@@ -24,7 +23,7 @@ export default function LanguageStep({ step, isDark, language, onSelect, onNext 
         {step.languages.map((option) => {
           const selected = option.enabled && option.code === language;
           const restingBorder = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
-          const selectedBackground = isDark ? 'rgba(99,102,241,0.18)' : 'rgba(99,102,241,0.10)';
+          const selectedBackground = isDark ? accentTint(0.18) : accentTint(0.1);
           const restingBackground = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.7)';
           return (
             <Pressable

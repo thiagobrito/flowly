@@ -1,11 +1,10 @@
 import { Text, View } from 'react-native';
 
+import { ACCENT } from '@/lib/theme';
 import { GetLifeArea } from '@/screens/common';
 import { formatDate } from '@/screens/Config/Goals/dateUtils';
 import type { GoalSetup, GoalSetupMetric } from '@/screens/Goals/data';
 import { cycleWeeks, inferMetricDirection } from '@/screens/Goals/data';
-
-const ACCENT = '#6366f1';
 
 function Card({ title, isDark, children }: { title: string; isDark: boolean; children: React.ReactNode }) {
   return (

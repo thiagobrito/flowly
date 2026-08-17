@@ -7,7 +7,7 @@ export default function MetricCard({ metric, isDark }: { metric: ProgressMetric;
     <View
       className="flex-1 rounded-2xl bg-white p-4 dark:bg-white/10"
       style={{
-        shadowColor: '#1e3a8a',
+        shadowColor: '#2A2419',
         shadowOffset: { width: 0, height: 6 },
         shadowOpacity: isDark ? 0.25 : 0.08,
         shadowRadius: 12,

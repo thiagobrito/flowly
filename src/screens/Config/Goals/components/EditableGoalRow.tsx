@@ -1,6 +1,8 @@
 import { Star, Trash2 } from 'lucide-react-native';
 import { Pressable, Text, TextInput, View } from 'react-native';
 
+import { accentTint } from '@/lib/theme';
+
 import type { Goal } from '../data';
 
 type EditableGoalRowProps = {
@@ -22,8 +24,8 @@ export default function EditableGoalRow({ goal, isDark, isMain = false, onChange
   let borderColor = isDark ? 'rgba(255,255,255,0.12)' : '#e4e4e7';
   let backgroundColor = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.7)';
   if (isMain) {
-    borderColor = isDark ? 'rgba(99,102,241,0.35)' : 'rgba(99,102,241,0.25)';
-    backgroundColor = isDark ? 'rgba(99,102,241,0.08)' : 'rgba(99,102,241,0.05)';
+    borderColor = isDark ? accentTint(0.35) : accentTint(0.25);
+    backgroundColor = isDark ? accentTint(0.08) : accentTint(0.05);
   }
 
   return (
