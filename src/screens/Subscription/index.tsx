@@ -52,10 +52,7 @@ export default function Subscription({ onClose, onDevBypass, source = 'onboardin
     return `${trialPrefix || 'Assine por '}${monthlyPriceLabel}/mês`;
   }, [introInfo, monthlyPriceLabel, selectedPlan, showFreeTrial, yearlyPerMonth, yearlyPriceLabel]);
 
-  const planDetails = useMemo(
-    () => subscriptionDetailsLine(selectedPlan, selectedPlan === 'flowly_yearly' ? yearlyPriceLabel : monthlyPriceLabel, yearlyPerMonth),
-    [monthlyPriceLabel, selectedPlan, yearlyPerMonth, yearlyPriceLabel],
-  );
+  const planDetails = useMemo(() => subscriptionDetailsLine(selectedPlan, selectedPlan === 'flowly_yearly' ? yearlyPriceLabel : monthlyPriceLabel, yearlyPerMonth), [monthlyPriceLabel, selectedPlan, yearlyPerMonth, yearlyPriceLabel]);
 
   const ctaLabel = showFreeTrial ? 'Começar teste grátis' : 'Assinar agora';
   const headerTitle = showFreeTrial ? 'Como o teste funciona' : 'Desbloqueie o Flowly Premium';

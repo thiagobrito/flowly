@@ -6,7 +6,7 @@ import { SUBSCRIPTION_PLANS } from '@/lib/subscription';
  * título da assinatura, duração e preço (com equivalente mensal no anual).
  */
 export function subscriptionDetailsLine(planId: SubscriptionPlanId, priceLabel: string, perMonthLabel: string): string {
-  const title = SUBSCRIPTION_PLANS[planId].title;
+  const { title } = SUBSCRIPTION_PLANS[planId];
   if (planId === 'flowly_yearly') {
     return `Flowly Premium ${title} · 12 meses · ${priceLabel}/ano (${perMonthLabel}/mês)`;
   }
