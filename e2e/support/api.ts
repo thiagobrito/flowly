@@ -97,12 +97,27 @@ export async function installApi(page: Page, world: FakeWorld): Promise<ApiRecor
     const method = route.request().method();
 
     if (IS_INTEGRATION) {
-      const response = await route.fetch({
-        url: `${INTEGRATION_API_URL}${path}${url.search}`,
-        headers: { ...route.request().headers(), authorization: `Bearer ${token}` },
-      });
-      calls.push({ method, path, query: url.search, status: response.status(), unhandled: false });
-      await route.fulfill({ response });
+      // Bufferiza o corpo antes do fulfill: passar `{ response }` direto falha com
+      // "Fetch response has been disposed" quando a página navega/recarrega no
+      // meio do repasse (o teste de integração faz `reload` após concluir).
+      try {
+        const response = await route.fetch({
+          url: `${INTEGRATION_API_URL}${path}${url.search}`,
+          headers: { ...route.request().headers(), authorization: `Bearer ${token}` },
+        });
+        const status = response.status();
+        const headers = response.headers();
+        const body = await response.body();
+        calls.push({ method, path, query: url.search, status, unhandled: false });
+        await route.fulfill({ status, headers, body });
+      } catch {
+        // Request abortado pela navegação — não há o que cumprir.
+        try {
+          await route.abort();
+        } catch {
+          // Já encerrado.
+        }
+      }
       return;
     }
 
