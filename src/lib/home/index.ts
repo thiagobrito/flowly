@@ -16,6 +16,7 @@ import { queryKeys } from '@/lib/query';
 import type { SleepProfileData } from '@/lib/sleepProfile/apply';
 import type { SubscriptionStatus } from '@/lib/subscription/types';
 import type { Task } from '@/screens/NewTask/data';
+import { classifyOpenTask } from '@/screens/Tasks/taskDateFilter';
 
 import { setHomeSnapshot } from './snapshot';
 
@@ -33,6 +34,7 @@ export type HomeWeek = {
 export type HomeData = {
   today: { visibleTasks: Task[]; concludedTasks: Task[] };
   week: HomeWeek;
+  overdueTasks: Task[];
   nodateTasks: Task[];
   subscription: SubscriptionStatus | null;
   sleepProfile: SleepProfileData | null;
@@ -63,6 +65,30 @@ function pick(pool: Task[], indexes: unknown): Task[] {
   return indexes.map((index) => pool[index as number]).filter((task): task is Task => Boolean(task));
 }
 
+/**
+ * Redistribui as listas abertas da Home. Produção antiga misturava atrasadas
+ * em `today.visible` e omitia `overdue`; o cliente não deve depender disso.
+ */
+export function rebucketOpenTasks(tasks: Task[], todayKey: string): { visibleTasks: Task[]; overdueTasks: Task[]; nodateTasks: Task[] } {
+  const seen = new Set<string>();
+  const visibleTasks: Task[] = [];
+  const overdueTasks: Task[] = [];
+  const nodateTasks: Task[] = [];
+
+  for (const task of tasks) {
+    if (!seen.has(task.id)) {
+      seen.add(task.id);
+
+      const bucket = classifyOpenTask(task, todayKey);
+      if (bucket === 'overdue') overdueTasks.push(task);
+      else if (bucket === 'nodate') nodateTasks.push(task);
+      else visibleTasks.push(task);
+    }
+  }
+
+  return { visibleTasks, overdueTasks, nodateTasks };
+}
+
 export async function fetchHome(dateISO: string, energyLevel: number): Promise<HomeData> {
   const response = await api.get<any>('/home', { params: { date: dateISO, energyLevel } });
   const pool = organizeTasks(response?.tasks);
@@ -72,13 +98,18 @@ export async function fetchHome(dateISO: string, energyLevel: number): Promise<H
     byDate[dayKey] = pick(pool, indexes);
   }
 
+  const todayKey = dateISO.split('T')[0] ?? dateISO;
+  const open = [...pick(pool, response?.today?.visible), ...pick(pool, response?.overdue), ...pick(pool, response?.nodate)];
+  const { visibleTasks, overdueTasks, nodateTasks } = rebucketOpenTasks(open, todayKey);
+
   const data: HomeData = {
     today: {
-      visibleTasks: pick(pool, response?.today?.visible),
+      visibleTasks,
       concludedTasks: pick(pool, response?.today?.concluded),
     },
     week: { byDate, tomorrowKey: response?.week?.tomorrowKey ?? '' },
-    nodateTasks: pick(pool, response?.nodate),
+    overdueTasks,
+    nodateTasks,
     subscription: response?.subscription ?? null,
     sleepProfile: response?.sleepProfile ?? null,
     coach: response?.coach ?? null,

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import plistlib
 from pathlib import Path
 
@@ -11,10 +12,15 @@ from .utils import OUTPUT_DIR, ROOT, capture, log, run, section
 
 def prebuild(clean: bool = False, env: dict | None = None) -> None:
     section("Expo prebuild (gera ios/ localmente)")
-    cmd = ["npx", "expo", "prebuild", "--platform", "ios", "--non-interactive"]
+    cmd = ["npx", "expo", "prebuild", "--platform", "ios"]
     if clean:
         cmd.append("--clean")
-    run(cmd, env=env)
+    # Expo não aceita --non-interactive: CI=1 desliga prompts; EXPO_NO_GIT_STATUS
+    # segue sempre com working tree suja (padrão desejado neste pipeline local).
+    merged = dict(os.environ if env is None else env)
+    merged["CI"] = "1"
+    merged["EXPO_NO_GIT_STATUS"] = "1"
+    run(cmd, env=merged)
 
 
 def _resolve_workspace(cfg: Config) -> Path:

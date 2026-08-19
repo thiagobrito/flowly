@@ -17,6 +17,10 @@ test.describe('lista do dia', () => {
     await expect(app.page.getByText('Escrever proposta comercial')).toBeVisible();
     await expect(app.page.getByText('Meditar 10 minutos')).toBeVisible();
     await expect(app.page.getByText('Ir à academia')).toBeVisible();
+    await expect(app.page.getByText('Atrasado')).toBeVisible();
+    await expect(app.page.getByText('Enviar relatório da sexta')).toBeVisible();
+    await expect(app.page.getByText('A definir')).toBeVisible();
+    await expect(app.page.getByText('Marcar dentista')).toBeVisible();
     await expect(app.page.getByText('1 atividades já concluídas')).toBeVisible();
     await expect(app.page.getByText('Ler 20 páginas')).toBeVisible();
     // Tarefa de amanhã não aparece no recorte de hoje.
@@ -115,7 +119,7 @@ test.describe('filtros', () => {
     await app.launch();
 
     await app.page.getByRole('button', { name: 'Filtros' }).click();
-    await app.page.getByRole('checkbox', { name: 'Sem data' }).click();
+    await app.page.getByRole('checkbox', { name: 'A definir' }).click();
 
     await expect(app.page.getByText('Marcar dentista')).toBeVisible();
     await expect(app.page.getByText('Meditar 10 minutos')).toHaveCount(0);

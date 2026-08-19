@@ -19,7 +19,7 @@ export const DATE_FILTERS: DateFilterOption[] = [
   { id: 'today', label: 'Hoje', Icon: Sun, accent: '#f59e0b' },
   { id: 'tomorrow', label: 'Amanhã', Icon: CalendarClock, accent: '#8b5cf6' },
   { id: 'thisWeek', label: 'Esta semana', Icon: CalendarRange, accent: ACCENT },
-  { id: 'nodate', label: 'Sem data', Icon: CalendarX, accent: '#ef4444' },
+  { id: 'nodate', label: 'A definir', Icon: CalendarX, accent: '#ef4444' },
 ];
 
 const WEEKDAY_INDEX: Record<string, number> = {
@@ -60,6 +60,11 @@ export function getWeekDateKeys(reference: Date = new Date()): string[] {
   return getWeekDates(reference).map((date) => localDateKey(date));
 }
 
+function civilDayFromIso(iso: string): string | null {
+  const match = iso.match(/^(\d{4}-\d{2}-\d{2})/);
+  return match?.[1] ?? null;
+}
+
 /** Extrai todas as datas civis explícitas de uma tarefa (`schedule` + `once.date`). */
 export function getTaskDateKeys(task: Task): Set<string> {
   const keys = new Set<string>();
@@ -67,10 +72,8 @@ export function getTaskDateKeys(task: Task): Set<string> {
   if (Array.isArray(task.schedule)) {
     for (const slot of task.schedule) {
       if (slot?.dateTime) {
-        const parsed = new Date(slot.dateTime);
-        if (!Number.isNaN(parsed.getTime())) {
-          keys.add(localDateKey(parsed));
-        }
+        const key = civilDayFromIso(slot.dateTime) ?? localDateKey(new Date(slot.dateTime));
+        if (key) keys.add(key);
       }
     }
   }
@@ -96,71 +99,75 @@ function weekdayOfKey(dayKey: string): number {
 
 /**
  * Espelha a parte recorrente de `isDueToday` do servidor
- * (`server/src/lib/tasks/filter.js`): decide se a tarefa "pode ser realizada"
- * num dia civil arbitrário por recorrência de dia da semana.
+ * (`web/src/lib/tasks/filter.js`): decide se a tarefa está marcada para um
+ * dia civil por recorrência de dia da semana.
  *
- * - `once` não entra aqui: sua data explícita já é tratada por `getTaskDateKeys`
- *   (o caso "atrasada" é resolvido por `isOverdueOnce`, ligado ao dia de hoje).
- * - `notime` sem conclusão está disponível qualquer dia (mesmo critério do
- *   servidor); após concluída, deixa de ser "para fazer".
- * - `weekly` com `mode: 'count'` (sem dias específicos) é flexível: disponível
- *   qualquer dia da semana.
- * - `trigger` retorna `false` — não pertence a um dia específico.
- * - `interval` mantém o comportamento "sempre disponível" do servidor.
+ * - `once` não entra aqui: sua data explícita já é tratada por `getTaskDateKeys`.
+ * - `notime` / `trigger` / `interval` não pertencem a um dia.
+ * - `weekly` com `mode: 'count'` (sem dias específicos) vai para "A definir".
  */
 export function isDueOn(task: Task, dayKey: string): boolean {
+  if (getTaskDateKeys(task).has(dayKey)) return true;
+
   const { frequency } = task;
   switch (frequency.kind) {
     case 'daily':
       return frequency.everyDay || frequency.days.includes(weekdayOfKey(dayKey));
     case 'weekly':
-      if (frequency.days.length === 0) return true;
+      if (frequency.days.length === 0) return false;
       return frequency.days.includes(weekdayOfKey(dayKey));
     case 'notime':
-      return (task.completed ?? []).length === 0;
     case 'once':
     case 'trigger':
+    case 'interval':
       return false;
     default:
-      return true;
+      return false;
   }
 }
 
-// Tarefa `once` vencida (data anterior a hoje) e ainda pendente: deve aparecer
-// em "Hoje" (faça agora), não em "Amanhã".
-function isOverdueOnce(task: Task, todayKey: string): boolean {
-  return task.frequency.kind === 'once' && task.frequency.date != null && task.frequency.date < todayKey;
+/** Tarefa com dia marcado no passado, ainda não devida hoje. */
+export function isOverdue(task: Task, todayKey: string): boolean {
+  if (isDueOn(task, todayKey)) return false;
+  const keys = getTaskDateKeys(task);
+  return [...keys].some((key) => key < todayKey);
 }
 
-// Tarefa sem associação a nenhum dia específico (nem data explícita, nem
-// recorrência de dia). É o que deve aparecer em "Sem data".
-function hasNoDate(task: Task): boolean {
+/** Tarefa sem associação a nenhum dia específico. Lista "A definir". */
+export function hasNoDate(task: Task): boolean {
   if (getTaskDateKeys(task).size > 0) return false;
   const { frequency } = task;
-  if (frequency.kind === 'trigger') return true;
+  if (frequency.kind === 'trigger' || frequency.kind === 'notime' || frequency.kind === 'interval') return true;
   if (frequency.kind === 'once' && frequency.date == null) return true;
-  // `notime` sem conclusão é "para hoje" (mesmo critério do servidor); só cai em
-  // "Sem data" depois de concluída.
-  if (frequency.kind === 'notime') return (task.completed ?? []).length > 0;
+  if (frequency.kind === 'weekly' && frequency.days.length === 0) return true;
   return false;
 }
 
+export type OpenTaskBucket = 'today' | 'overdue' | 'nodate';
+
+/**
+ * Recorte das listas abertas da Home. O fallback `today` evita que uma tarefa
+ * pendente suma se não casar com overdue/nodate (ex.: `once` no futuro).
+ */
+export function classifyOpenTask(task: Task, todayKey: string): OpenTaskBucket {
+  if (isDueOn(task, todayKey)) return 'today';
+  if (isOverdue(task, todayKey)) return 'overdue';
+  if (hasNoDate(task)) return 'nodate';
+  return 'today';
+}
+
 export function taskMatchesDateFilter(task: Task, filterId: DateFilterId, reference: Date = new Date()): boolean {
-  const keys = getTaskDateKeys(task);
   const todayKey = localDateKey(reference);
   const tomorrowKey = localDateKey(addDays(reference, 1));
   const weekKeys = getWeekDateKeys(reference);
 
-  const matchesDay = (dayKey: string) => keys.has(dayKey) || isDueOn(task, dayKey);
-
   switch (filterId) {
     case 'today':
-      return matchesDay(todayKey) || isOverdueOnce(task, todayKey);
+      return isDueOn(task, todayKey);
     case 'tomorrow':
-      return matchesDay(tomorrowKey);
+      return isDueOn(task, tomorrowKey);
     case 'thisWeek':
-      // A semana contém hoje, então tarefas vencidas também entram aqui.
-      return weekKeys.some(matchesDay) || isOverdueOnce(task, todayKey);
+      return weekKeys.some((dayKey) => isDueOn(task, dayKey));
     case 'nodate':
       return hasNoDate(task);
     default:

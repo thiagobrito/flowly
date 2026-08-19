@@ -36,6 +36,7 @@ function fullDay(): FakeWorld {
     task({ _id: 'task-academia', name: 'Ir à academia', goal: { id: null, name: 'health' }, energy: 4, impact: 3, frequency: { kind: 'daily', everyDay: true, days: [] } }),
     task({ _id: 'task-ler', name: 'Ler 20 páginas', goal: { id: null, name: 'learning' }, energy: 2, impact: 2, frequency: { kind: 'daily', everyDay: true, days: [] }, completed: [`${today}T08:00:00.000Z`] }),
     task({ _id: 'task-dentista', name: 'Marcar dentista', goal: { id: null, name: 'health' }, energy: 1, impact: 2, frequency: { kind: 'notime' } }),
+    task({ _id: 'task-atrasada', name: 'Enviar relatório da sexta', goal: { id: null, name: 'work' }, energy: 2, impact: 4, frequency: { kind: 'once', date: dayKeyOffset(-3), time: '14:00' } }),
     task({ _id: 'task-amanha', name: 'Revisar orçamento do mês', goal: { id: null, name: 'finance' }, energy: 3, impact: 4, frequency: { kind: 'once', date: dayKeyOffset(1), time: null } }),
   ];
 

@@ -130,7 +130,11 @@ function isScheduledFor(item: FakeTask, dayKey: string): boolean {
     return Boolean(frequency.days?.includes(weekday));
   }
   if (frequency.kind === 'once') return frequency.date === dayKey;
-  if (frequency.kind === 'weekly' || frequency.kind === 'interval') return true;
+  if (frequency.kind === 'weekly') {
+    if (!frequency.days || frequency.days.length === 0) return false;
+    const weekday = new Date(`${dayKey}T12:00:00.000Z`).getUTCDay();
+    return frequency.days.includes(weekday);
+  }
   return false;
 }
 
@@ -152,22 +156,44 @@ export function buildHome(world: FakeWorld, dayKey: string) {
 
   const forToday = world.tasks.filter((item) => isScheduledFor(item, dayKey));
   const visible = forToday.filter((item) => !isDone(item, dayKey));
-  const concluded = forToday.filter((item) => isDone(item, dayKey));
+  const concluded = world.tasks.filter((item) => isDone(item, dayKey));
+  const overdue = world.tasks.filter((item) => {
+    const frequency = item.frequency as { kind?: string; date?: string };
+    if (frequency.kind !== 'once' || !frequency.date || frequency.date >= dayKey) return false;
+    return item.completed.length === 0;
+  });
+  const nodate = world.tasks.filter((item) => {
+    const frequency = item.frequency as { kind?: string; date?: string | null; days?: number[] };
+    if (item.completed.length > 0 && (frequency.kind === 'notime' || frequency.kind === 'trigger')) return false;
+    if (frequency.kind === 'notime' || frequency.kind === 'trigger' || frequency.kind === 'interval') return true;
+    if (frequency.kind === 'once') return frequency.date == null;
+    if (frequency.kind === 'weekly') return !frequency.days || frequency.days.length === 0;
+    return false;
+  });
 
   const weekKeys = Array.from({ length: 7 }, (_unused, offset) => dayKeyOffset(offset));
 
   return {
     success: true,
     today: {
-      // Mais impacto primeiro, como a priorização do servidor.
-      visible: [...visible].sort((left, right) => (right.impact ?? 0) - (left.impact ?? 0)).map(add),
+      visible: [...visible]
+        .sort((left, right) => {
+          const leftTime = (left.frequency as { time?: string | null }).time ?? '';
+          const rightTime = (right.frequency as { time?: string | null }).time ?? '';
+          if (leftTime && rightTime && leftTime !== rightTime) return leftTime.localeCompare(rightTime);
+          if (Boolean(leftTime) !== Boolean(rightTime)) return leftTime ? -1 : 1;
+          if ((left.energy ?? 3) !== (right.energy ?? 3)) return (left.energy ?? 3) - (right.energy ?? 3);
+          return (right.impact ?? 0) - (left.impact ?? 0);
+        })
+        .map(add),
       concluded: concluded.map(add),
     },
     week: {
       byDate: Object.fromEntries(weekKeys.map((key) => [key, world.tasks.filter((item) => isScheduledFor(item, key) && !isDone(item, key)).map(add)])),
       tomorrowKey: dayKeyOffset(1),
     },
-    nodate: world.tasks.filter((item) => (item.frequency as { kind?: string }).kind === 'notime').map(add),
+    overdue: overdue.map(add),
+    nodate: nodate.map(add),
     subscription: world.subscription,
     sleepProfile: world.sleepProfile,
     coach: world.coach,

@@ -31,8 +31,9 @@ import FilterDrawer from './components/FilterDrawer';
 import Header from './components/Header';
 import RushedEmptyState from './components/RushedEmptyState';
 import TaskCard from './components/TaskCard';
-import TodayHeading from './components/TodayHeading';
-import { moveTask, removeTaskFromLists, type TasksData } from './taskCache';
+import TaskSection from './components/TaskSection';
+import { sortTasksBySchedule } from './sortBySchedule';
+import { removeTaskFromHome, toggleTaskOnHome } from './taskCache';
 import { DATE_FILTERS, type DateFilterId, getTomorrowDate, taskMatchesDateFilter } from './taskDateFilter';
 
 type TasksProps = {
@@ -41,13 +42,54 @@ type TasksProps = {
   onOpenConfig?: () => void;
 };
 
-/**
- * Aplica uma atualização otimista às listas de hoje dentro do payload da Home,
- * preservando o resto (semana, sem data, assinatura, coach).
- */
-function updateHomeToday(data: HomeData | undefined, update: (today: TasksData) => TasksData): HomeData | undefined {
-  if (!data) return data;
-  return { ...data, today: update(data.today) };
+type TaskListsProps = {
+  isDark: boolean;
+  futureLoading: boolean;
+  isFutureFilter: boolean;
+  selectedDateFilter: DateFilterId | null;
+  tomorrowDate: Date;
+  filteredVisible: Task[];
+  filteredOverdue: Task[];
+  filteredNodate: Task[];
+  onComplete: (task: Task) => void;
+  onEdit?: (task: Task) => void;
+  onDelete: (task: Task) => void;
+};
+
+function TaskLists({ isDark, futureLoading, isFutureFilter, selectedDateFilter, tomorrowDate, filteredVisible, filteredOverdue, filteredNodate, onComplete, onEdit, onDelete }: TaskListsProps) {
+  if (futureLoading) {
+    return (
+      <View className="items-center justify-center py-10">
+        <ActivityIndicator color={isDark ? '#e4e4e7' : ACCENT} />
+      </View>
+    );
+  }
+
+  if (isFutureFilter) {
+    return (
+      <TaskSection
+        isDark={isDark}
+        title={selectedDateFilter === 'tomorrow' ? 'Amanhã' : 'Esta semana'}
+        tasks={filteredVisible}
+        showDate={selectedDateFilter === 'tomorrow'}
+        date={tomorrowDate}
+        sortLabel="Por horário"
+        highlightFirst
+        forceShow
+        onComplete={onComplete}
+        onEdit={onEdit}
+        onDelete={onDelete}
+      />
+    );
+  }
+
+  return (
+    <>
+      {selectedDateFilter === 'nodate' ? null : <TaskSection isDark={isDark} title="Hoje" tasks={filteredVisible} showDate sortLabel="Por horário" highlightFirst forceShow onComplete={onComplete} onEdit={onEdit} onDelete={onDelete} />}
+      <TaskSection isDark={isDark} title="Atrasado" tasks={filteredOverdue} onComplete={onComplete} onEdit={onEdit} onDelete={onDelete} />
+      <TaskSection isDark={isDark} title="A definir" tasks={filteredNodate} forceShow={selectedDateFilter === 'nodate'} onComplete={onComplete} onEdit={onEdit} onDelete={onDelete} />
+    </>
+  );
 }
 
 /**
@@ -98,6 +140,7 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
 
   const visibleTasks = useMemo(() => home?.today.visibleTasks ?? [], [home]);
   const concludedTasks = useMemo(() => home?.today.concludedTasks ?? [], [home]);
+  const overdueTasks = useMemo(() => home?.overdueTasks ?? [], [home]);
   const nodateTasks = useMemo(() => home?.nodateTasks ?? [], [home]);
   // Spinner só na primeiríssima carga (sem cache) — ao voltar para a Home o
   // conteúdo do cache aparece instantaneamente. `energyReady` não entra aqui: a
@@ -133,7 +176,7 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
   const showTrialBanner = isTrialing;
   const showLockedBanner = !isPremium && !isTrialing;
 
-  const allTasks = useMemo(() => [...visibleTasks, ...concludedTasks], [visibleTasks, concludedTasks]);
+  const allTasks = useMemo(() => [...visibleTasks, ...overdueTasks, ...nodateTasks, ...concludedTasks], [visibleTasks, overdueTasks, nodateTasks, concludedTasks]);
 
   // Amanhã/Esta semana produzem uma lista única (sem separar "concluídas", pois
   // conclusão é por dia e dias futuros não têm conclusão).
@@ -150,7 +193,7 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
   const matchesArea = useCallback((task: Task) => selectedAreas.length === 0 || selectedAreas.includes(task.goal.name), [selectedAreas]);
 
   // Todas as contagens vêm dos recortes que o servidor já entregou no payload
-  // da Home, inclusive "Sem data" — que antes era calculado no cliente sobre a
+  // da Home, inclusive "A definir" — que antes era calculado no cliente sobre a
   // lista completa de tarefas do usuário.
   const filterDateOptions = useMemo(
     () =>
@@ -171,6 +214,8 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
     let source = allTasks;
     if (selectedDateFilter === 'tomorrow') source = tomorrowTasks;
     else if (selectedDateFilter === 'thisWeek') source = allWeekTasks;
+    else if (selectedDateFilter === 'nodate') source = nodateTasks;
+    else if (selectedDateFilter === 'today') source = [...visibleTasks, ...concludedTasks];
 
     const counts = new Map<string, number>();
     source.forEach((task) => {
@@ -187,7 +232,7 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
         count,
       };
     });
-  }, [selectedDateFilter, tomorrowTasks, allWeekTasks, allTasks]);
+  }, [selectedDateFilter, tomorrowTasks, allWeekTasks, nodateTasks, visibleTasks, concludedTasks, allTasks]);
 
   const applyFilters = useCallback(
     (tasks: Task[]) =>
@@ -202,10 +247,20 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
     let list: Task[];
     if (selectedDateFilter === 'tomorrow') list = tomorrowTasks.filter(matchesArea);
     else if (selectedDateFilter === 'thisWeek') list = allWeekTasks.filter(matchesArea);
-    else if (selectedDateFilter === 'nodate') list = nodateTasks.filter(matchesArea);
+    else if (selectedDateFilter === 'nodate') list = [];
     else list = applyFilters(visibleTasks);
-    return filterTasksForMode(list, energyMode);
-  }, [selectedDateFilter, tomorrowTasks, allWeekTasks, nodateTasks, matchesArea, visibleTasks, applyFilters, energyMode]);
+    return sortTasksBySchedule(filterTasksForMode(list, energyMode), dateKey);
+  }, [selectedDateFilter, tomorrowTasks, allWeekTasks, matchesArea, visibleTasks, applyFilters, energyMode, dateKey]);
+
+  const filteredOverdue = useMemo(() => {
+    if (selectedDateFilter) return [];
+    return sortTasksBySchedule(filterTasksForMode(overdueTasks.filter(matchesArea), energyMode), dateKey);
+  }, [selectedDateFilter, overdueTasks, matchesArea, energyMode, dateKey]);
+
+  const filteredNodate = useMemo(() => {
+    if (selectedDateFilter && selectedDateFilter !== 'nodate') return [];
+    return sortTasksBySchedule(filterTasksForMode(nodateTasks.filter(matchesArea), energyMode), dateKey);
+  }, [selectedDateFilter, nodateTasks, matchesArea, energyMode, dateKey]);
 
   // Concluídas ficam fora do filtro de modo: Rushed serve para decidir o que
   // fazer agora, e esconder o que já foi feito apaga o progresso do dia.
@@ -216,7 +271,12 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
 
   // Rushed pode esvaziar a lista legitimamente (nada curto e de alto impacto).
   // Sem aviso, a tela vazia parece falha de carregamento.
-  const rushedHidAll = energyMode === 'rushed' && filteredVisible.length === 0 && applyFilters(visibleTasks).length > 0;
+  const rushedHidAll =
+    energyMode === 'rushed' &&
+    filteredVisible.length === 0 &&
+    filteredOverdue.length === 0 &&
+    filteredNodate.length === 0 &&
+    (applyFilters(visibleTasks).length > 0 || overdueTasks.filter(matchesArea).length > 0 || nodateTasks.filter(matchesArea).length > 0);
 
   // Enquanto o payload da Home ainda busca, evita mostrar o filtro futuro vazio.
   const futureLoading = isFutureFilter && homeQuery.isLoading;
@@ -244,7 +304,7 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
         style: 'destructive',
         onPress: async () => {
           const previous = queryClient.getQueryData<HomeData>(homeKey);
-          queryClient.setQueryData<HomeData>(homeKey, (data) => updateHomeToday(data, (today) => removeTaskFromLists(today, task.id)));
+          queryClient.setQueryData<HomeData>(homeKey, (data) => removeTaskFromHome(data, task.id));
           try {
             await api.delete(`/tasks`, { params: { id: task.id } });
           } catch {
@@ -263,10 +323,10 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
   // tarefa entre as listas no cache (sem esperar refetch) e revalidamos.
   const handleToggled = useCallback(
     (task: Task, nowConcluded: boolean) => {
-      queryClient.setQueryData<HomeData>(homeKey, (data) => updateHomeToday(data, (today) => moveTask(today, task.id, nowConcluded)));
+      queryClient.setQueryData<HomeData>(homeKey, (data) => toggleTaskOnHome(data, task.id, nowConcluded, dateKey));
       queryClient.invalidateQueries({ queryKey: queryKeys.tasksAll() });
     },
-    [queryClient, homeKey],
+    [queryClient, homeKey, dateKey],
   );
 
   const refreshEnergy = useCallback(async () => {
@@ -343,7 +403,7 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
       if (!insight.action || insight.action.type !== 'schedule') return;
       // As candidatas do coach saem das tarefas do dia, mas a semana e as sem
       // data entram na busca para cobrir sugestões de reagendamento.
-      const task = [...visibleTasks, ...concludedTasks, ...allWeekTasks, ...nodateTasks].find((item) => item.id === insight.action!.taskId);
+      const task = [...visibleTasks, ...concludedTasks, ...overdueTasks, ...allWeekTasks, ...nodateTasks].find((item) => item.id === insight.action!.taskId);
       if (!task) {
         Alert.alert('Erro', 'Não encontramos essa atividade.');
         return;
@@ -369,7 +429,7 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
         setApplyingInsightId(null);
       }
     },
-    [visibleTasks, concludedTasks, allWeekTasks, nodateTasks, queryClient, dateKey, coachBatchId],
+    [visibleTasks, concludedTasks, overdueTasks, allWeekTasks, nodateTasks, queryClient, dateKey, coachBatchId],
   );
 
   const handleSelectEnergyMode = useCallback(
@@ -526,17 +586,19 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
 
         <CoachSuggestions insights={coachInsights} loading={coachQueryEnabled && coachPending} isDark={isDark} applyingId={applyingInsightId} onApply={handleApplyInsight} onDismiss={dismissInsight} />
 
-        <TodayHeading isDark={isDark} />
-
-        {futureLoading ? (
-          <View className="items-center justify-center py-10">
-            <ActivityIndicator color={isDark ? '#e4e4e7' : ACCENT} />
-          </View>
-        ) : (
-          filteredVisible.map((task, index) => (
-            <TaskCard key={task.randomId} highlight={index === 0} task={task} selected={false} isDark={isDark} onComplete={() => handleToggled(task, true)} onEdit={() => onEdit?.(task)} onDelete={() => handleDelete(task)} />
-          ))
-        )}
+        <TaskLists
+          isDark={isDark}
+          futureLoading={futureLoading}
+          isFutureFilter={isFutureFilter}
+          selectedDateFilter={selectedDateFilter}
+          tomorrowDate={tomorrowDate}
+          filteredVisible={filteredVisible}
+          filteredOverdue={filteredOverdue}
+          filteredNodate={filteredNodate}
+          onComplete={(task) => handleToggled(task, true)}
+          onEdit={onEdit}
+          onDelete={handleDelete}
+        />
 
         {rushedHidAll ? <RushedEmptyState isDark={isDark} onShowAll={() => handleSelectEnergyMode('ideal')} /> : null}
 

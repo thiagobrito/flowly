@@ -85,5 +85,5 @@ test('sem reconhecimento de fala, a tela convida a tocar no microfone', async ({
 
   await expect(app.page.getByText('Toque para falar')).toBeVisible();
   await app.page.getByRole('button', { name: 'Fechar assistente' }).click();
-  await expect(app.page.getByText('Ordenado pela sua energia')).toBeVisible();
+  await expect(app.page.getByText('Por horário')).toBeVisible();
 });

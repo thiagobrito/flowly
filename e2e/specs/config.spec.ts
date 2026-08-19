@@ -41,7 +41,7 @@ test('abre as configurações e volta para a Home', async ({ app }) => {
   await expect(app.page.getByText('INTEGRAÇÕES')).toBeVisible();
 
   await app.page.getByRole('button', { name: 'Voltar' }).click();
-  await expect(app.page.getByText('Ordenado pela sua energia')).toBeVisible();
+  await expect(app.page.getByText('Por horário')).toBeVisible();
 });
 
 test('escolher o tema escuro persiste a preferência', async ({ app }) => {

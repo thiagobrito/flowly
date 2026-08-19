@@ -34,7 +34,7 @@ test.use({ viewport: { width: 440, height: 956 }, deviceScaleFactor: 3 });
 test('01 — Home', async ({ app }) => {
   await app.launch({ now: morningToday() });
 
-  await expect(app.page.getByText('Ordenado pela sua energia')).toBeVisible();
+  await expect(app.page.getByText('Por horário')).toBeVisible();
   await app.page.screenshot({ path: `${SHOTS_DIR}/01-home.png` });
 });
 
@@ -50,7 +50,7 @@ test('02 — Energia do dia', async ({ app }) => {
 test('03 — Lista do dia', async ({ app }) => {
   await app.launch({ now: morningToday() });
 
-  const heading = app.page.getByText('Ordenado pela sua energia');
+  const heading = app.page.getByText('Por horário');
   await expect(heading).toBeVisible();
   // A rolagem é do ScrollView, não da página: `scrollIntoViewIfNeeded` não move
   // nada porque o item já está no DOM. A roda do mouse é o que empurra a lista
