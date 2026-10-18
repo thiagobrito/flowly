@@ -3,7 +3,9 @@
  *
  * Camada fina de autenticação sobre as libs de `network` e `storage`. Persiste
  * a sessão (token + e-mail) com `usePersistedState` e injeta o header
- * `Authorization` na instância default da `api` via `configureApi`.
+ * `Authorization` na instância default da `api`. Um 401 em rota protegida
+ * encerra a sessão (pede login de novo); o header `x-refreshed-token` atualiza
+ * o JWT sem o usuário perceber.
  *
  * ## Uso
  *
@@ -26,16 +28,14 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { trackSignupCompleted } from '@/lib/attribution';
 import { clearHomeSnapshot } from '@/lib/home/snapshot';
-import { api, HttpError, isNetworkError, setAuthToken, setAuthTokenProvider } from '@/lib/network';
+import { api, HttpError, isNetworkError, setAuthSessionHandlers, setAuthToken, setAuthTokenProvider } from '@/lib/network';
 import { getPersistedSnapshot, usePersistedState } from '@/lib/storage';
 import { loginUser, logoutUser } from '@/lib/subscription';
 import type { TelemetryEventName } from '@/lib/telemetry';
 import { track } from '@/lib/telemetry';
 
+import { EMPTY_SESSION, expireStoredSession, persistRefreshedToken, SESSION_KEY, shouldExpireSessionOnError } from './sessionSync';
 import type { AuthResponse, AuthResult, Credentials, Session } from './types';
-
-const SESSION_KEY = 'auth_session_v1';
-const EMPTY_SESSION: Session = { token: null, email: null, hasAccount: false };
 
 /**
  * Resolve o token sob demanda a partir do snapshot síncrono da sessão
@@ -48,6 +48,24 @@ setAuthTokenProvider(() => getPersistedSnapshot(EMPTY_SESSION, SESSION_KEY).toke
 function applyAuthHeader(token: string | null): void {
   setAuthToken(token);
 }
+
+function expireLocalSession(): void {
+  applyAuthHeader(null);
+  logoutUser().catch(() => undefined);
+  clearHomeSnapshot();
+  expireStoredSession();
+}
+
+setAuthSessionHandlers({
+  onUnauthorized: (error) => {
+    if (!shouldExpireSessionOnError(error)) return;
+    expireLocalSession();
+  },
+  onRefreshedToken: (token) => {
+    applyAuthHeader(token);
+    persistRefreshedToken(token);
+  },
+});
 
 /** Traduz erros da lib de network em mensagens amigáveis em pt-BR. */
 function toFriendlyMessage(error: unknown): string {
@@ -124,13 +142,8 @@ export function useSession() {
   );
 
   const signOut = useCallback(() => {
-    applyAuthHeader(null);
-    logoutUser().catch(() => undefined);
-    // Assinatura e perfil de sono trazidos pela Home ficam em memória fora do
-    // React Query; sem limpar, a próxima conta a logar leria os dados da anterior.
-    clearHomeSnapshot();
-    setSession({ ...EMPTY_SESSION, hasAccount: true });
-  }, [setSession]);
+    expireLocalSession();
+  }, []);
 
   return {
     session,

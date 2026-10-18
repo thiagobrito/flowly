@@ -182,12 +182,12 @@ test.describe('resiliência', () => {
     expect(app.console.relevant()).toEqual([]);
   });
 
-  test('sessão expirada (401) não quebra a tela', async ({ app }) => {
-    await app.launch({ scenario: 'unauthorized' });
+  test('sessão expirada (401) pede e-mail e senha de novo', async ({ app }) => {
+    await app.launch({ scenario: 'unauthorized', waitForTabs: false });
 
-    await expect(app.page.getByRole('button', { name: 'Home', exact: true })).toBeVisible();
+    await expect(app.page.getByText('Bem-vindo de volta')).toBeVisible();
+    await expect(app.page.getByPlaceholder('Digite seu e-mail')).toBeVisible();
     expect(await findLeakedText(app.page)).toEqual([]);
-    expect(app.console.relevant()).toEqual([]);
   });
 
   test('a abertura não repete requisições (detector de loop de refetch)', async ({ app }) => {

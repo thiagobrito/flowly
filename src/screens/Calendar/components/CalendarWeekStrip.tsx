@@ -8,7 +8,7 @@
 
 import { Pressable, Text, View } from 'react-native';
 
-import { localDateKey, startOfLocalDay } from '@/lib/date';
+import { localDateKey, startOfLocalDay, toLocalISOString } from '@/lib/date';
 import { ACCENT, accentOn, mutedText } from '@/lib/theme';
 
 const WEEKDAY_INITIALS = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB'] as const;
@@ -48,7 +48,7 @@ export default function CalendarWeekStrip({ visibleDate, isDark, onSelect }: Cal
         return (
           <Pressable
             key={key}
-            onPress={() => onSelect(day.toISOString())}
+            onPress={() => onSelect(toLocalISOString(day))}
             accessibilityRole="button"
             accessibilityState={{ selected: isSelected }}
             accessibilityLabel={`${WEEKDAY_INITIALS[day.getDay()]}, dia ${day.getDate()}`}

@@ -98,6 +98,7 @@
 
 import { createHttpClient } from './client';
 import { resolveBaseURL } from './config';
+import { HttpError } from './errors';
 import type { HttpClient, HttpClientConfig } from './types';
 
 /**
@@ -139,6 +140,19 @@ export function getAuthToken(): string | null {
   return authTokenProvider?.() ?? authToken;
 }
 
+let onUnauthorized: ((error: HttpError) => void) | null = null;
+let onRefreshedToken: ((token: string) => void) | null = null;
+
+/**
+ * Callbacks da sessão: 401 em rota protegida e JWT renovado no header
+ * `x-refreshed-token`. A lib de auth registra os handlers; a de network não
+ * conhece storage.
+ */
+export function setAuthSessionHandlers(handlers: { onUnauthorized?: ((error: HttpError) => void) | null; onRefreshedToken?: ((token: string) => void) | null }): void {
+  if ('onUnauthorized' in handlers) onUnauthorized = handlers.onUnauthorized ?? null;
+  if ('onRefreshedToken' in handlers) onRefreshedToken = handlers.onRefreshedToken ?? null;
+}
+
 let defaultConfig: HttpClientConfig = {
   baseURL: resolveBaseURL(),
   hooks: {
@@ -150,6 +164,13 @@ let defaultConfig: HttpClientConfig = {
         delete request.headers.Authorization;
       }
       return request;
+    },
+    onResponse: (response) => {
+      const token = response.headers['x-refreshed-token'] ?? response.headers['X-Refreshed-Token'];
+      if (token) onRefreshedToken?.(token);
+    },
+    onError: (error) => {
+      if (error instanceof HttpError) onUnauthorized?.(error);
     },
   },
 };

@@ -80,3 +80,4 @@ export { configureStorage, DEFAULT_STORAGE_KEY, HYDRATION_TIMEOUT_MS, MAX_PERSIS
 export { trimNutritionData, trimProfileData } from './trimmers';
 export type { PersistedRecord, PersistedValue, SetPersisted, StorageBackend, StorageConfig, StorageTelemetry, TelemetryContext, Trimmer, UsePersistedStateResult } from './types';
 export { usePersistedState } from './usePersistedState';
+export { writePersistedSnapshot } from './write';

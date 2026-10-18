@@ -229,9 +229,33 @@ export default function Calendar({ onEdit, onCreateAt }: CalendarProps) {
     [extremes, getLevel, hasData, isDark],
   );
 
-  const goToDate = useCallback((dateISO: string) => {
-    calendarRef.current?.setVisibleDate(dateISO);
+  const scrollHourForDate = useCallback((dateISO: string) => {
+    const isToday = localDateKey(startOfLocalDay(dateISO)) === localDateKey();
+    if (isToday) return;
+    // Em outro dia, `scrollToNow` deixa a grade na hora atual (~21h) e os
+    // blocos da manhã/tarde ficam fora da tela — parece calendário vazio.
+    calendarRef.current?.goToHour(8, false);
   }, []);
+
+  const handleDateChanged = useCallback(
+    (dateISO: string) => {
+      setVisibleDate(dateISO);
+      scrollHourForDate(dateISO);
+    },
+    [scrollHourForDate],
+  );
+
+  const goToDate = useCallback(
+    (dateISO: string) => {
+      // `setVisibleDate` do kit só atualiza um ref interno: não rola a página
+      // e não dispara `onDateChanged`, então a faixa DOM–SÁB não recarregava
+      // as tarefas. `goToDate` + estado React buscam o dia certo na API.
+      setVisibleDate(dateISO);
+      calendarRef.current?.goToDate({ date: dateISO, animatedDate: true, hourScroll: false });
+      scrollHourForDate(dateISO);
+    },
+    [scrollHourForDate],
+  );
 
   const renderCalendarEvent = useCallback(
     (event: PackedEvent) => {
@@ -661,8 +685,10 @@ export default function Calendar({ onEdit, onCreateAt }: CalendarProps) {
   );
 
   const goToday = useCallback(() => {
+    const now = toLocalISOString();
+    setVisibleDate(now);
     calendarRef.current?.goToDate({
-      date: toLocalISOString(),
+      date: now,
       hourScroll: true,
       animatedDate: true,
       animatedHour: true,
@@ -730,7 +756,7 @@ export default function Calendar({ onEdit, onCreateAt }: CalendarProps) {
           onPressEvent={handlePressEvent}
           onDragEventEnd={handleDragEventEnd}
           onLongPressBackground={handleLongPressBackground}
-          onDateChanged={setVisibleDate}
+          onDateChanged={handleDateChanged}
         >
           <CalendarBody showNowIndicator renderEvent={renderCalendarEvent} renderHour={renderHour} renderCustomHorizontalLine={renderEnergyRow} />
         </CalendarContainer>
