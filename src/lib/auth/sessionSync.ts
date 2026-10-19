@@ -1,8 +1,9 @@
 /**
  * Sincroniza a sessão persistida com o que o servidor devolveu.
  *
- * - 401 em rota protegida: o token morreu; sem limpar a sessão o guard acha
- *   que ainda há login e a tela trava.
+ * - 401 em rota protegida **com token já hidratado**: o JWT morreu; sem
+ *   limpar a sessão o guard acha que ainda há login e a tela trava. 401 no
+ *   boot (subscription/home antes do AsyncStorage) não pode apagar o token.
  * - Header `x-refreshed-token`: o servidor empurrou o `exp` do JWT; gravamos
  *   o valor novo para o próximo acesso não nascer já velho.
  *
@@ -23,7 +24,12 @@ export function isCredentialAuthUrl(url: string): boolean {
 }
 
 export function shouldExpireSessionOnError(error: unknown): boolean {
-  return error instanceof HttpError && error.status === 401 && !isCredentialAuthUrl(error.url);
+  if (!(error instanceof HttpError) || error.status !== 401) return false;
+  if (isCredentialAuthUrl(error.url)) return false;
+  // Sem token hidratado, o 401 é "ainda não logou" — não "sessão morreu".
+  // Gravar o vazio agora apagaria o JWT que ainda está no AsyncStorage.
+  const session = getPersistedSnapshot(EMPTY_SESSION, SESSION_KEY);
+  return Boolean(session.token);
 }
 
 export function refreshedTokenFromHeaders(headers: Record<string, string>): string | null {

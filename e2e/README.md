@@ -118,7 +118,7 @@ Ele gera o `ios/` **sem** `META_APP_ID`/`META_CLIENT_TOKEN` (o plugin fica de
 fora, como no release que caiu), compila para o iPhone Simulator, lança o app e
 falha se o processo morrer ou se o invariant do `NativeEventEmitter` aparecer no
 log. Se o [Maestro](https://maestro.mobile.dev) estiver instalado, também afirma
-que a tela de login ("Bem-vindo de volta") ficou visível.
+que o install fresco mostra "Criar conta" e que o tab Entrar abre "Bem-vindo de volta".
 
 Requer macOS + Xcode. Não roda no CI de PR (Ubuntu). Roda no caminho de
 publicação (`python build.py all`); `python build.py all --no-ios-smoke` pula

@@ -20,7 +20,7 @@ def prebuild(clean: bool = False, env: dict | None = None) -> None:
     merged = dict(os.environ if env is None else env)
     merged["CI"] = "1"
     merged["EXPO_NO_GIT_STATUS"] = "1"
-    run(cmd, env=merged)
+    run(cmd, env=merged, log_file=OUTPUT_DIR / "ios-prebuild.log")
 
 
 def _resolve_workspace(cfg: Config) -> Path:
@@ -91,13 +91,14 @@ def archive_and_export(cfg: Config | None = None) -> Path:
         "generic/platform=iOS",
         "-archivePath",
         str(archive_path),
+        "COMPILER_INDEX_STORE_ENABLE=NO",
         "clean",
         "archive",
         "-allowProvisioningUpdates",
     ]
     if cfg.team_id:
         archive_cmd.append(f"DEVELOPMENT_TEAM={cfg.team_id}")
-    run(archive_cmd)
+    run(archive_cmd, log_file=OUTPUT_DIR / "ios-archive.log")
 
     section("Export do .ipa")
     export_options = _write_export_options(cfg)
@@ -112,7 +113,7 @@ def archive_and_export(cfg: Config | None = None) -> Path:
         str(export_options),
         "-allowProvisioningUpdates",
     ]
-    run(export_cmd)
+    run(export_cmd, log_file=OUTPUT_DIR / "ios-export.log")
 
     ipas = sorted(OUTPUT_DIR.glob("*.ipa"))
     if not ipas:

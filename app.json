@@ -2,7 +2,7 @@
   "expo": {
     "name": "Flowly",
     "slug": "flowly-m-gvdcsjo9xgnlwu4indg",
-    "version": "2026.08.18",
+    "version": "2026.10.18",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -26,7 +26,7 @@
         "CFBundleLocalizations": ["pt-BR"],
         "NSPhotoLibraryUsageDescription": "O Flowly pode acessar sua galeria para salvar ou importar arquivos quando voc\u00ea realizar essa a\u00e7\u00e3o no app."
       },
-      "buildNumber": "2",
+      "buildNumber": "1",
       "appleTeamId": "WCZL6FK4U7"
     },
     "android": {
@@ -44,7 +44,7 @@
         "android.permission.health.READ_ACTIVE_CALORIES_BURNED",
         "android.permission.POST_NOTIFICATIONS"
       ],
-      "versionCode": 2026081802
+      "versionCode": 2026101801
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -54,6 +54,7 @@
       "expo-router",
       "./plugins/withXcodeDefaultToolchain.js",
       "./plugins/withIosPrimaryLocale.js",
+      "./plugins/withIosSceneDelegate.js",
       [
         "expo-notifications",
         {

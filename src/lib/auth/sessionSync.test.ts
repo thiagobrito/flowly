@@ -21,9 +21,16 @@ describe('sessionSync', () => {
   });
 
   it('401 em rota protegida encerra a sessão; 401 no login não', () => {
+    persistSession({ ...EMPTY_SESSION, token: 'jwt', email: 'a@b.c', hasAccount: true });
+
     expect(shouldExpireSessionOnError(new HttpError({ status: 401, body: {}, headers: {}, url: 'https://flowly.app/api/v1/home' }))).toBe(true);
     expect(shouldExpireSessionOnError(new HttpError({ status: 401, body: {}, headers: {}, url: 'https://flowly.app/api/v1/auth/login' }))).toBe(false);
     expect(shouldExpireSessionOnError(new HttpError({ status: 500, body: {}, headers: {}, url: 'https://flowly.app/api/v1/home' }))).toBe(false);
+  });
+
+  it('401 sem token hidratado não apaga a sessão que ainda está no disco', () => {
+    expect(shouldExpireSessionOnError(new HttpError({ status: 401, body: {}, headers: {}, url: 'https://flowly.app/api/v1/home' }))).toBe(false);
+    expect(shouldExpireSessionOnError(new HttpError({ status: 401, body: {}, headers: {}, url: 'https://flowly.app/api/v1/subscription' }))).toBe(false);
   });
 
   it('lê o JWT renovado mesmo com o header em outra caixa', () => {

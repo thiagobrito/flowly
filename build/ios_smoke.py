@@ -31,8 +31,14 @@ CRASH_MARKERS = (
 )
 DERIVED_DATA = OUTPUT_DIR / "DerivedData-smoke"
 LOG_PATH = OUTPUT_DIR / "ios-smoke.log"
+XCODEBUILD_LOG = OUTPUT_DIR / "ios-smoke-xcodebuild.log"
 BOOT_SECONDS = 25
 MAESTRO_FLOW = ROOT / "e2e" / "ios" / "smoke.yaml"
+SWIFT_CACHE_RELATIVES = (
+    "Build/Intermediates.noindex/ExplicitPrecompiledModules",
+    "Build/Intermediates.noindex/SwiftExplicitPrecompiledModules",
+    "ModuleCache.noindex",
+)
 
 
 def env_without_meta(source: dict[str, str] | None = None) -> dict[str, str]:
@@ -157,7 +163,40 @@ def _stream_logs(udid: str, log_path: Path) -> subprocess.Popen:
     )
 
 
-def _run_maestro(bundle_id: str) -> None:
+JAVA_HOME_CANDIDATES = (
+    Path("/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home"),
+    Path("/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home"),
+    Path("/opt/homebrew/opt/openjdk/libexec/openjdk.jdk/Contents/Home"),
+    Path("/usr/local/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home"),
+)
+
+
+def resolve_java_home(environ: dict[str, str] | None = None) -> Path | None:
+    """Localiza um JDK real. `/usr/bin/java` no macOS é stub e o Maestro cai."""
+    env = environ if environ is not None else os.environ
+    candidates: list[Path] = []
+    configured = env.get("JAVA_HOME")
+    if configured:
+        candidates.append(Path(configured))
+    candidates.extend(JAVA_HOME_CANDIDATES)
+    for home in candidates:
+        if (home / "bin" / "java").is_file():
+            return home
+    return None
+
+
+def java_runtime_works(java: Path) -> bool:
+    result = subprocess.run([str(java), "-version"], capture_output=True, text=True)
+    text = f"{result.stdout}{result.stderr}"
+    return result.returncode == 0 and "Unable to locate a Java Runtime" not in text
+
+
+def maestro_test_cmd(maestro: str, udid: str, flow: Path) -> list[str]:
+    """Maestro 2+ não aceita `--app-id`; o appId vai no YAML e o device em `--udid`."""
+    return [maestro, "test", "--udid", udid, str(flow)]
+
+
+def _run_maestro(udid: str) -> None:
     maestro = shutil.which("maestro")
     if maestro is None:
         home = Path.home() / ".maestro" / "bin" / "maestro"
@@ -168,8 +207,52 @@ def _run_maestro(bundle_id: str) -> None:
     if not MAESTRO_FLOW.exists():
         return
 
+    java_home = resolve_java_home()
+    env = dict(os.environ)
+    if java_home is not None and java_runtime_works(java_home / "bin" / "java"):
+        env["JAVA_HOME"] = str(java_home)
+        env["PATH"] = f"{java_home / 'bin'}{os.pathsep}{env.get('PATH', '')}"
+    else:
+        log(
+            "Maestro pulado: Java 17+ ausente (o smoke de processo + logs já passou). "
+            "Instale openjdk@17 ou defina JAVA_HOME.",
+            "warn",
+        )
+        return
+
     section("Maestro — login visível após o boot")
-    run([maestro, "test", "--app-id", bundle_id, str(MAESTRO_FLOW)])
+    run(maestro_test_cmd(maestro, udid, MAESTRO_FLOW), env=env)
+
+
+def prune_stale_swift_caches(derived: Path) -> None:
+    """Remove PCM explícito inflado. No Xcode 26+ isso passa de 10 GB e o
+    SWBBuildService trava no swift-driver incremental sem clang filho."""
+    for relative in SWIFT_CACHE_RELATIVES:
+        path = derived / relative
+        if not path.exists():
+            continue
+        log(f"Limpando cache Swift {relative}", "info")
+        subprocess.run(["rm", "-rf", str(path)], check=False)
+
+
+def xcodebuild_smoke_cmd(workspace: Path, scheme: str, derived: Path) -> list[str]:
+    """Simulador Debug sem index store — o índice também empaca o llbuild."""
+    return [
+        "xcodebuild",
+        "-workspace",
+        str(workspace),
+        "-scheme",
+        scheme,
+        "-configuration",
+        "Release",
+        "-destination",
+        "generic/platform=iOS Simulator",
+        "-derivedDataPath",
+        str(derived),
+        "CODE_SIGNING_ALLOWED=NO",
+        "COMPILER_INDEX_STORE_ENABLE=NO",
+        "build",
+    ]
 
 
 def run_ios_smoke(*, skip_prebuild: bool = False, skip_build: bool = False) -> None:
@@ -200,25 +283,10 @@ def run_ios_smoke(*, skip_prebuild: bool = False, skip_build: bool = False) -> N
     scheme = _resolve_scheme(cfg, workspace)
 
     if not skip_build:
-        section(f"xcodebuild (simulador Debug) — scheme {scheme}")
+        section(f"xcodebuild (simulador Release) — scheme {scheme}")
         DERIVED_DATA.mkdir(parents=True, exist_ok=True)
-        run(
-            [
-                "xcodebuild",
-                "-workspace",
-                str(workspace),
-                "-scheme",
-                scheme,
-                "-configuration",
-                "Debug",
-                "-sdk",
-                "iphonesimulator",
-                "-derivedDataPath",
-                str(DERIVED_DATA),
-                "CODE_SIGNING_ALLOWED=NO",
-                "build",
-            ]
-        )
+        prune_stale_swift_caches(DERIVED_DATA)
+        run(xcodebuild_smoke_cmd(workspace, scheme, DERIVED_DATA), log_file=XCODEBUILD_LOG)
 
     app = _find_app(DERIVED_DATA)
     log(f"App: {app}", "info")
@@ -252,5 +320,5 @@ def run_ios_smoke(*, skip_prebuild: bool = False, skip_build: bool = False) -> N
         streamer.wait(timeout=5)
 
     log(f"Processo vivo após {BOOT_SECONDS}s, sem NativeEventEmitter no log.", "ok")
-    _run_maestro(cfg.bundle_id)
+    _run_maestro(udid)
     log("Smoke nativo iOS passou.", "ok")

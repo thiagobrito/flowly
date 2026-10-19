@@ -2,6 +2,7 @@
  * Config plugin: workarounds para builds iOS no Xcode 26+.
  *
  * - Força toolchain padrão do Xcode (evita conflito Metal/SwiftUICore)
+ * - Sobe IPHONEOS_DEPLOYMENT_TARGET dos pods para 15.0 (Xcode 27 recusa 12/13)
  * - Patch do fmt quando RN compila from source (consteval + Apple Clang 21)
  *
  * Requer `ios.buildReactNativeFromSource: true` em expo-build-properties para
@@ -18,10 +19,20 @@ const PODFILE_SNIPPET = `
     # Xcode 26+: evita link error com SwiftUICore (Metal toolchain)
     installer.pods_project.build_configurations.each do |config|
       config.build_settings['TOOLCHAINS'] = 'com.apple.dt.toolchain.XcodeDefault'
+      current = config.build_settings['IPHONEOS_DEPLOYMENT_TARGET']
+      if current.nil? || current.to_s.to_f < 15.0
+        config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.0'
+      end
     end
     installer.pods_project.targets.each do |target|
       target.build_configurations.each do |config|
         config.build_settings['TOOLCHAINS'] = 'com.apple.dt.toolchain.XcodeDefault'
+        # Xcode 27: o simulador só aceita 15.0–27.0. Bundles de RevenueCat,
+        # RNSVG e AsyncStorage ainda declaram 12.4/13.x e derrubam o smoke.
+        current = config.build_settings['IPHONEOS_DEPLOYMENT_TARGET']
+        if current.nil? || current.to_s.to_f < 15.0
+          config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.0'
+        end
       end
     end
     installer.aggregate_targets.each do |aggregate_target|
