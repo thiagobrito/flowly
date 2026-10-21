@@ -23,11 +23,19 @@
  * faixa de cada instante, então o verde do pico e o terracota do vale aparecem
  * no mesmo traço. É a informação que o eixo Y já dá, repetida no canal que o
  * olho lê mais rápido.
+ *
+ * ## Recolher
+ *
+ * Na lista de tarefas o cartão compete com o que o usuário veio fazer. O botão
+ * no canto superior direito esconde a curva e deixa uma faixa com a janela de
+ * pico — o dado que justifica o gráfico — para abrir de novo. A preferência
+ * fica salva: quem liberou espaço não vê o cartão inteiro na próxima abertura.
  */
 
-import { Zap } from 'lucide-react-native';
-import { useMemo, useState } from 'react';
-import { Text, View } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { ChevronDown, ChevronUp, Zap } from 'lucide-react-native';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Pressable, Text, View } from 'react-native';
 import Svg, { Circle, Defs, Line, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
 
 import { type EnergyCurvePoint, findPeakWindow, type FlowlyEngineInput, formatPeakWindowLabel, generateEnergyCurve, type PeakWindow, periodHeatmap } from '@/lib/energy';
@@ -42,7 +50,43 @@ type PeakEnergyCardProps = {
   /** Título opcional (onboarding usa copy diferente). */
   title?: string;
   subtitle?: string;
+  /**
+   * Mostra o botão de minimizar. O onboarding deixa de fora: ali a curva é o
+   * conteúdo do passo, não um cartão no caminho da lista.
+   */
+  collapsible?: boolean;
 };
+
+const COLLAPSED_KEY = 'peak_energy_card_collapsed_v1';
+
+function useChartCollapsed(enabled: boolean): [boolean, () => void] {
+  const [collapsed, setCollapsed] = useState(false);
+
+  useEffect(() => {
+    if (!enabled) return undefined;
+
+    let active = true;
+    AsyncStorage.getItem(COLLAPSED_KEY)
+      .then((raw) => {
+        if (active && raw === '1') setCollapsed(true);
+      })
+      .catch(() => undefined);
+
+    return () => {
+      active = false;
+    };
+  }, [enabled]);
+
+  const toggle = useCallback(() => {
+    setCollapsed((current) => {
+      const next = !current;
+      AsyncStorage.setItem(COLLAPSED_KEY, next ? '1' : '0').catch(() => undefined);
+      return next;
+    });
+  }, []);
+
+  return [enabled && collapsed, toggle];
+}
 
 const CHART_HEIGHT = 104;
 
@@ -129,8 +173,9 @@ function hourTicks(curve: EnergyCurvePoint[]): { index: number; label: string }[
   return ticks;
 }
 
-export default function PeakEnergyCard({ input, currentScore, isDark, title = 'Pico de energia de hoje', subtitle }: PeakEnergyCardProps) {
+export default function PeakEnergyCard({ input, currentScore, isDark, title = 'Pico de energia de hoje', subtitle, collapsible = false }: PeakEnergyCardProps) {
   const [width, setWidth] = useState(FALLBACK_WIDTH);
+  const [collapsed, toggleCollapsed] = useChartCollapsed(collapsible);
 
   const { curve, peak, heat } = useMemo(() => {
     if (!input) return { curve: [] as EnergyCurvePoint[], peak: null as PeakWindow | null, heat: [] };
@@ -167,14 +212,60 @@ export default function PeakEnergyCard({ input, currentScore, isDark, title = 'P
   // pouco para não cobrir justamente o ponto que ele explica.
   const labelTop = apex ? Math.min(Math.max(apex.y + 12, 4), CHART_HEIGHT - 24) : 4;
 
-  return (
-    <View className="rounded-2xl border p-4" style={{ borderColor: surface.border(isDark), backgroundColor: surface.card(isDark) }}>
-      <View className="flex-row items-center">
-        <Zap size={14} color={bandColor} />
-        <Text className="ml-1.5 text-[11px] font-semibold uppercase tracking-wide" style={{ color: muted }}>
-          {title}
+  const cardStyle = { borderColor: surface.border(isDark), backgroundColor: surface.card(isDark) };
+  const windowLabel = peak?.startISO ? `${hourLabel(peak.startISO)} às ${hourLabel(peak.endISO)}` : '';
+  const chevronWell = { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)' };
+
+  const heading = (
+    <View className="flex-row items-center" pointerEvents={collapsible && !collapsed ? 'box-none' : 'auto'} style={collapsible && !collapsed ? { paddingRight: 36 } : undefined}>
+      <Zap size={14} color={bandColor} />
+      <Text className="ml-1.5 flex-1 text-[11px] font-semibold uppercase tracking-wide" style={{ color: muted }} numberOfLines={1}>
+        {title}
+      </Text>
+      {collapsed && windowLabel ? (
+        <Text className="ml-2 text-xs font-semibold tabular-nums" style={{ color: bandColor }}>
+          {windowLabel}
         </Text>
-      </View>
+      ) : null}
+      {collapsed ? (
+        <View className="ml-2 size-7 items-center justify-center rounded-full" style={chevronWell}>
+          <ChevronDown size={16} color={muted} strokeWidth={2} />
+        </View>
+      ) : null}
+    </View>
+  );
+
+  if (collapsed) {
+    return (
+      <Pressable
+        onPress={toggleCollapsed}
+        accessibilityRole="button"
+        accessibilityLabel={windowLabel ? `Mostrar pico de energia, janela ${windowLabel}` : 'Mostrar pico de energia'}
+        accessibilityState={{ expanded: false }}
+        className="rounded-2xl border px-4 py-2 active:opacity-80"
+        style={cardStyle}
+      >
+        {heading}
+      </Pressable>
+    );
+  }
+
+  return (
+    <View className="rounded-2xl border p-4" style={cardStyle}>
+      {heading}
+      {collapsible ? (
+        <Pressable
+          onPress={toggleCollapsed}
+          accessibilityRole="button"
+          accessibilityLabel="Minimizar pico de energia"
+          accessibilityState={{ expanded: true }}
+          hitSlop={8}
+          className="absolute right-3 top-3 size-8 items-center justify-center rounded-full active:opacity-70"
+          style={[chevronWell, { zIndex: 2 }]}
+        >
+          <ChevronUp size={16} color={muted} strokeWidth={2} />
+        </Pressable>
+      ) : null}
 
       <View className="mt-2 flex-row items-baseline">
         <Text className="text-[44px] font-bold tabular-nums leading-[48px]" style={{ color: bandColor }} accessibilityLabel={`${displayScore} de 100, ${ENERGY_BAND_LABEL[band]}`}>

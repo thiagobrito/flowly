@@ -2,7 +2,7 @@
   "expo": {
     "name": "Flowly",
     "slug": "flowly-m-gvdcsjo9xgnlwu4indg",
-    "version": "2026.10.18",
+    "version": "2026.10.19",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -44,7 +44,7 @@
         "android.permission.health.READ_ACTIVE_CALORIES_BURNED",
         "android.permission.POST_NOTIFICATIONS"
       ],
-      "versionCode": 2026101801
+      "versionCode": 2026101901
     },
     "web": {
       "favicon": "./assets/favicon.png",

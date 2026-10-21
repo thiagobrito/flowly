@@ -580,7 +580,7 @@ export default function Tasks({ onEdit, onLogout, onOpenConfig }: TasksProps) {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={isDark ? '#e4e4e7' : ACCENT} colors={[ACCENT]} />}
       >
         <View className="mb-4" style={{ gap: 10 }}>
-          <PeakEnergyCard input={energyInput} currentScore={engineScore} isDark={isDark} />
+          <PeakEnergyCard input={energyInput} currentScore={engineScore} isDark={isDark} collapsible />
           <LastNightSleepCard input={energyInput} isDark={isDark} />
         </View>
 

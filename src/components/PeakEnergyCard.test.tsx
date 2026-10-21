@@ -1,4 +1,5 @@
-import { render, screen } from '@testing-library/react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
 import type { FlowlyEngineInput } from '@/lib/energy';
 
@@ -18,6 +19,10 @@ const input: FlowlyEngineInput = {
 };
 
 describe('PeakEnergyCard', () => {
+  beforeEach(async () => {
+    await AsyncStorage.clear();
+  });
+
   it('mostra o título em pt-BR', () => {
     render(<PeakEnergyCard input={input} currentScore={70} isDark={false} />);
 
@@ -77,6 +82,48 @@ describe('PeakEnergyCard', () => {
     render(<PeakEnergyCard input={input} currentScore={70} isDark={false} />);
 
     expect(screen.getAllByText(/^(Alta|Média|Baixa)$/)).toHaveLength(3);
+  });
+
+  it('não mostra o botão de minimizar fora da lista de tarefas', () => {
+    render(<PeakEnergyCard input={input} currentScore={70} isDark={false} />);
+
+    expect(screen.queryByLabelText('Minimizar pico de energia')).toBeNull();
+  });
+
+  it('esconde o gráfico e volta a mostrá-lo', () => {
+    render(<PeakEnergyCard input={input} currentScore={70} isDark={false} collapsible />);
+
+    expect(screen.getByText('Manhã')).toBeTruthy();
+
+    fireEvent.press(screen.getByLabelText('Minimizar pico de energia'));
+
+    expect(screen.queryByText('Manhã')).toBeNull();
+    expect(screen.queryByLabelText(/Curva de energia do dia/)).toBeNull();
+    expect(screen.getByText('Pico de energia de hoje')).toBeTruthy();
+    expect(screen.getByText(/^\d{1,2}h às \d{1,2}h$/)).toBeTruthy();
+
+    fireEvent.press(screen.getByLabelText(/Mostrar pico de energia/));
+
+    expect(screen.getByText('Manhã')).toBeTruthy();
+    expect(screen.getByLabelText(/Curva de energia do dia/)).toBeTruthy();
+  });
+
+  it('lembra que o gráfico foi minimizado', async () => {
+    const { unmount } = render(<PeakEnergyCard input={input} currentScore={70} isDark={false} collapsible />);
+
+    fireEvent.press(screen.getByLabelText('Minimizar pico de energia'));
+
+    await waitFor(async () => {
+      expect(await AsyncStorage.getItem('peak_energy_card_collapsed_v1')).toBe('1');
+    });
+
+    unmount();
+    render(<PeakEnergyCard input={input} currentScore={70} isDark={false} collapsible />);
+
+    await waitFor(() => {
+      expect(screen.queryByText('Manhã')).toBeNull();
+    });
+    expect(screen.getByLabelText(/Mostrar pico de energia/)).toBeTruthy();
   });
 
   it('descreve o score para leitores de tela, com a faixa de energia', () => {
