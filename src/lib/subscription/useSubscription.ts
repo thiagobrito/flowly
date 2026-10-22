@@ -12,6 +12,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CustomerInfo } from 'react-native-purchases';
 
+import { getAuthToken } from '@/lib/network';
 import { usePersistedState } from '@/lib/storage';
 import { track } from '@/lib/telemetry';
 
@@ -74,6 +75,11 @@ export function useSubscription() {
   }, [cache]);
 
   const refresh = useCallback(async () => {
+    // No cold start o snapshot da sessão ainda está vazio. Chamar agora sai
+    // sem Authorization, o servidor responde 401 e — se a hidratação terminar
+    // no meio do caminho — o app trataria isso como logout.
+    if (!getAuthToken()) return;
+
     setLoading(true);
     const [remoteRes, infoRes] = await Promise.allSettled([fetchSubscription(), getCustomerInfo()]);
 
@@ -111,9 +117,12 @@ export function useSubscription() {
     setLoading(false);
   }, [setCache]);
 
+  const hasToken = Boolean(getAuthToken());
+
   useEffect(() => {
+    if (!hasToken) return;
     refresh();
-  }, [refresh]);
+  }, [hasToken, refresh]);
 
   // Reage a renovações/expirações/restore vindas do RevenueCat.
   useEffect(() => addCustomerInfoListener(() => refresh()), [refresh]);

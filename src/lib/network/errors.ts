@@ -33,13 +33,20 @@ export class HttpError<TBody = unknown> extends NetworkError {
   /** URL que originou o erro. */
   readonly url: string;
 
-  constructor(params: { status: number; body: TBody; headers: Record<string, string>; url: string }) {
+  /**
+   * `false` quando o pedido saiu sem `Authorization`. Um 401 nesse caso não
+   * pode encerrar a sessão: o JWT no aparelho pode continuar válido.
+   */
+  readonly sentAuthorization: boolean;
+
+  constructor(params: { status: number; body: TBody; headers: Record<string, string>; url: string; sentAuthorization?: boolean }) {
     super(`HTTP ${params.status} em ${params.url}`);
     this.name = 'HttpError';
     this.status = params.status;
     this.body = params.body;
     this.headers = params.headers;
     this.url = params.url;
+    this.sentAuthorization = params.sentAuthorization ?? true;
   }
 }
 

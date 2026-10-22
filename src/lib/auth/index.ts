@@ -3,10 +3,9 @@
  *
  * Camada fina de autenticação sobre as libs de `network` e `storage`. Persiste
  * a sessão (token + e-mail) com `usePersistedState` e injeta o header
- * `Authorization` na instância default da `api`. Um 401 em rota protegida
- * **com token já hidratado** encerra a sessão (pede login de novo). 401 no
- * boot, antes do storage, não apaga o JWT. O header `x-refreshed-token`
- * atualiza o JWT sem o usuário perceber.
+ * `Authorization` na instância default da `api`. Um 401 de token expirado ou
+ * inválido encerra a sessão (pede login de novo). 401 por header ausente não
+ * apaga o JWT. O header `x-refreshed-token` atualiza o JWT sem o usuário perceber.
  *
  * ## Uso
  *

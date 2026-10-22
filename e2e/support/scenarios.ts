@@ -89,8 +89,9 @@ function serverError(): FakeWorld {
 
 function unauthorized(): FakeWorld {
   const world = fullDay();
-  // 401 em tudo que exige sessão: é como o app vê um token expirado.
-  world.failures = [{ pattern: /^\/(home|tasks|report|goals|sleep-|subscription|ai\/)/, status: 401, body: { error: 'Unauthorized' } }];
+  // 401 de token expirado em tudo que exige sessão. Header ausente
+  // (`missing_authorization`) não pode usar este cenário: o app não desloga.
+  world.failures = [{ pattern: /^\/(home|tasks|report|goals|sleep-|subscription|ai\/)/, status: 401, body: { error: 'Unauthorized', code: 'token_expired' } }];
   return world;
 }
 

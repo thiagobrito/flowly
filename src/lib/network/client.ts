@@ -42,6 +42,13 @@ function prepareBody(body: unknown): { body: BodyInit | null; isJson: boolean } 
   return { body: JSON.stringify(body), isJson: true };
 }
 
+function requestSentAuthorization(headers: Record<string, string>): boolean {
+  const value = (headers.Authorization ?? headers.authorization ?? '').trim();
+  if (!value || /^bearer$/i.test(value)) return false;
+  const token = /^bearer\s+/i.test(value) ? value.replace(/^bearer\s+/i, '').trim() : value;
+  return token.length > 0;
+}
+
 function collectHeaders(headers: Response['headers']): Record<string, string> {
   const result: Record<string, string> = {};
   headers.forEach((value: string, key: string) => {
@@ -140,6 +147,7 @@ export function createHttpClient(config: HttpClientConfig = {}): HttpClient {
           body: data,
           headers: responseHeaders,
           url: prepared.url,
+          sentAuthorization: requestSentAuthorization(prepared.headers),
         });
       }
 
