@@ -40,6 +40,7 @@ describe('sessionSync', () => {
     expect(shouldExpireSessionOnError(unauthorized('https://flowly.app/api/v1/subscription', { error: 'Unauthorized', code: 'missing_authorization' }))).toBe(false);
     expect(shouldExpireSessionOnError(unauthorized('https://flowly.app/api/v1/subscription', { error: 'Unauthorized' }, false))).toBe(false);
     expect(shouldExpireSessionOnError(unauthorized('https://flowly.app/api/v1/home', { error: 'Unauthorized', code: 'token_expired' }, false))).toBe(false);
+    expect(shouldExpireSessionOnError(new HttpError({ status: 403, body: { code: 'missing_authorization' }, headers: {}, url: 'https://flowly.app/api/v1/subscription' }))).toBe(false);
   });
 
   it('401 sem token hidratado não apaga a sessão que ainda está no disco', () => {

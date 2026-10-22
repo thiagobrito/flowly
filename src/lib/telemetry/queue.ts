@@ -10,7 +10,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppState } from 'react-native';
 
+import { SESSION_KEY } from '@/lib/auth/sessionSync';
 import { api } from '@/lib/network';
+import { ensureHydrated, getCacheEntry } from '@/lib/storage/cache';
 
 import { getAppVersion, loadIdentity, PLATFORM } from './identity';
 import type { QueuedEvent, TelemetryBatch } from './types';
@@ -62,12 +64,31 @@ async function restore(): Promise<void> {
   }
 }
 
+/**
+ * Espera a sessão sair do disco antes do POST. Sem isso o lote do boot sai
+ * sem `Authorization` mesmo com alguém logado, e o evento fica anônimo.
+ * O listener segura a entrada no cache até o `onRequest` ler o token.
+ */
+async function waitForSession(): Promise<void> {
+  const entry = getCacheEntry(SESSION_KEY);
+  const hold = (): void => undefined;
+  entry.listeners.add(hold);
+  try {
+    await ensureHydrated(entry, SESSION_KEY, 'telemetry_flush');
+  } catch {
+    // Sem sessão hidratada o lote segue anônimo. A fila não pode travar.
+  } finally {
+    entry.listeners.delete(hold);
+  }
+}
+
 /** Envia o próximo lote. Silencioso em qualquer falha. */
 export async function flush(): Promise<void> {
   if (flushing || queue.length === 0) return;
   if (Date.now() < retryAfter) return;
 
   flushing = true;
+  await waitForSession();
   const batch = queue.slice(0, MAX_BATCH);
 
   try {
