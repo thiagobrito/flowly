@@ -159,3 +159,30 @@ test.describe('guards de rota', () => {
     await expect(app.page.getByRole('button', { name: 'Home', exact: true })).toBeVisible();
   });
 });
+
+test.describe('sessão no boot', () => {
+  test('com sessão salva, nenhuma chamada da abertura sai sem Authorization', async ({ app }) => {
+    await app.launch();
+
+    await expect.poll(() => app.api.calls.some((call) => call.path === '/events')).toBe(true);
+    await expect.poll(() => app.api.calls.some((call) => call.path === '/home' || call.path === '/subscription')).toBe(true);
+
+    const anonymous = app.api.calls.filter((call) => !call.authorized && call.path !== '/feature-flags').map((call) => `${call.method} ${call.path}`);
+    expect(anonymous).toEqual([]);
+  });
+
+  test('403 de header ausente não desloga', async ({ app }) => {
+    app.allowFailures();
+    await app.launch({
+      world: (world) => {
+        world.failures = [{ pattern: /^\/subscription$/, status: 403, body: { error: 'Unauthorized', code: 'missing_authorization' } }];
+      },
+    });
+
+    await expect.poll(() => app.api.calls.some((call) => call.path === '/subscription' && call.status === 403)).toBe(true);
+
+    await expect(app.page.getByRole('button', { name: 'Home', exact: true })).toBeVisible();
+    const stored = await app.page.evaluate(() => window.localStorage.getItem('auth_session_v1'));
+    expect(JSON.parse(stored ?? '{}').token).toBeTruthy();
+  });
+});

@@ -4,6 +4,7 @@ import { APP_TIME_ZONE, localDateKey, toLocalISOString } from '@/lib/date';
 
 import type { ScheduledSlot, Task } from '../NewTask/data';
 import { getLifeArea } from '../NewTask/data';
+import { hasNoDate } from '../Tasks/taskDateFilter';
 
 /** Duração padrão (min) quando a tarefa não tem tempo estimado. */
 export const DEFAULT_DURATION_MIN = 30;
@@ -60,13 +61,47 @@ export function buildTaskEvent(task: Task, startISO: string, durationMin = getTa
   return buildEvent(task, task.id, startISO, durationMin);
 }
 */
-/** Horário inicial para tarefas de frequência `once` (data + hora). */
+/** Hora `HH:MM` explícita, ou `null` quando a tarefa não tem horário. */
+function clockOf(time: string | null | undefined): { hour: number; minute: number } | null {
+  const match = /^(\d{1,2}):(\d{2})$/.exec((time ?? '').trim());
+  if (!match) return null;
+
+  const hour = Number(match[1]);
+  const minute = Number(match[2]);
+  if (hour > 23 || minute > 59) return null;
+  return { hour, minute };
+}
+
+/** Pontual com data marcada e sem hora válida: fica na lista, não na grade. */
+function isDateWithoutTime(task: Task): boolean {
+  return task.frequency.kind === 'once' && Boolean(task.frequency.date) && clockOf(task.frequency.time) == null;
+}
+
+/** Tarefas só com data vêm primeiro; o restante conserva a ordem de chegada. */
+function prioritizeDateOnly(tasks: Task[]): Task[] {
+  const dated: Task[] = [];
+  const rest: Task[] = [];
+
+  for (const task of tasks) {
+    if (isDateWithoutTime(task)) dated.push(task);
+    else rest.push(task);
+  }
+
+  return [...dated, ...rest];
+}
+
+/**
+ * Horário inicial para tarefas de frequência `once` (data + hora).
+ * Sem hora válida devolve `null` — não inventa 09:00.
+ */
 export function getOnceStartISO(task: Task): string | null {
   if (task.frequency.kind !== 'once' || !task.frequency.date) return null;
 
+  const clock = clockOf(task.frequency.time);
+  if (!clock) return null;
+
   const [year = 0, month = 1, day = 1] = task.frequency.date.split('-').map(Number);
-  const [hour = 9, minute = 0] = (task.frequency.time ?? '09:00').split(':').map(Number);
-  const date = new Date(year, month - 1, day, hour, minute, 0, 0);
+  const date = new Date(year, month - 1, day, clock.hour, clock.minute, 0, 0);
 
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
 }
@@ -84,6 +119,37 @@ function shouldAddTaskToUnscheduled(task: Task): boolean {
     }
   }
   return true;
+}
+
+type IncomingTask = Task & { _id?: string };
+
+function sourceId(task: IncomingTask): string {
+  // eslint-disable-next-line no-underscore-dangle -- campo `_id` retornado pela API MongoDB
+  return task.id || task._id || '';
+}
+
+/** `notime`/`trigger` já concluídas saem da bandeja: não há o que arrastar para o dia. */
+function isOpenInboxTask(task: IncomingTask): boolean {
+  if (!hasNoDate(task)) return false;
+  const { kind } = task.frequency;
+  if ((kind === 'notime' || kind === 'trigger') && (task.completed?.length ?? 0) > 0) return false;
+  return true;
+}
+
+/**
+ * O recorte do dia não traz tarefas sem data. Desagendar uma `once` zera a
+ * frequência para `notime`; sem esta lista, o refetch apaga a tarefa da tela
+ * em vez de devolvê-la à bandeja.
+ */
+export function appendInboxTasks(dayTasks: IncomingTask[], allTasks: IncomingTask[]): IncomingTask[] {
+  const seen = new Set(dayTasks.map(sourceId).filter(Boolean));
+  const inbox = allTasks.filter((task) => {
+    const id = sourceId(task);
+    if (!id || seen.has(id)) return false;
+    return isOpenInboxTask(task);
+  });
+
+  return [...dayTasks, ...inbox.map((task) => ({ ...task, done: false }))];
 }
 
 /**
@@ -132,5 +198,5 @@ export function buildCalendarEvents(tasks: Task[], visibleDateKeys?: Set<string>
     }
   }
 
-  return { events, unscheduled };
+  return { events, unscheduled: prioritizeDateOnly(unscheduled) };
 }

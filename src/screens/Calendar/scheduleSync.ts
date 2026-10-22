@@ -99,6 +99,8 @@ async function syncOnceTaskUnschedule(task: Task): Promise<void> {
     subtasks: task.subtasks,
     estimatedMinutes: task.estimatedMinutes,
     frequency: { kind: 'notime' },
+    // Slot restante continuaria tornando a tarefa devida nesse dia.
+    schedule: [],
   });
 }
 

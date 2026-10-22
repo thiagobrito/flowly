@@ -120,8 +120,15 @@ export function emptyWorld(): FakeWorld {
 
 const dayOf = (value: unknown): string => String(value ?? '').split('T')[0] ?? '';
 
-/** Tarefa prevista para o dia (mesma leitura de `FilterTasksToShow`, simplificada). */
+/**
+ * Tarefa prevista para o dia.
+ *
+ * Espelha `isDueToday`: um slot em `schedule` torna a tarefa devida nesse dia
+ * civil mesmo quando a frequência é `notime` (arrastar da bandeja para a grade).
+ */
 function isScheduledFor(item: FakeTask, dayKey: string): boolean {
+  if ((item.schedule ?? []).some((slot) => dayOf(slot.dateTime) === dayKey)) return true;
+
   const frequency = item.frequency as { kind?: string; date?: string; everyDay?: boolean; days?: number[] };
 
   if (frequency.kind === 'daily') {
@@ -356,6 +363,7 @@ export function handle(world: FakeWorld, method: string, path: string, query: UR
         goal: { id: null, name: payload.area ?? existing.goal.name },
         subtasks: payload.subtasks ?? existing.subtasks,
         estimatedMinutes: payload.estimatedMinutes ?? existing.estimatedMinutes,
+        schedule: 'schedule' in payload ? payload.schedule : existing.schedule,
       });
       return ok({ success: true, result: { matchedCount: 1 } });
     }

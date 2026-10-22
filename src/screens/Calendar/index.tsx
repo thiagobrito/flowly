@@ -23,7 +23,7 @@ import CalendarWeekStrip from './components/CalendarWeekStrip';
 import TaskDetailModal from './components/TaskDetailModal';
 import UnscheduledTray from './components/UnscheduledTray';
 import type { CalendarTaskEvent } from './eventMapping';
-import { buildCalendarEvents, getTaskDurationMin } from './eventMapping';
+import { appendInboxTasks, buildCalendarEvents, getTaskDurationMin } from './eventMapping';
 import { useDayEnergyLevels } from './hooks/useDayEnergyLevels';
 import { getTaskSlot, hasScheduleChanged, onceFrequencyFromISO, syncTaskDetailsToServer, syncTaskEstimatedMinutesToServer, syncTaskScheduleToServer, syncTaskSubtasksToServer, syncTaskUnscheduleToServer } from './scheduleSync';
 import { buildCalendarTheme } from './theme';
@@ -152,9 +152,12 @@ export default function Calendar({ onEdit, onCreateAt }: CalendarProps) {
   const tasksQuery = useQuery<Task[]>({
     queryKey: calendarKey,
     queryFn: async () => {
-      const response = await api.get<any>('/tasks', { params: { date: visibleDateRef.current, energyLevel: 5 } });
-      const visible = [...response.visibleTasks.map((task: Task) => ({ ...task, done: false })), ...response.concludedTasks.map((task: Task) => ({ ...task, done: true }))];
-      return organizeTasks(visible);
+      const date = visibleDateRef.current;
+      // `scope=all` traz a bandeja (sem dia). O recorte do dia não inclui `notime`,
+      // então desagendar uma `once` sumiria da tela no refetch.
+      const [dayResponse, allResponse] = await Promise.all([api.get<any>('/tasks', { params: { date, energyLevel: 5 } }), api.get<any>('/tasks', { params: { scope: 'all' } })]);
+      const dayTasks = [...(dayResponse.visibleTasks ?? []).map((task: Task) => ({ ...task, done: false })), ...(dayResponse.concludedTasks ?? []).map((task: Task) => ({ ...task, done: true }))];
+      return organizeTasks(appendInboxTasks(dayTasks, allResponse.tasks ?? []));
     },
     // Mantém o dia anterior visível durante a troca de datas (sem tela vazia).
     placeholderData: keepPreviousData,

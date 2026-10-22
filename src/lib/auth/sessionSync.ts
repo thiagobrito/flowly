@@ -12,7 +12,7 @@
  * O nome do header precisa coincidir com `REFRESHED_TOKEN_HEADER` no web.
  */
 
-import { HttpError } from '@/lib/network';
+import { HttpError, setAuthTokenProvider } from '@/lib/network';
 import { getPersistedSnapshot, writePersistedSnapshot } from '@/lib/storage';
 
 import type { Session } from './types';
@@ -23,6 +23,11 @@ const TOKEN_INVALID = 'token_invalid';
 
 export const SESSION_KEY = 'auth_session_v1';
 export const EMPTY_SESSION: Session = { token: null, email: null, hasAccount: false };
+
+// Registrado aqui, e não em `@/lib/auth`: a telemetria importa este módulo e
+// envia no boot, antes de alguma tela carregar `@/lib/auth`. Sem o provedor o
+// `onRequest` não acha token e o pedido sai sem `Authorization`.
+setAuthTokenProvider(() => getPersistedSnapshot(EMPTY_SESSION, SESSION_KEY).token ?? null);
 export const REFRESHED_TOKEN_HEADER = 'x-refreshed-token';
 
 export function isCredentialAuthUrl(url: string): boolean {

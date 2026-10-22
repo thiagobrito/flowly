@@ -89,7 +89,7 @@ export default function UnscheduledTray({ tasks, isDark, scrollEnabled, onDragSt
   if (tasks.length === 0) return null;
 
   return (
-    <View className="my-1">
+    <View className="my-1" accessibilityLabel="Atividades sem horário">
       <ScrollView horizontal scrollEnabled={scrollEnabled} showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         {tasks.map((task) => (
           <TaskChip key={task.randomId || task.id} task={task} isDark={isDark} onDragStart={onDragStart} onDragMove={onDragMove} onDragEnd={onDragEnd} />

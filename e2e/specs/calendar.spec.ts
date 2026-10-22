@@ -6,6 +6,7 @@
  */
 
 import { expect, test } from '../support/fixtures';
+import { todayKey } from '../support/state';
 
 test('mostra o dia atual com as atividades agendadas', async ({ app }) => {
   await app.launch();
@@ -43,6 +44,28 @@ test('navegar entre dias mantém a grade de pé', async ({ app }) => {
 
   await expect(app.page.getByRole('button', { name: /\d+ de [a-zç]+$/i }).first()).toBeVisible();
   expect(app.console.relevant()).toEqual([]);
+});
+
+test('tarefa só com data fica no topo da lista e fora da grade', async ({ app }) => {
+  await app.launch();
+  await app.tab('new');
+
+  await app.page.getByPlaceholder('Ex: Meditar 10 minutos').fill('Buscar encomenda');
+  await app.page.getByRole('button', { name: 'Data específica', exact: true }).click();
+  await app.page.getByRole('button', { name: 'Hoje', exact: true }).click();
+  await app.page.getByRole('button', { name: 'Saúde', exact: true }).click();
+  await app.page.getByRole('button', { name: 'Criar atividade' }).click();
+
+  const created = app.world.tasks.find((item) => item.name === 'Buscar encomenda');
+  expect(created?.frequency).toEqual({ kind: 'once', date: todayKey(), time: null });
+  expect(created?.schedule ?? []).toEqual([]);
+
+  await app.tab('calendar');
+
+  const tray = app.page.getByLabel('Atividades sem horário');
+  await expect(tray.getByRole('button').first()).toContainText('Buscar encomenda');
+  await expect(tray.getByText('Buscar encomenda')).toBeVisible();
+  await expect(app.page.getByText('Buscar encomenda')).toHaveCount(1);
 });
 
 test('conta nova abre o calendário vazio sem erro', async ({ app }) => {

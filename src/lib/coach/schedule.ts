@@ -11,7 +11,6 @@ import type { DayEnergyCurve } from './dayCurve';
 export const SLOT_MINUTES = 15;
 export const DEFAULT_BLOCK_MINUTES = 45;
 const DEFAULT_ONCE_DURATION_MINUTES = 30;
-const DEFAULT_ONCE_MINUTE = 9 * 60;
 const FALLBACK_AWAKE_START_HOUR = 8;
 const FALLBACK_AWAKE_END_HOUR = 22;
 
@@ -52,7 +51,8 @@ function storedBlockForDay(task: Task, dateKey: string): { dateTime: string; dur
 function onceBlockForDay(task: Task, dateKey: string): { dateTime: string; duration: number } | null {
   const { kind, date, time } = task.frequency as { kind: string; date?: string | null; time?: string | null };
   if (kind !== 'once' || date !== dateKey) return null;
-  const minutes = minutesOfHhmm(time) ?? DEFAULT_ONCE_MINUTE;
+  const minutes = minutesOfHhmm(time);
+  if (minutes == null) return null;
   return { dateTime: isoAtDayMinutes(dateKey, minutes), duration: taskDurationMinutes(task) };
 }
 

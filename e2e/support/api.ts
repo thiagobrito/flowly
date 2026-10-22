@@ -30,7 +30,14 @@ export type ApiCall = {
   status: number;
   /** `true` quando nenhum handler do backend falso conhecia o caminho. */
   unhandled: boolean;
+  /** O browser mandou `Authorization` com token. Lido antes do repasse reescrever o header. */
+  authorized: boolean;
 };
+
+function sentAuthorization(route: Route): boolean {
+  const value = (route.request().headers().authorization ?? '').trim();
+  return /^bearer\s+\S+/i.test(value);
+}
 
 export type ApiRecorder = {
   calls: ApiCall[];
@@ -95,6 +102,7 @@ export async function installApi(page: Page, world: FakeWorld): Promise<ApiRecor
     const url = new URL(route.request().url());
     const path = url.pathname.slice(url.pathname.indexOf(API_PREFIX) + API_PREFIX.length) || '/';
     const method = route.request().method();
+    const authorized = sentAuthorization(route);
 
     if (IS_INTEGRATION) {
       // Bufferiza o corpo antes do fulfill: passar `{ response }` direto falha com
@@ -108,7 +116,7 @@ export async function installApi(page: Page, world: FakeWorld): Promise<ApiRecor
         const status = response.status();
         const headers = response.headers();
         const body = await response.body();
-        calls.push({ method, path, query: url.search, status, unhandled: false });
+        calls.push({ method, path, query: url.search, status, unhandled: false, authorized });
         await route.fulfill({ status, headers, body });
       } catch {
         // Request abortado pela navegação — não há o que cumprir.
@@ -123,7 +131,7 @@ export async function installApi(page: Page, world: FakeWorld): Promise<ApiRecor
 
     const result = handle(world, method, path, url.searchParams, parseBody(route));
     const status = result?.status ?? 404;
-    calls.push({ method, path, query: url.search, status, unhandled: result === null });
+    calls.push({ method, path, query: url.search, status, unhandled: result === null, authorized });
 
     await route.fulfill({
       status,

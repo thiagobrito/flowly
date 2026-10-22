@@ -50,16 +50,22 @@ describe('blockForDay', () => {
     expect(minutesOfIso(blockForDay(task, DATE_KEY)!.dateTime)).toBe(14 * 60 + 30);
   });
 
-  it('usa 09:00 quando a tarefa "once" não tem hora', () => {
-    const task = makeTask({ id: '1', frequency: { kind: 'once', date: DATE_KEY } as Task['frequency'] });
+  it('mantém 09:00 quando a hora foi escolhida', () => {
+    const task = makeTask({ id: '1', frequency: { kind: 'once', date: DATE_KEY, time: '09:00' } });
 
     expect(minutesOfIso(blockForDay(task, DATE_KEY)!.dateTime)).toBe(9 * 60);
   });
 
-  it('ignora hora inválida e cai no padrão', () => {
-    const task = makeTask({ id: '1', frequency: { kind: 'once', date: DATE_KEY, time: '25:99' } as Task['frequency'] });
+  it('não inventa horário quando a once não tem hora', () => {
+    const task = makeTask({ id: '1', frequency: { kind: 'once', date: DATE_KEY, time: null } });
 
-    expect(minutesOfIso(blockForDay(task, DATE_KEY)!.dateTime)).toBe(9 * 60);
+    expect(blockForDay(task, DATE_KEY)).toBeNull();
+  });
+
+  it('não inventa horário quando a hora é inválida', () => {
+    const task = makeTask({ id: '1', frequency: { kind: 'once', date: DATE_KEY, time: '25:99' } });
+
+    expect(blockForDay(task, DATE_KEY)).toBeNull();
   });
 });
 

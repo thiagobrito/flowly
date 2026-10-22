@@ -28,7 +28,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { trackSignupCompleted } from '@/lib/attribution';
 import { clearHomeSnapshot } from '@/lib/home/snapshot';
-import { api, HttpError, isNetworkError, setAuthSessionHandlers, setAuthToken, setAuthTokenProvider } from '@/lib/network';
+import { api, HttpError, isNetworkError, setAuthSessionHandlers, setAuthToken } from '@/lib/network';
 import { getPersistedSnapshot, usePersistedState } from '@/lib/storage';
 import { loginUser, logoutUser } from '@/lib/subscription';
 import type { TelemetryEventName } from '@/lib/telemetry';
@@ -36,13 +36,6 @@ import { track } from '@/lib/telemetry';
 
 import { EMPTY_SESSION, expireStoredSession, persistRefreshedToken, SESSION_KEY, shouldExpireSessionOnError } from './sessionSync';
 import type { AuthResponse, AuthResult, Credentials, Session } from './types';
-
-/**
- * Resolve o token sob demanda a partir do snapshot síncrono da sessão
- * persistida. Registrado no boot do módulo para que toda requisição leia o
- * token mais recente, sem depender da ordem de execução dos `useEffect`.
- */
-setAuthTokenProvider(() => getPersistedSnapshot(EMPTY_SESSION, SESSION_KEY).token ?? null);
 
 /** Liga/desliga o header `Authorization` na instância default da `api`. */
 function applyAuthHeader(token: string | null): void {

@@ -50,4 +50,8 @@ describe('startTimeLabel', () => {
   it('devolve null quando a tarefa não tem hora marcada', () => {
     expect(startTimeLabel(task(), '2026-08-16')).toBeNull();
   });
+
+  it('não inventa 09:00 para uma once só com data', () => {
+    expect(startTimeLabel(task({ frequency: { kind: 'once', date: '2026-08-16', time: null } }), '2026-08-16')).toBeNull();
+  });
 });
